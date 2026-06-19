@@ -1,0 +1,33 @@
+# ── Build artifacts ──────────────────────────────────────
+**/bin/
+**/obj/
+**/binDebug*/
+binDebug*/
+*.dll
+*.exe
+*.pdb
+
+# ── Node ────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Server data & logs ──────────────────────────────────
+server/uploads/
+server/server.log
+server/certs/
+**/*.log
+
+# ── OS junk ─────────────────────────────────────────────
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ── IDE ─────────────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# ── Misc ────────────────────────────────────────────────
+nul

