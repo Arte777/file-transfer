@@ -6,7 +6,6 @@ const session     = require('express-session');
 const https       = require('https');
 const http        = require('http');
 const WebSocket   = require('ws');
-const helmet      = require('helmet');
 const { MongoClient } = require('mongodb');
 
 const app = express();
@@ -64,13 +63,6 @@ async function checkPassword(username, password) {
 function fileOperator(entry) {
   return (entry && typeof entry.operator === 'string' && entry.operator) || 'Shonll';
 }
-
-// ── Security: Helmet (HSTS, XSS Protection, No-Sniff, Frameguard) ─────────────
-app.use(helmet({
-  contentSecurityPolicy: false,   // отключаем CSP — мешает inline-стилям дашборда
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
-}));
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({ origin: true, credentials: true }));
@@ -2230,6 +2222,14 @@ function setupWebSocket(httpServer) {
     });
   });
 }
+
+// ── Global error handler — prevents server crash on any unhandled error ────────
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 25565;
