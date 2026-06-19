@@ -38,18 +38,33 @@ document.getElementById('avatarFileInput').addEventListener('change', function(e
   const file = e.target.files[0];
   if (!file) return;
 
-  // Проверка размера (до ~500КБ, чтобы уместиться в лимит base64)
-  if (file.size > 500 * 1024) {
-    toast('Файл слишком большой. Максимум 500 КБ.', 'err');
+  // Проверка размера (до 5МБ, затем сжимается)
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Файл слишком большой. Максимум 5 МБ.', 'err');
     return;
   }
 
   const reader = new FileReader();
-  reader.onload = function(evt) {
-    currentAvatarImageBase64 = evt.target.result;
-    document.getElementById('avatarInput').value = ''; // очищаем эмодзи
-    highlightSelectedEmoji('');
-    updatePreview();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 300, maxH = 300;
+      let w = img.width, h = img.height;
+      if (w > maxW || h > maxH) {
+        if (w > h) { h = Math.round((h * maxW) / w); w = maxW; }
+        else { w = Math.round((w * maxH) / h); h = maxH; }
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      
+      document.getElementById('avatarInput').value = ''; // очищаем эмодзи
+      highlightSelectedEmoji('');
+      updatePreview();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 });
