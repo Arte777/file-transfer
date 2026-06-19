@@ -4,6 +4,7 @@ const cors        = require('cors');
 const path        = require('path');
 const fs          = require('fs');
 const session     = require('express-session');
+const MongoStore  = require('connect-mongo').MongoStore;
 const https       = require('https');
 const http        = require('http');
 const WebSocket   = require('ws');
@@ -84,6 +85,7 @@ app.use(session({
   secret: 'supersecret_ai_key_2025',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: MONGO_URI }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,            // защита от XSS-кражи cookie
@@ -219,30 +221,37 @@ async function setOperatorSettings(user, patch) {
 }
 
 // ── Token-based auth (для статического сайта на GitHub Pages) ──────────────────
-const validTokens = new Map(); // token -> username
-
+// ── Token-based auth (для статического сайта на GitHub Pages) ──────────────────
 function makeToken() {
   return require('crypto').randomBytes(32).toString('hex');
 }
 
-function currentUser(req) {
+async function currentUser(req) {
   if (req.session && req.session.user) return req.session.user;
+  const db = await getDb();
+  
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    if (validTokens.has(t)) return validTokens.get(t);
+    const doc = await db.collection('api_tokens').findOne({ token: t });
+    if (doc) return doc.user;
   }
-  if (req.query && req.query.token && validTokens.has(req.query.token)) {
-    return validTokens.get(req.query.token);
+  if (req.query && req.query.token) {
+    const doc = await db.collection('api_tokens').findOne({ token: req.query.token });
+    if (doc) return doc.user;
   }
   return null;
 }
 
 // ── Auth guard (поддерживает cookie-сессию и Bearer/ query-токен) ──────────────
-function requireAuth(req, res, next) {
-  const user = currentUser(req);
-  if (user) { req.authUser = user; return next(); }
-  res.status(404).send(`Cannot GET ${req.originalUrl}`);
+async function requireAuth(req, res, next) {
+  try {
+    const user = await currentUser(req);
+    if (user) { req.authUser = user; return next(); }
+    res.status(401).json({ error: 'Unauthorized' });
+  } catch (err) {
+    res.status(500).json({ error: 'Auth check error' });
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -273,13 +282,18 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
   const token = makeToken();
-  validTokens.set(token, username);
+  const db = await getDb();
+  await db.collection('api_tokens').insertOne({ token, user: username, createdAt: new Date() });
   res.json({ token, user: username });
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
   const h = req.headers.authorization;
-  if (h && h.startsWith('Bearer ')) validTokens.delete(h.slice(7).trim());
+  if (h && h.startsWith('Bearer ')) {
+    const t = h.slice(7).trim();
+    const db = await getDb();
+    await db.collection('api_tokens').deleteOne({ token: t });
+  }
   res.json({ success: true });
 });
 
@@ -519,7 +533,7 @@ app.get('/files', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
 
   let files = await db.collection('files')
-    .find({ operator: user })
+    .find({ operator: user, originalName: { $ne: 'settings.json' } })
     .sort({ uploadedAt: -1 })
     .toArray();
 
