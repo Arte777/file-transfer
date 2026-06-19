@@ -7,7 +7,6 @@ const https       = require('https');
 const http        = require('http');
 const WebSocket   = require('ws');
 const helmet      = require('helmet');
-const rateLimit   = require('express-rate-limit');
 const { MongoClient } = require('mongodb');
 
 const app = express();
@@ -73,27 +72,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// ── Security: Rate limiter для login (защита от брутфорса) ────────────────────
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 минут
-  max: 10,                     // максимум 10 попыток
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Слишком много попыток входа. Попробуйте позже.' }
-});
-
-// ── Security: Rate limiter для API (защита от спама/DoS) ──────────────────────
-const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,    // 1 минута
-  max: 60,                     // 60 запросов в минуту
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.path === '/upload' || req.path === '/ws' // не лимитируем загрузки и стрим
-});
-
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use('/login228', loginLimiter);
-app.use('/api/', apiLimiter);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
