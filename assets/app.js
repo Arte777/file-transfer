@@ -109,29 +109,45 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-// Аватарка оператора в шапке
-function operatorAvatar(user) { return user === 'Shonll' ? '🦊' : '🐉'; }
+// Аватарка оператора в шапке (с поддержкой кастомных настроек)
+function operatorAvatar(user) {
+  const custom = localStorage.getItem('ft_avatar');
+  if (custom) return custom;
+  return user === 'Shonll' ? '🦊' : '🐉';
+}
 
-// Заполняет шапку (header) общим HTML для дашборда/токенов
+// Отображаемое имя (с поддержкой кастомных настроек)
+function operatorDisplayName(user) {
+  const custom = localStorage.getItem('ft_displayName');
+  if (custom) return custom;
+  return user;
+}
+
+// Заполняет шапку (header) общим HTML для дашборда/токенов/настроек
 function renderHeader(activePage) {
   const user = getUser();
   const avatar = operatorAvatar(user);
+  const name = operatorDisplayName(user);
   const navFiles = activePage === 'files'
     ? '<a href="index.html" class="nav-link active">📁 Файлы</a>'
     : '<a href="index.html" class="nav-link">📁 Файлы</a>';
   const navTokens = activePage === 'tokens'
     ? '<a href="tokens.html" class="nav-link active">🎫 Токены</a>'
     : '<a href="tokens.html" class="nav-link">🎫 Токены</a>';
+  const navSettings = activePage === 'settings'
+    ? '<a href="settings.html" class="nav-link active">⚙️ Настройки</a>'
+    : '<a href="settings.html" class="nav-link">⚙️ Настройки</a>';
   return `
   <header>
     <div class="logo">⚡ СИСТЕМА ПЕРЕДАЧИ ФАЙЛОВ</div>
     <div class="nav-links" style="margin-left:auto; margin-right:1rem;">
       ${navFiles}
       ${navTokens}
+      ${navSettings}
     </div>
     <div class="user-badge">
       <span class="user-avatar">${avatar}</span>
-      <span class="user-name">${escapeHtml(user)}</span>
+      <span class="user-name">${escapeHtml(name)}</span>
       <a href="#" class="btn-logout" id="btnLogout">Выйти</a>
     </div>
   </header>`;
