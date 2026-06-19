@@ -108,6 +108,10 @@ app.use(session({
     secure: false              // false т.к. HTTP; при HTTPS поставить true
   }
 }));
+
+// ── Health check для Render ───────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 // ── Отдача файлов (скриншотов) из MongoDB ─────────────────────────────────────
 app.get('/uploads/:filename', async (req, res) => {
   try {
