@@ -4,11 +4,15 @@ const VID = ["mp4","webm","mov","avi"];
 const AUD = ["mp3","wav","flac","ogg","m4a"];
 const TXT = ["txt","md","js","ts","html","css","cs","py","json","cpp","c","java"];
 
+// Системные файлы, которые нужно скрывать из списка
+const HIDDEN_FILES = ["settings.json","_metadata.json","metadata.json",".gitkeep",".DS_Store","thumbs.db"];
+
 function ext(n) { return n.split(".").pop().toLowerCase(); }
 function isImg(n) { return IMG.includes(ext(n)); }
 function isText(n) { return TXT.includes(ext(n)); }
 function isVid(n) { return VID.includes(ext(n)); }
 function isAud(n) { return AUD.includes(ext(n)); }
+function isHiddenFile(n) { return HIDDEN_FILES.includes(n.toLowerCase()); }
 
 function icon(n) {
   const e = ext(n);
@@ -109,10 +113,14 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-// Аватарка оператора в шапке (с поддержкой кастомных настроек)
-function operatorAvatar(user) {
-  const custom = localStorage.getItem('ft_avatar');
-  if (custom) return custom;
+// ── Аватарка оператора (поддержка фото + emoji) ──────────────────────────────
+function operatorAvatarHTML(user) {
+  const avatarImage = localStorage.getItem('ft_avatarImage');
+  if (avatarImage) {
+    return '<img src="' + avatarImage + '" alt="avatar">';
+  }
+  const emoji = localStorage.getItem('ft_avatar');
+  if (emoji) return escapeHtml(emoji);
   return user === 'Shonll' ? '🦊' : '🐉';
 }
 
@@ -123,30 +131,55 @@ function operatorDisplayName(user) {
   return user;
 }
 
-// Заполняет шапку (header) общим HTML для дашборда/токенов/настроек
+// ── Акцентный цвет — глобальное применение ────────────────────────────────────
+function applyAccentColor(color) {
+  if (!color) color = localStorage.getItem('ft_themeColor') || '#7c6aff';
+  const root = document.documentElement;
+  root.style.setProperty('--accent', color);
+
+  // Вычисляем производные цвета
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  root.style.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ', 0.12)');
+  root.style.setProperty('--accent-glow', 'rgba(' + r + ',' + g + ',' + b + ', 0.2)');
+
+  // Светлая версия акцента для текста
+  const lr = Math.min(255, r + 50);
+  const lg = Math.min(255, g + 50);
+  const lb = Math.min(255, b + 50);
+  root.style.setProperty('--accent-text', 'rgb(' + lr + ',' + lg + ',' + lb + ')');
+
+  localStorage.setItem('ft_themeColor', color);
+}
+
+// Применяем акцент при загрузке каждой страницы
+applyAccentColor();
+
+// ── Генерация шапки (header) ──────────────────────────────────────────────────
 function renderHeader(activePage) {
   const user = getUser();
-  const avatar = operatorAvatar(user);
+  const avatarHtml = operatorAvatarHTML(user);
   const name = operatorDisplayName(user);
-  const navFiles = activePage === 'files'
-    ? '<a href="index.html" class="nav-link active">📁 Файлы</a>'
-    : '<a href="index.html" class="nav-link">📁 Файлы</a>';
-  const navTokens = activePage === 'tokens'
-    ? '<a href="tokens.html" class="nav-link active">🎫 Токены</a>'
-    : '<a href="tokens.html" class="nav-link">🎫 Токены</a>';
-  const navSettings = activePage === 'settings'
-    ? '<a href="settings.html" class="nav-link active">⚙️ Настройки</a>'
-    : '<a href="settings.html" class="nav-link">⚙️ Настройки</a>';
+
+  function navLink(page, href, icon, label) {
+    const cls = activePage === page ? 'nav-link active' : 'nav-link';
+    return '<a href="' + href + '" class="' + cls + '">' + icon + ' ' + label + '</a>';
+  }
+
   return `
   <header>
-    <div class="logo">⚡ СИСТЕМА ПЕРЕДАЧИ ФАЙЛОВ</div>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">FILE TRANSFER</span>
+    </div>
     <div class="nav-links" style="margin-left:auto; margin-right:1rem;">
-      ${navFiles}
-      ${navTokens}
-      ${navSettings}
+      ${navLink('files', 'index.html', '📁', 'Файлы')}
+      ${navLink('tokens', 'tokens.html', '🎫', 'Токены')}
+      ${navLink('settings', 'settings.html', '⚙️', 'Настройки')}
     </div>
     <div class="user-badge">
-      <span class="user-avatar">${avatar}</span>
+      <span class="user-avatar">${avatarHtml}</span>
       <span class="user-name">${escapeHtml(name)}</span>
       <a href="#" class="btn-logout" id="btnLogout">Выйти</a>
     </div>

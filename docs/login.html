@@ -8,31 +8,93 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="login-body">
-  <form id="loginForm" class="login-card">
+
+  <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">⚡</div>
-      <span class="login-logo-text">СИСТЕМА ПЕРЕДАЧИ ФАЙЛОВ</span>
+      <div class="login-logo-text">FILE TRANSFER</div>
     </div>
+    
+    <h1>Вход в систему</h1>
+    <div class="login-subtitle">Доступ только для администраторов</div>
 
-    <h1>Авторизация</h1>
-    <p class="login-subtitle">Введите учетные данные для доступа</p>
+    <form id="loginForm">
+      <div id="errorBox" class="error-msg" style="display: none;"></div>
+      
+      <div class="input-group">
+        <input type="text" id="username" placeholder="Логин (например, Shonll)" required autocomplete="username">
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
+      </div>
+      
+      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
+    </form>
 
-    <div id="errorMsg" class="error-msg" style="display:none;">⚠️ Неверный логин или пароль!</div>
-
-    <div class="input-group">
-      <input type="text" id="username" placeholder="Логин" required autocomplete="username">
+    <div class="security-note">
+      Все действия логируются. Несанкционированный доступ запрещен.
     </div>
-    <div class="input-group">
-      <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
-    </div>
-
-    <button type="submit" class="btn-submit">Войти</button>
-
-    <div class="security-note">🔒 Вход разрешен только администраторам системы</div>
-  </form>
+  </div>
 
   <script src="assets/config.js"></script>
-  <script src="assets/app.js"></script>
-  <script src="assets/login.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      const errBox = document.getElementById('errorBox');
+      const btn = document.getElementById('submitBtn');
+      
+      errBox.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Вход...';
+      
+      try {
+        const res = await fetch(API_BASE + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: u, pass: p })
+        });
+        const data = await res.json();
+        
+        if (data.token) {
+          localStorage.setItem('ft_token', data.token);
+          localStorage.setItem('ft_user', u);
+          // Load initial settings before redirect
+          try {
+            const setRes = await fetch(API_BASE + '/api/settings', {
+              headers: { 'Authorization': 'Bearer ' + data.token }
+            });
+            const setObj = await setRes.json();
+            if (setObj.themeColor) localStorage.setItem('ft_themeColor', setObj.themeColor);
+            if (setObj.displayName) localStorage.setItem('ft_displayName', setObj.displayName);
+            
+            if (setObj.avatarImage) {
+              localStorage.setItem('ft_avatarImage', setObj.avatarImage);
+              localStorage.removeItem('ft_avatar');
+            } else {
+              localStorage.setItem('ft_avatar', setObj.avatar || '');
+              localStorage.removeItem('ft_avatarImage');
+            }
+          } catch(e) {}
+          location.href = 'index.html';
+        } else {
+          errBox.textContent = data.error || 'Неверный логин или пароль';
+          errBox.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Войти';
+          // Trigger shake animation
+          errBox.style.animation = 'none';
+          errBox.offsetHeight; /* trigger reflow */
+          errBox.style.animation = 'shake 0.4s ease';
+        }
+      } catch (e) {
+        errBox.textContent = 'Ошибка сети. Сервер недоступен.';
+        errBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+      }
+    });
+  </script>
 </body>
 </html>

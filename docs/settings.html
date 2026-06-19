@@ -11,11 +11,11 @@
 
   <div id="headerSlot"></div>
 
-  <div class="container" style="max-width:680px; margin:0 auto;">
-    <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:1.5rem; padding:0 0 0 0.5rem;">⚙️ Настройки профиля</h2>
+  <div class="container" style="max-width:720px; margin:0 auto; padding-top:2rem;">
+    <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:1.5rem; letter-spacing:-0.5px;">Настройки профиля</h2>
 
     <!-- Profile preview card -->
-    <div class="settings-card" id="profilePreview" style="margin-bottom:1.5rem;">
+    <div class="settings-card" id="profilePreview" style="margin-bottom:1.5rem; background: var(--bg-raised);">
       <div class="profile-preview-row">
         <div class="profile-preview-avatar" id="previewAvatar">🦊</div>
         <div>
@@ -32,9 +32,23 @@
       <div class="settings-hint">Максимум 32 символа</div>
     </div>
 
-    <!-- Avatar emoji -->
+    <!-- Avatar Upload / Emoji -->
     <div class="settings-card">
-      <label class="settings-label">Аватар (эмодзи)</label>
+      <label class="settings-label">Аватар (Фото или Эмодзи)</label>
+      
+      <div class="avatar-upload-area" style="margin-bottom: 1.5rem;">
+        <div class="avatar-preview-circle" id="uploadPreviewCircle">
+          <span id="uploadPreviewPlaceholder" style="opacity: 0.3;">📷</span>
+          <img id="uploadPreviewImg" src="" style="display:none;" alt="">
+        </div>
+        <div class="avatar-upload-controls">
+          <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+          <button class="avatar-upload-btn" onclick="document.getElementById('avatarFileInput').click()">Загрузить фотографию</button>
+          <button class="avatar-reset-btn" id="btnResetAvatar">Сбросить фото (использовать эмодзи)</button>
+        </div>
+      </div>
+
+      <label class="settings-label" style="font-size: 0.65rem;">Или выберите эмодзи:</label>
       <div class="emoji-picker" id="emojiPicker">
         <button class="emoji-btn" data-emoji="🦊">🦊</button>
         <button class="emoji-btn" data-emoji="🐉">🐉</button>
@@ -57,7 +71,7 @@
         <button class="emoji-btn" data-emoji="🎯">🎯</button>
         <button class="emoji-btn" data-emoji="🚀">🚀</button>
       </div>
-      <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Или вставь свой эмодзи" style="margin-top:0.75rem;">
+      <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи" style="margin-top:0.75rem; max-width: 200px;">
     </div>
 
     <!-- Theme color -->
@@ -75,8 +89,10 @@
         <button class="color-btn" data-color="#74c0fc" style="background:#74c0fc;"></button>
         <button class="color-btn" data-color="#20c997" style="background:#20c997;"></button>
       </div>
-      <input type="color" class="settings-color-input" id="themeColor" value="#7c6aff">
-      <span class="settings-hint" style="margin-left:0.5rem;">Кастомный цвет</span>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+        <input type="color" class="settings-color-input" id="themeColor" value="#7c6aff">
+        <span class="settings-hint" style="margin-top: 0;">Свой цвет (меняет оформление всего дашборда)</span>
+      </div>
     </div>
 
     <!-- Bio / Status -->
@@ -89,13 +105,13 @@
     <!-- Change password -->
     <div class="settings-card">
       <label class="settings-label">Смена пароля</label>
-      <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.6rem;">
+      <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.75rem;">
       <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
       <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
     </div>
 
     <!-- Save button -->
-    <button class="btn-submit" id="btnSave" style="max-width:100%; margin-bottom:1.5rem;">💾 Сохранить настройки</button>
+    <button class="btn-submit" id="btnSave" style="max-width:100%; margin-top: 1rem; margin-bottom:3rem;">Сохранить настройки</button>
 
   </div>
 

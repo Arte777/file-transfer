@@ -5,6 +5,7 @@ document.getElementById('headerSlot').innerHTML = renderHeader('settings');
 bindLogout();
 
 let currentSettings = {};
+let currentAvatarImageBase64 = null; // Хранит base64 фото, если выбрано
 
 // ── Загрузка текущих настроек ──────────────────────────────────────────────────
 async function loadSettings() {
@@ -13,9 +14,17 @@ async function loadSettings() {
     const s = await r.json();
     currentSettings = s;
     document.getElementById('displayName').value = s.displayName || '';
-    document.getElementById('avatarInput').value = s.avatar || '';
     document.getElementById('bio').value = s.bio || '';
     document.getElementById('themeColor').value = s.themeColor || '#7c6aff';
+    
+    if (s.avatarImage) {
+      currentAvatarImageBase64 = s.avatarImage;
+      document.getElementById('avatarInput').value = '';
+    } else {
+      document.getElementById('avatarInput').value = s.avatar || '';
+      currentAvatarImageBase64 = null;
+    }
+
     updatePreview();
     highlightSelectedEmoji(s.avatar);
     highlightSelectedColor(s.themeColor);
@@ -24,14 +33,59 @@ async function loadSettings() {
   }
 }
 
+// ── Обработка загрузки фото ────────────────────────────────────────────────────
+document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Проверка размера (до ~500КБ, чтобы уместиться в лимит base64)
+  if (file.size > 500 * 1024) {
+    toast('Файл слишком большой. Максимум 500 КБ.', 'err');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    currentAvatarImageBase64 = evt.target.result;
+    document.getElementById('avatarInput').value = ''; // очищаем эмодзи
+    highlightSelectedEmoji('');
+    updatePreview();
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('btnResetAvatar').addEventListener('click', function() {
+  currentAvatarImageBase64 = null;
+  document.getElementById('avatarFileInput').value = '';
+  document.getElementById('avatarInput').value = '🦊'; // дефолт эмодзи
+  highlightSelectedEmoji('🦊');
+  updatePreview();
+});
+
 // ── Превью профиля ─────────────────────────────────────────────────────────────
 function updatePreview() {
-  const avatar = document.getElementById('avatarInput').value || '⭐';
   const name = document.getElementById('displayName').value || getUser();
   const bio = document.getElementById('bio').value || '—';
-  document.getElementById('previewAvatar').textContent = avatar;
+  
   document.getElementById('previewName').textContent = name;
   document.getElementById('previewBio').textContent = bio;
+
+  const previewEl = document.getElementById('previewAvatar');
+  const uploadImg = document.getElementById('uploadPreviewImg');
+  const uploadPlaceholder = document.getElementById('uploadPreviewPlaceholder');
+
+  if (currentAvatarImageBase64) {
+    previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;">';
+    uploadImg.src = currentAvatarImageBase64;
+    uploadImg.style.display = 'block';
+    uploadPlaceholder.style.display = 'none';
+  } else {
+    const emoji = document.getElementById('avatarInput').value || '⭐';
+    previewEl.innerHTML = escapeHtml(emoji);
+    uploadImg.style.display = 'none';
+    uploadImg.src = '';
+    uploadPlaceholder.style.display = 'inline-block';
+  }
 }
 
 // ── Подсветка выбранного эмодзи ────────────────────────────────────────────────
@@ -53,23 +107,35 @@ document.querySelectorAll('.emoji-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     const emoji = this.dataset.emoji;
     document.getElementById('avatarInput').value = emoji;
+    currentAvatarImageBase64 = null; // Сбрасываем фото при выборе эмодзи
     highlightSelectedEmoji(emoji);
     updatePreview();
   });
 });
 
-// ── Color picker ───────────────────────────────────────────────────────────────
+// ── Color picker (Live Preview) ────────────────────────────────────────────────
+function handleColorChange(color) {
+  document.getElementById('themeColor').value = color;
+  highlightSelectedColor(color);
+  applyAccentColor(color); // Live update of CSS variables
+}
+
 document.querySelectorAll('.color-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const color = this.dataset.color;
-    document.getElementById('themeColor').value = color;
-    highlightSelectedColor(color);
-  });
+  btn.addEventListener('click', function() { handleColorChange(this.dataset.color); });
+});
+
+document.getElementById('themeColor').addEventListener('input', function() {
+  handleColorChange(this.value);
 });
 
 // ── Live preview на ввод ───────────────────────────────────────────────────────
 ['displayName', 'avatarInput', 'bio'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePreview);
+  document.getElementById(id).addEventListener('input', function() {
+    if (id === 'avatarInput' && this.value.trim() !== '') {
+      currentAvatarImageBase64 = null; // Если юзер вручную вводит эмодзи, сбрасываем фото
+    }
+    updatePreview();
+  });
 });
 
 // ── Сохранение ─────────────────────────────────────────────────────────────────
@@ -77,10 +143,16 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   const btn = this;
   const data = {
     displayName: document.getElementById('displayName').value.trim(),
-    avatar: document.getElementById('avatarInput').value.trim(),
     themeColor: document.getElementById('themeColor').value,
     bio: document.getElementById('bio').value.trim()
   };
+
+  if (currentAvatarImageBase64) {
+    data.avatarImage = currentAvatarImageBase64;
+  } else {
+    data.avatar = document.getElementById('avatarInput').value.trim();
+  }
+
   const newPwd = document.getElementById('newPassword').value;
   const curPwd = document.getElementById('currentPassword').value;
   if (newPwd) {
@@ -103,9 +175,22 @@ document.getElementById('btnSave').addEventListener('click', async function() {
       document.getElementById('newPassword').value = '';
       document.getElementById('currentPassword').value = '';
       currentSettings = resp.settings;
-      // Обновляем аватар/имя в localStorage чтобы шапка обновилась
-      if (resp.settings.avatar) localStorage.setItem('ft_avatar', resp.settings.avatar);
+      
+      // Обновляем localStorage для шапки
+      localStorage.setItem('ft_themeColor', resp.settings.themeColor);
       if (resp.settings.displayName) localStorage.setItem('ft_displayName', resp.settings.displayName);
+      
+      if (resp.settings.avatarImage) {
+        localStorage.setItem('ft_avatarImage', resp.settings.avatarImage);
+        localStorage.removeItem('ft_avatar');
+      } else {
+        localStorage.setItem('ft_avatar', resp.settings.avatar);
+        localStorage.removeItem('ft_avatarImage');
+      }
+      
+      // Перерисовываем шапку чтобы изменения вступили в силу
+      document.getElementById('headerSlot').innerHTML = renderHeader('settings');
+      bindLogout();
     } else {
       toast(resp.error || 'Ошибка сохранения', 'err');
     }
@@ -114,7 +199,7 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   }
 
   btn.disabled = false;
-  btn.textContent = '💾 Сохранить настройки';
+  btn.textContent = 'Сохранить настройки';
 });
 
 loadSettings();

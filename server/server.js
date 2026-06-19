@@ -284,7 +284,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
 
 app.post('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const { displayName, avatar, themeColor, bio, newPassword, currentPassword } = req.body || {};
+  const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
     if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
@@ -297,7 +297,13 @@ app.post('/api/settings', requireAuth, async (req, res) => {
 
   const patch = {};
   if (typeof displayName === 'string' && displayName.trim()) patch.displayName = displayName.trim().substring(0, 32);
-  if (typeof avatar === 'string' && avatar.trim()) patch.avatar = avatar.trim().substring(0, 8);
+  if (typeof avatarImage === 'string' && avatarImage.startsWith('data:image/') && avatarImage.length < 700000) {
+    patch.avatarImage = avatarImage;
+    patch.avatar = '';
+  } else if (typeof avatar === 'string' && avatar.trim()) {
+    patch.avatar = avatar.trim().substring(0, 8);
+    patch.avatarImage = '';
+  }
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (newPassword) patch.password = newPassword;

