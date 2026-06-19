@@ -164,6 +164,39 @@ const CREDENTIALS = {
   'DildMan': 'dild228'
 };
 
+// ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
+const SETTINGS_FILE = path.join(UPLOADS, '_settings.json');
+
+const DEFAULT_SETTINGS = {
+  'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#7c6aff', bio: 'Root Admin' },
+  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#00CEC9', bio: 'Operator' }
+};
+
+function readSettings() {
+  try { return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); }
+  catch { return {}; }
+}
+
+function writeSettings(data) {
+  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2)); } catch {}
+}
+
+function getOperatorSettings(user) {
+  const all = readSettings();
+  return { ...DEFAULT_SETTINGS[user] || {}, ...(all[user] || {}) };
+}
+
+function setOperatorSettings(user, patch) {
+  const all = readSettings();
+  if (!all[user]) all[user] = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined && v !== null) all[user][k] = v;
+  }
+  writeSettings(all);
+  // Обновляем пароль в CREDENTIALS если пришёл новый
+  if (patch.password) CREDENTIALS[user] = patch.password;
+}
+
 // ── Token-based auth (для статического сайта на GitHub Pages) ──────────────────
 const validTokens = new Map(); // token -> username
 
@@ -230,7 +263,43 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
-  res.json({ user: req.authUser || req.session.user });
+  const user = req.authUser || req.session.user;
+  const s = getOperatorSettings(user);
+  res.json({ user, ...s });
+});
+
+// ── Settings API ──────────────────────────────────────────────────────────────
+app.get('/api/settings', requireAuth, (req, res) => {
+  const user = req.authUser || req.session.user;
+  const s = getOperatorSettings(user);
+  // Не отдаём пароль
+  const { password, ...safe } = s;
+  res.json({ user, ...safe });
+});
+
+app.post('/api/settings', requireAuth, (req, res) => {
+  const user = req.authUser || req.session.user;
+  const { displayName, avatar, themeColor, bio, newPassword, currentPassword } = req.body || {};
+
+  // Если меняет пароль — проверяем текущий
+  if (newPassword) {
+    if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
+      return res.status(403).json({ error: 'Неверный текущий пароль' });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: 'Пароль слишком короткий (мин. 4 символа)' });
+    }
+  }
+
+  const patch = {};
+  if (typeof displayName === 'string' && displayName.trim()) patch.displayName = displayName.trim().substring(0, 32);
+  if (typeof avatar === 'string' && avatar.trim()) patch.avatar = avatar.trim().substring(0, 8);
+  if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
+  if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
+  if (newPassword) patch.password = newPassword;
+
+  setOperatorSettings(user, patch);
+  res.json({ success: true, settings: getOperatorSettings(user) });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

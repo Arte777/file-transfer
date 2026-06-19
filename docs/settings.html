@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Настройки профиля</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+  <div id="headerSlot"></div>
+
+  <div class="container" style="max-width:680px; margin:0 auto;">
+    <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:1.5rem; padding:0 0 0 0.5rem;">⚙️ Настройки профиля</h2>
+
+    <!-- Profile preview card -->
+    <div class="settings-card" id="profilePreview" style="margin-bottom:1.5rem;">
+      <div class="profile-preview-row">
+        <div class="profile-preview-avatar" id="previewAvatar">🦊</div>
+        <div>
+          <div class="profile-preview-name" id="previewName">—</div>
+          <div class="profile-preview-bio" id="previewBio">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Display name -->
+    <div class="settings-card">
+      <label class="settings-label">Отображаемое имя</label>
+      <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
+      <div class="settings-hint">Максимум 32 символа</div>
+    </div>
+
+    <!-- Avatar emoji -->
+    <div class="settings-card">
+      <label class="settings-label">Аватар (эмодзи)</label>
+      <div class="emoji-picker" id="emojiPicker">
+        <button class="emoji-btn" data-emoji="🦊">🦊</button>
+        <button class="emoji-btn" data-emoji="🐉">🐉</button>
+        <button class="emoji-btn" data-emoji="🐺">🐺</button>
+        <button class="emoji-btn" data-emoji="🦁">🦁</button>
+        <button class="emoji-btn" data-emoji="🐯">🐯</button>
+        <button class="emoji-btn" data-emoji="🐸">🐸</button>
+        <button class="emoji-btn" data-emoji="🦅">🦅</button>
+        <button class="emoji-btn" data-emoji="🐙">🐙</button>
+        <button class="emoji-btn" data-emoji="💀">💀</button>
+        <button class="emoji-btn" data-emoji="👻">👻</button>
+        <button class="emoji-btn" data-emoji="🤖">🤖</button>
+        <button class="emoji-btn" data-emoji="👾">👾</button>
+        <button class="emoji-btn" data-emoji="🔥">🔥</button>
+        <button class="emoji-btn" data-emoji="⚡">⚡</button>
+        <button class="emoji-btn" data-emoji="💎">💎</button>
+        <button class="emoji-btn" data-emoji="🌙">🌙</button>
+        <button class="emoji-btn" data-emoji="☀️">☀️</button>
+        <button class="emoji-btn" data-emoji="⭐">⭐</button>
+        <button class="emoji-btn" data-emoji="🎯">🎯</button>
+        <button class="emoji-btn" data-emoji="🚀">🚀</button>
+      </div>
+      <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Или вставь свой эмодзи" style="margin-top:0.75rem;">
+    </div>
+
+    <!-- Theme color -->
+    <div class="settings-card">
+      <label class="settings-label">Цвет акцента</label>
+      <div class="color-picker" id="colorPicker">
+        <button class="color-btn" data-color="#7c6aff" style="background:#7c6aff;"></button>
+        <button class="color-btn" data-color="#00CEC9" style="background:#00CEC9;"></button>
+        <button class="color-btn" data-color="#ff6b6b" style="background:#ff6b6b;"></button>
+        <button class="color-btn" data-color="#51cf66" style="background:#51cf66;"></button>
+        <button class="color-btn" data-color="#ffd43b" style="background:#ffd43b;"></button>
+        <button class="color-btn" data-color="#ff922b" style="background:#ff922b;"></button>
+        <button class="color-btn" data-color="#f783ac" style="background:#f783ac;"></button>
+        <button class="color-btn" data-color="#e599f7" style="background:#e599f7;"></button>
+        <button class="color-btn" data-color="#74c0fc" style="background:#74c0fc;"></button>
+        <button class="color-btn" data-color="#20c997" style="background:#20c997;"></button>
+      </div>
+      <input type="color" class="settings-color-input" id="themeColor" value="#7c6aff">
+      <span class="settings-hint" style="margin-left:0.5rem;">Кастомный цвет</span>
+    </div>
+
+    <!-- Bio / Status -->
+    <div class="settings-card">
+      <label class="settings-label">Статус / О себе</label>
+      <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Admin 🔥">
+      <div class="settings-hint">Показывается в шапке профиля (макс. 120 символов)</div>
+    </div>
+
+    <!-- Change password -->
+    <div class="settings-card">
+      <label class="settings-label">Смена пароля</label>
+      <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.6rem;">
+      <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
+      <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
+    </div>
+
+    <!-- Save button -->
+    <button class="btn-submit" id="btnSave" style="max-width:100%; margin-bottom:1.5rem;">💾 Сохранить настройки</button>
+
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/app.js"></script>
+  <script src="assets/settings.js"></script>
+</body>
+</html>

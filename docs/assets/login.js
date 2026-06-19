@@ -26,6 +26,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     }
     const data = await resp.json();
     setAuth(data.token, data.user);
+    // Подтягиваем настройки (аватар, имя, цвет) сразу после логина
+    try {
+      const sr = await fetch(API_BASE + '/api/settings', { headers: { 'Authorization': 'Bearer ' + data.token } });
+      if (sr.ok) {
+        const s = await sr.json();
+        if (s.avatar) localStorage.setItem('ft_avatar', s.avatar);
+        if (s.displayName) localStorage.setItem('ft_displayName', s.displayName);
+      }
+    } catch(_) {}
     location.href = 'index.html';
   } catch (err) {
     errBox.textContent = '⚠️ Нет связи с сервером';
