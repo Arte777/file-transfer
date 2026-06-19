@@ -96,18 +96,21 @@ app.use('/api/', apiLimiter);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(session({
+const sessionOpts = {
   secret: 'supersecret_ai_key_2025',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: MONGO_URI }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,            // защита от XSS-кражи cookie
-    sameSite: 'strict',        // защита от CSRF
-    secure: false              // false т.к. HTTP; при HTTPS поставить true
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: false
   }
-}));
+};
+if (MONGO_URI) {
+  sessionOpts.store = MongoStore.create({ mongoUrl: MONGO_URI });
+}
+app.use(session(sessionOpts));
 
 // ── Health check для Render ───────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
