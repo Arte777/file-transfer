@@ -12,9 +12,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   btn.disabled = true;
   errBox.style.display = 'none';
 
-  // Retry loop — Render free tier спит, нужен повтор
-  for (let attempt = 0; attempt < 3; attempt++) {
-    btn.textContent = attempt === 0 ? 'Вход...' : 'Повтор (' + (attempt + 1) + ')...';
+  // Retry loop — Render free tier спит до 60 сек, нужно больше попыток
+  for (let attempt = 0; attempt < 5; attempt++) {
+    btn.textContent = attempt === 0 ? 'Вход...' : 'Подключение (' + (attempt + 1) + '/5)...';
     try {
       const resp = await fetch(API_BASE + '/api/login', {
         method: 'POST',
@@ -22,10 +22,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         body: JSON.stringify({ username, password })
       });
 
-      if (resp.status === 502 || !resp.ok && resp.status === 0) {
-        // Render спит — ждём и ретраим
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 3000));
+      if (resp.status === 502) {
+        if (attempt < 4) {
+          await new Promise(r => setTimeout(r, 5000));
           continue;
         }
       }
@@ -40,24 +39,25 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
       const data = await resp.json();
       setAuth(data.token, data.user);
-      // Подтягиваем настройки сразу после логина
+      // Подтягиваем настройки
       try {
         const sr = await fetch(API_BASE + '/api/settings', { headers: { 'Authorization': 'Bearer ' + data.token } });
         if (sr.ok) {
           const s = await sr.json();
           if (s.avatar) localStorage.setItem('ft_avatar', s.avatar);
           if (s.displayName) localStorage.setItem('ft_displayName', s.displayName);
+          if (s.themeColor) localStorage.setItem('ft_themeColor', s.themeColor);
+          if (s.bio) localStorage.setItem('ft_bio', s.bio);
         }
       } catch(_) {}
       location.href = 'index.html';
       return;
     } catch (err) {
-      // Network error — Render спит
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 3000));
+      if (attempt < 4) {
+        await new Promise(r => setTimeout(r, 5000));
         continue;
       }
-      errBox.textContent = '⚠️ Сервер недоступен. Попробуй через минуту.';
+      errBox.textContent = '⚠️ Сервер просыпается... подожди минуту и попробуй снова.';
       errBox.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Войти';
