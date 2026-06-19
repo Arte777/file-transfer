@@ -58,38 +58,23 @@ function requireLogin() {
 }
 
 // fetch с подставленным API_BASE и Authorization-заголовком
-// Автоматически будит Render (free tier спит до 60 сек) и ретраит запрос
 async function apiFetch(path, opts = {}) {
   opts.headers = opts.headers || {};
   const token = getToken();
   if (token) opts.headers['Authorization'] = 'Bearer ' + token;
 
-  for (let attempt = 0; attempt < 4; attempt++) {
-    try {
-      const resp = await fetch(API_BASE + path, opts);
+  try {
+    const resp = await fetch(API_BASE + path, opts);
 
-      // 502 = Render спит, будим и ретраим
-      if (resp.status === 502) {
-        if (attempt < 3) {
-          await new Promise(r => setTimeout(r, 5000));
-          continue;
-        }
-      }
-
-      if (resp.status === 401 || resp.status === 403) {
-        clearAuth();
-        location.href = 'login.html';
-        throw new Error('auth');
-      }
-      return resp;
-    } catch (err) {
-      if (err.message === 'auth') throw err;
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 5000));
-        continue;
-      }
-      throw err;
+    if (resp.status === 401 || resp.status === 403) {
+      clearAuth();
+      location.href = 'login.html';
+      throw new Error('auth');
     }
+    return resp;
+  } catch (err) {
+    if (err.message === 'auth') throw err;
+    throw err;
   }
 }
 
