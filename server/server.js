@@ -2,15 +2,13 @@ const express      = require('express');
 const multer      = require('multer');
 const cors        = require('cors');
 const path        = require('path');
-const fs          = require('fs');
 const session     = require('express-session');
-const MongoStore  = require('connect-mongo').MongoStore;
 const https       = require('https');
 const http        = require('http');
 const WebSocket   = require('ws');
 const helmet      = require('helmet');
 const rateLimit   = require('express-rate-limit');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
@@ -107,9 +105,6 @@ const sessionOpts = {
     secure: false
   }
 };
-if (MONGO_URI) {
-  sessionOpts.store = MongoStore.create({ mongoUrl: MONGO_URI });
-}
 app.use(session(sessionOpts));
 
 // ── Health check для Render ───────────────────────────────────────────────────
