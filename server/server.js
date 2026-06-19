@@ -13,6 +13,7 @@ app.set('trust proxy', 1);
 // ── MongoDB подключение ───────────────────────────────────────────────────────
 const MONGO_URI = process.env.MONGODB_URI || '';
 const DB_NAME   = process.env.MONGODB_DB || 'file_transfer';
+console.log('MONGODB_URI set:', MONGO_URI ? 'YES (len=' + MONGO_URI.length + ')' : 'NO');
 let _db = null;
 let _dbConnecting = false;
 
@@ -244,13 +245,27 @@ app.get('/logout', (req, res) => {
 });
 
 // ── JSON auth для статического сайта ──────────────────────────────────────────
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
-    return res.status(401).json({ error: 'Неверный логин или пароль' });
+
+  // Сначала дефолтный пароль
+  if (CREDENTIALS[username] && CREDENTIALS[username] === password) {
+    return res.json({ token: makeToken(username), user: username });
   }
-  const token = makeToken(username);
-  res.json({ token, user: username });
+
+  // Если не подошёл — проверяем в MongoDB (может меняли через настройки)
+  try {
+    const db = await getDb();
+    if (db) {
+      const s = await db.collection('settings').findOne({ user: username });
+      if (s && s.password && s.password === password) {
+        CREDENTIALS[username] = s.password;
+        return res.json({ token: makeToken(username), user: username });
+      }
+    }
+  } catch (e) {}
+
+  return res.status(401).json({ error: 'Неверный логин или пароль' });
 });
 
 app.post('/api/logout', (req, res) => {
