@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Система Передачи Файлов — Вход</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="login-body">
+  <form id="loginForm" class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚡</div>
+      <span class="login-logo-text">СИСТЕМА ПЕРЕДАЧИ ФАЙЛОВ</span>
+    </div>
+
+    <h1>Авторизация</h1>
+    <p class="login-subtitle">Введите учетные данные для доступа</p>
+
+    <div id="errorMsg" class="error-msg" style="display:none;">⚠️ Неверный логин или пароль!</div>
+
+    <div class="input-group">
+      <input type="text" id="username" placeholder="Логин" required autocomplete="username">
+    </div>
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
+    </div>
+
+    <button type="submit" class="btn-submit">Войти</button>
+
+    <div class="security-note">🔒 Вход разрешен только администраторам системы</div>
+  </form>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/app.js"></script>
+  <script src="assets/login.js"></script>
+</body>
+</html>
