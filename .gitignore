@@ -31,6 +31,3 @@ Desktop.ini
 
 # ── Misc ────────────────────────────────────────────────
 nul
-
-# ── Local config (не коммитить — содержит IP сервера) ──
-docs/assets/config.js
