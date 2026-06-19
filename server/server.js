@@ -24,6 +24,17 @@ async function getDb() {
   await client.connect();
   _db = client.db(DB_NAME);
   console.log('✅ MongoDB connected');
+  try {
+    const list = await _db.collection('settings').find({}).toArray();
+    for (const doc of list) {
+      if (doc.user && doc.password) {
+        CREDENTIALS[doc.user] = doc.password;
+      }
+    }
+    console.log('🔑 Operator credentials synced from database');
+  } catch (e) {
+    console.error('⚠️ Failed to sync operator credentials:', e);
+  }
   return _db;
 }
 
@@ -172,7 +183,7 @@ const upload = multer({
 
 // ── Учётные данные (используются и сессией, и token-auth для статического сайта) ──
 const CREDENTIALS = {
-  'Shonll':  'shonll228',
+  'Shonll':  'khwSQqtf',
   'DildMan': 'dild228'
 };
 
