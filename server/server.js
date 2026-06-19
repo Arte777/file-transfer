@@ -249,11 +249,20 @@ app.get('/login228', (req, res) => {
   res.send(loginHTML(req.query.error));
 });
 
-app.post('/login228', (req, res) => {
+app.post('/login228', async (req, res) => {
   const { username, password } = req.body;
-  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
-    return res.redirect('/login228?error=1');
+  let valid = CREDENTIALS[username] && CREDENTIALS[username] === password;
+  if (!valid && CREDENTIALS[username]) {
+    try {
+      const db = await getDb();
+      const s = await db.collection('settings').findOne({ user: username });
+      if (s && s.password && s.password === password) {
+        valid = true;
+        CREDENTIALS[username] = s.password;
+      }
+    } catch (e) {}
   }
+  if (!valid) return res.redirect('/login228?error=1');
   req.session.user = username;
   res.redirect('/');
 });
@@ -263,9 +272,25 @@ app.get('/logout', (req, res) => {
 });
 
 // ── JSON auth для статического сайта (GitHub Pages) ────────────────────────────
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
+
+  // Сначала проверяем дефолтные CREDENTIALS
+  let valid = CREDENTIALS[username] && CREDENTIALS[username] === password;
+
+  // Если дефолтный не подошёл — проверяем пароль из MongoDB (на случай если меняли через настройки)
+  if (!valid && CREDENTIALS[username]) {
+    try {
+      const db = await getDb();
+      const s = await db.collection('settings').findOne({ user: username });
+      if (s && s.password && s.password === password) {
+        valid = true;
+        CREDENTIALS[username] = s.password; // кешируем
+      }
+    } catch (e) {}
+  }
+
+  if (!valid) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
   const token = makeToken();
@@ -298,7 +323,16 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
-    if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
+    // Проверяем текущий пароль — сначала CREDENTIALS, потом MongoDB
+    let pwdValid = CREDENTIALS[user] === currentPassword;
+    if (!pwdValid) {
+      try {
+        const db = await getDb();
+        const s = await db.collection('settings').findOne({ user });
+        if (s && s.password && s.password === currentPassword) pwdValid = true;
+      } catch (e) {}
+    }
+    if (!currentPassword || !pwdValid) {
       return res.status(403).json({ error: 'Неверный текущий пароль' });
     }
     if (newPassword.length < 4) {
