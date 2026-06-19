@@ -190,11 +190,12 @@ async function setOperatorSettings(user, patch) {
   if (patch.password) CREDENTIALS[user] = patch.password;
 }
 
-// ── Token-based auth (токены в памяти, не зависят от MongoDB) ──────────────────
-const validTokens = new Map(); // token -> username
+// ── Token-based auth (детерминированный токен — переживает перезапуск) ─────────
+const TOKEN_SECRET = process.env.TOKEN_SECRET || 'ft_secret_2026';
 
-function makeToken() {
-  return require('crypto').randomBytes(32).toString('hex');
+function makeToken(username) {
+  const crypto = require('crypto');
+  return crypto.createHmac('sha256', TOKEN_SECRET).update(username).digest('hex');
 }
 
 function currentUser(req) {
@@ -202,10 +203,14 @@ function currentUser(req) {
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    if (validTokens.has(t)) return validTokens.get(t);
+    for (const user of Object.keys(CREDENTIALS)) {
+      if (makeToken(user) === t) return user;
+    }
   }
-  if (req.query && req.query.token && validTokens.has(req.query.token)) {
-    return validTokens.get(req.query.token);
+  if (req.query && req.query.token) {
+    for (const user of Object.keys(CREDENTIALS)) {
+      if (makeToken(user) === req.query.token) return user;
+    }
   }
   return null;
 }
@@ -244,18 +249,11 @@ app.post('/api/login', (req, res) => {
   if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-  const token = makeToken();
-  validTokens.set(token, username);
+  const token = makeToken(username);
   res.json({ token, user: username });
 });
 
-app.post('/api/logout', async (req, res) => {
-  const h = req.headers.authorization;
-  if (h && h.startsWith('Bearer ')) {
-    const t = h.slice(7).trim();
-    const db = await getDb();
-    await db.collection('api_tokens').deleteOne({ token: t });
-  }
+app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
