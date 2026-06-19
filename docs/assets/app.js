@@ -58,17 +58,39 @@ function requireLogin() {
 }
 
 // fetch с подставленным API_BASE и Authorization-заголовком
+// Автоматически будит Render (free tier спит) и ретраит запрос
 async function apiFetch(path, opts = {}) {
   opts.headers = opts.headers || {};
   const token = getToken();
   if (token) opts.headers['Authorization'] = 'Bearer ' + token;
-  const resp = await fetch(API_BASE + path, opts);
-  if (resp.status === 401 || resp.status === 403) {
-    clearAuth();
-    location.href = 'login.html';
-    throw new Error('auth');
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await fetch(API_BASE + path, opts);
+
+      // 502 = Render спит, будим и ретраим
+      if (resp.status === 502) {
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+      }
+
+      if (resp.status === 401 || resp.status === 403) {
+        clearAuth();
+        location.href = 'login.html';
+        throw new Error('auth');
+      }
+      return resp;
+    } catch (err) {
+      // Network error = Render спит, ретраим
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
+      }
+      throw err;
+    }
   }
-  return resp;
 }
 
 // Абсолютный URL для статики сервера (превью /uploads/...)
