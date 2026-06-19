@@ -53,7 +53,7 @@
         const res = await fetch(API_BASE + '/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user: u, pass: p })
+          body: JSON.stringify({ username: u, password: p })
         });
         const data = await res.json();
         
