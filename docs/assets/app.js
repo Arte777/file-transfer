@@ -200,6 +200,10 @@ async function bindLogout() {
     e.preventDefault();
     try { await apiFetch('/api/logout', { method: 'POST' }); } catch (_) {}
     clearAuth();
+    // Очищаем "Запомнить меня" при ручном выходе
+    localStorage.removeItem('ft_remember');
+    localStorage.removeItem('ft_savedUser');
+    localStorage.removeItem('ft_savedPass');
     location.href = 'login.html';
   });
 }

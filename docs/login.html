@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Система Передачи Файлов — Вход</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=8">
+  <link rel="stylesheet" href="assets/style.css?v=9">
 </head>
 <body class="login-body">
 
@@ -28,6 +28,10 @@
         <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
       </div>
       
+      <label class="remember-me">
+        <input type="checkbox" id="rememberMe"> Запомнить меня
+      </label>
+      
       <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
     </form>
 
@@ -36,8 +40,38 @@
     </div>
   </div>
 
-  <script src="assets/config.js?v=8"></script>
+  <script src="assets/config.js?v=9"></script>
   <script>
+    // ── Автологин если "Запомнить меня" ──────────────────────────────────────
+    (async function() {
+      if (localStorage.getItem('ft_remember') === '1') {
+        const u = localStorage.getItem('ft_savedUser') || '';
+        const p = localStorage.getItem('ft_savedPass') || '';
+        if (u && p) {
+          try {
+            const res = await fetch(API_BASE + '/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: u, password: p })
+            });
+            const data = await res.json();
+            if (data.token) {
+              localStorage.setItem('ft_token', data.token);
+              localStorage.setItem('ft_user', u);
+              location.href = 'index.html';
+              return;
+            }
+          } catch(e) {}
+        }
+      }
+      // Предзаполнение логина
+      const savedUser = localStorage.getItem('ft_savedUser');
+      if (savedUser) {
+        document.getElementById('username').value = savedUser;
+        document.getElementById('rememberMe').checked = true;
+      }
+    })();
+
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const u = document.getElementById('username').value.trim();
@@ -60,6 +94,16 @@
         if (data.token) {
           localStorage.setItem('ft_token', data.token);
           localStorage.setItem('ft_user', u);
+          // Запомнить меня — сохраняем логин/пароль для автологина
+          if (document.getElementById('rememberMe').checked) {
+            localStorage.setItem('ft_remember', '1');
+            localStorage.setItem('ft_savedUser', u);
+            localStorage.setItem('ft_savedPass', p);
+          } else {
+            localStorage.removeItem('ft_remember');
+            localStorage.removeItem('ft_savedUser');
+            localStorage.removeItem('ft_savedPass');
+          }
           // Load initial settings before redirect
           try {
             const setRes = await fetch(API_BASE + '/api/settings', {

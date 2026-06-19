@@ -956,6 +956,22 @@ header {
   font-size: 0.72rem;
   color: var(--text-muted);
 }
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  user-select: none;
+}
+.remember-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOKENS PAGE
