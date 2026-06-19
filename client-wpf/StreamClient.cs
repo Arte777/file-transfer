@@ -10,17 +10,15 @@ namespace FileTransfer
 {
     public class StreamClient
     {
-        private readonly string _serverIp;
-        private readonly string _serverPort;
+        private readonly string _serverUrl;
         private readonly string _computerName;
         private readonly string _operatorName;
         private CancellationTokenSource _cts = new CancellationTokenSource();
         private Task? _loop;
 
-        public StreamClient(string serverIp, string serverPort, string computerName, string operatorName)
+        public StreamClient(string serverUrl, string computerName, string operatorName)
         {
-            _serverIp = serverIp;
-            _serverPort = serverPort;
+            _serverUrl = serverUrl;
             _computerName = computerName;
             _operatorName = operatorName;
         }
@@ -45,7 +43,8 @@ namespace FileTransfer
                 {
                     using var ws = new ClientWebSocket();
                     ws.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-                    var uri = new Uri($"wss://{_serverIp}:{_serverPort}/ws");
+                    var wsUrl = _serverUrl.Replace("https://", "wss://").Replace("http://", "ws://") + "/ws";
+                    var uri = new Uri(wsUrl);
                 MainWindow.Log("StreamClient connecting to " + uri);
                 await ws.ConnectAsync(uri, _cts.Token);
                 MainWindow.Log("StreamClient connected");

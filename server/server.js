@@ -1,17 +1,15 @@
 const express      = require('express');
-const multer       = require('multer');
-const cors         = require('cors');
-const path         = require('path');
-const fs           = require('fs');
-const session      = require('express-session');
-const https        = require('https');
-const http         = require('http');
-const WebSocket    = require('ws');
-const helmet       = require('helmet');
-const rateLimit    = require('express-rate-limit');
+const multer      = require('multer');
+const cors        = require('cors');
+const path        = require('path');
+const fs          = require('fs');
+const session     = require('express-session');
+const http        = require('http');
+const WebSocket   = require('ws');
+const helmet      = require('helmet');
+const rateLimit   = require('express-rate-limit');
 
 const app        = express();
-const PORT       = 25565;
 const UPLOADS    = path.join(__dirname, 'uploads');
 const META_FILE  = path.join(UPLOADS, '_metadata.json');
 
@@ -2162,15 +2160,9 @@ function setupWebSocket(httpServer) {
   });
 }
 
-// ── Start (HTTPS) ──────────────────────────────────────────────────────────────
-const sslOpts = {
-  key:  fs.readFileSync(path.join(__dirname, 'certs', 'key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, 'certs', 'cert.pem'))
-};
-const server = https.createServer(sslOpts, app).listen(PORT, '0.0.0.0', () => {
-  console.log('╔══════════════════════════════════════════╗');
-  console.log(`║  🚀 AI System (HTTPS) запущен на ${PORT}    ║`);
-  console.log(`║  https://134.249.56.228:${PORT}            ║`);
-  console.log('╚══════════════════════════════════════════╝');
+// ── Start ─────────────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 25565;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 setupWebSocket(server);

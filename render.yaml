@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: file-transfer
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/login
+    dir: server
