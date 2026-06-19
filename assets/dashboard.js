@@ -303,20 +303,4 @@ async function checkRobux(name) {
   }
 }
 
-// ── SSE Realtime ──────────────────────────────────────────────────────────────
-function setupSSE() {
-  const sse = new EventSource(API_BASE + "/events?token=" + getToken());
-  sse.onmessage = function(e) {
-    try {
-      const data = JSON.parse(e.data);
-      if (data.event === "new_file" && !isHiddenFile(data.file?.originalName || data.file?.name)) {
-        toast("📥 Получен новый файл!");
-        playChime();
-        loadFiles();
-      }
-    } catch(err) { }
-  };
-}
-
 loadFiles();
-setupSSE();
