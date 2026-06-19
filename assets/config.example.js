@@ -1,4 +1,5 @@
-// Адрес бэкенд-сервера.
-// Скопируй этот файл в config.js и впиши свой адрес сервера:
+// Адрес бэкенд-сервера на Render.com.
+// После создания сервиса на Render впиши сюда свой URL:
 //   cp config.example.js config.js
-window.API_BASE = 'https://YOUR-SERVER-IP:25565';
+// и замени YOUR-RENDER-URL на адрес типа https://file-transfer-xxxx.onrender.com
+window.API_BASE = 'https://YOUR-RENDER-URL.onrender.com';
