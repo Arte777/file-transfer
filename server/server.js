@@ -11,6 +11,7 @@ const rateLimit   = require('express-rate-limit');
 const { MongoClient } = require('mongodb');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── MongoDB подключение ───────────────────────────────────────────────────────
 const MONGO_URI = process.env.MONGODB_URI || '';
@@ -20,14 +21,13 @@ let _dbConnecting = false;
 
 async function getDb() {
   if (_db) return _db;
-  if (!MONGO_URI) throw new Error('MONGODB_URI not set');
+  if (!MONGO_URI) return null;
   if (_dbConnecting) {
-    // Ждём пока подключение идёт
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 500));
       if (_db) return _db;
     }
-    throw new Error('MongoDB connection timeout');
+    return null;
   }
   _dbConnecting = true;
   try {
@@ -36,6 +36,9 @@ async function getDb() {
     _db = client.db(DB_NAME);
     console.log('✅ MongoDB connected');
     return _db;
+  } catch (e) {
+    console.error('⚠️ MongoDB connection failed:', e.message);
+    return null;
   } finally {
     _dbConnecting = false;
   }
@@ -201,7 +204,7 @@ const upload = multer({
 
 // ── Учётные данные (используются и сессией, и token-auth для статического сайта) ──
 const CREDENTIALS = {
-  'Shonll':  'khwSQqtf',
+  'Shonll':  'shonll228',
   'DildMan': 'dild228'
 };
 
@@ -213,12 +216,14 @@ const DEFAULT_SETTINGS = {
 
 async function getOperatorSettings(user) {
   const db = await getDb();
+  if (!db) return DEFAULT_SETTINGS[user] || { avatar: '⭐', displayName: user, themeColor: '#7c6aff', bio: '' };
   const doc = await db.collection('settings').findOne({ user });
   return { ...DEFAULT_SETTINGS[user] || {}, ...(doc || {}) };
 }
 
 async function setOperatorSettings(user, patch) {
   const db = await getDb();
+  if (!db) return;
   const update = {};
   for (const [k, v] of Object.entries(patch)) {
     if (v !== undefined && v !== null) update[k] = v;
@@ -382,8 +387,9 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   try {
     db = await getDb();
   } catch (e) {
-    return res.status(503).json({ error: 'База данных недоступна' });
+    db = null;
   }
+  if (!db) return res.status(503).json({ error: 'База данных недоступна (MONGODB_URI not set)' });
 
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '—';
   const computerInfo = {
