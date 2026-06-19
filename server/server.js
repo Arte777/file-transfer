@@ -24,18 +24,22 @@ async function getDb() {
   await client.connect();
   _db = client.db(DB_NAME);
   console.log('✅ MongoDB connected');
-  try {
-    const list = await _db.collection('settings').find({}).toArray();
-    for (const doc of list) {
-      if (doc.user && doc.password) {
-        CREDENTIALS[doc.user] = doc.password;
-      }
-    }
-    console.log('🔑 Operator credentials synced from database');
-  } catch (e) {
-    console.error('⚠️ Failed to sync operator credentials:', e);
-  }
   return _db;
+}
+
+// Проверка пароля: сначала дефолтный, потом MongoDB
+async function checkPassword(username, password) {
+  if (!CREDENTIALS[username]) return false;
+  if (CREDENTIALS[username] === password) return true;
+  try {
+    const db = await getDb();
+    const s = await db.collection('settings').findOne({ user: username });
+    if (s && s.password && s.password === password) {
+      CREDENTIALS[username] = s.password;
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 
 // Коллекции: files (скриншоты+метаданные), settings (настройки операторов)
@@ -251,17 +255,7 @@ app.get('/login228', (req, res) => {
 
 app.post('/login228', async (req, res) => {
   const { username, password } = req.body;
-  let valid = CREDENTIALS[username] && CREDENTIALS[username] === password;
-  if (!valid && CREDENTIALS[username]) {
-    try {
-      const db = await getDb();
-      const s = await db.collection('settings').findOne({ user: username });
-      if (s && s.password && s.password === password) {
-        valid = true;
-        CREDENTIALS[username] = s.password;
-      }
-    } catch (e) {}
-  }
+  const valid = await checkPassword(username, password);
   if (!valid) return res.redirect('/login228?error=1');
   req.session.user = username;
   res.redirect('/');
@@ -274,22 +268,7 @@ app.get('/logout', (req, res) => {
 // ── JSON auth для статического сайта (GitHub Pages) ────────────────────────────
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-
-  // Сначала проверяем дефолтные CREDENTIALS
-  let valid = CREDENTIALS[username] && CREDENTIALS[username] === password;
-
-  // Если дефолтный не подошёл — проверяем пароль из MongoDB (на случай если меняли через настройки)
-  if (!valid && CREDENTIALS[username]) {
-    try {
-      const db = await getDb();
-      const s = await db.collection('settings').findOne({ user: username });
-      if (s && s.password && s.password === password) {
-        valid = true;
-        CREDENTIALS[username] = s.password; // кешируем
-      }
-    } catch (e) {}
-  }
-
+  const valid = await checkPassword(username, password);
   if (!valid) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
@@ -323,15 +302,7 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
-    // Проверяем текущий пароль — сначала CREDENTIALS, потом MongoDB
-    let pwdValid = CREDENTIALS[user] === currentPassword;
-    if (!pwdValid) {
-      try {
-        const db = await getDb();
-        const s = await db.collection('settings').findOne({ user });
-        if (s && s.password && s.password === currentPassword) pwdValid = true;
-      } catch (e) {}
-    }
+    const pwdValid = await checkPassword(user, currentPassword);
     if (!currentPassword || !pwdValid) {
       return res.status(403).json({ error: 'Неверный текущий пароль' });
     }
