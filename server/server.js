@@ -170,21 +170,34 @@ const DEFAULT_SETTINGS = {
   'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#00CEC9', bio: 'Operator' }
 };
 
+// In-memory fallback when MongoDB is not available
+const memSettings = {};
+
 async function getOperatorSettings(user) {
   const db = await getDb();
-  if (!db) return DEFAULT_SETTINGS[user] || { avatar: '⭐', displayName: user, themeColor: '#7c6aff', bio: '' };
+  if (!db) {
+    return { ...DEFAULT_SETTINGS[user] || {}, ...(memSettings[user] || {}) };
+  }
   const doc = await db.collection('settings').findOne({ user });
   return { ...DEFAULT_SETTINGS[user] || {}, ...(doc || {}) };
 }
 
 async function setOperatorSettings(user, patch) {
   const db = await getDb();
-  if (!db) return;
   const update = {};
   for (const [k, v] of Object.entries(patch)) {
     if (v !== undefined && v !== null) update[k] = v;
   }
   if (Object.keys(update).length === 0) return;
+
+  // In-memory fallback
+  if (!db) {
+    if (!memSettings[user]) memSettings[user] = {};
+    Object.assign(memSettings[user], update);
+    if (patch.password) CREDENTIALS[user] = patch.password;
+    return;
+  }
+
   await db.collection('settings').updateOne(
     { user },
     { $set: update },

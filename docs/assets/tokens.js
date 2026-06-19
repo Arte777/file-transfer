@@ -9,10 +9,11 @@ let sortMode = 'date'; // 'date' или 'robux'
 
 async function loadTokens() {
   try {
-    const r = await apiFetch('/robux');
+    const r = await apiFetch('/tokens-data');
     const data = await r.json();
-    allTokens = data.tokens || [];
+    allTokens = Array.isArray(data) ? data : (data.tokens || []);
     renderTokens();
+    toast('✅ Загружено');
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка загрузки токенов', 'err');
     document.getElementById('tokensContainer').innerHTML = "<div class='empty'><span class='empty-icon'>❌</span>Ошибка загрузки</div>";
