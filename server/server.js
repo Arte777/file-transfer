@@ -76,6 +76,10 @@ app.use(session({
 }));
 app.use('/uploads', express.static(UPLOADS));
 
+// ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
+const DOCS_DIR = path.join(__dirname, '..', 'docs');
+app.use(express.static(DOCS_DIR));
+
 // ── SSE Realtime Clients ──────────────────────────────────────────────────────
 let sseClients = [];
 
@@ -228,10 +232,6 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.authUser || req.session.user });
-});
-
-app.get('/', requireAuth, (req, res) => {
-  res.send(dashboardHTML(req.authUser || req.session.user));
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
