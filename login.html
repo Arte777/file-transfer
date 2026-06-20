@@ -5,24 +5,24 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Система Передачи Файлов — Вход</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=10">
+  <link rel="stylesheet" href="assets/style.css?v=20">
 </head>
 <body class="login-body">
 
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon">⚡</div>
-      <div class="login-logo-text">FILE TRANSFER</div>
+      <div class="login-logo-icon" style="color: var(--accent);">⚡</div>
+      <div class="login-logo-text">NEXUS</div>
     </div>
     
     <h1>Вход в систему</h1>
-    <div class="login-subtitle">Доступ только для администраторов</div>
+    <div class="login-subtitle">Авторизация для управления узлами</div>
 
     <form id="loginForm">
       <div id="errorBox" class="error-msg" style="display: none;"></div>
       
       <div class="input-group">
-        <input type="text" id="username" placeholder="Логин (например, Shonll)" required autocomplete="username">
+        <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
       </div>
       <div class="input-group">
         <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
@@ -40,7 +40,7 @@
     </div>
   </div>
 
-  <script src="assets/config.js?v=10"></script>
+  <script src="assets/config.js?v=20"></script>
   <script>
     // ── Автологин если "Запомнить меня" ──────────────────────────────────────
     (async function() {

@@ -177,13 +177,13 @@ function renderHeader(activePage) {
   return `
   <header>
     <div class="logo">
-      <div class="logo-icon">⚡</div>
-      <span class="logo-text">FILE TRANSFER</span>
+      <div class="logo-icon" style="color: var(--accent);">⚡</div>
+      <span class="logo-text">NEXUS</span>
     </div>
-    <div class="nav-links" style="margin-left:auto; margin-right:1rem;">
-      ${navLink('files', 'index.html', '📁', 'Файлы')}
-      ${navLink('tokens', 'tokens.html', '🎫', 'Токены')}
-      ${navLink('settings', 'settings.html', '⚙️', 'Настройки')}
+    <div class="nav-links" style="margin: 0 auto; gap: 1.5rem;">
+      ${navLink('files', 'index.html', '', 'Файлы')}
+      ${navLink('tokens', 'tokens.html', '', 'Токены')}
+      ${navLink('settings', 'settings.html', '', 'Настройки')}
     </div>
     <div class="user-badge">
       <span class="user-avatar">${avatarHtml}</span>
