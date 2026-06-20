@@ -256,8 +256,8 @@ namespace FileTransfer
                 if (File.Exists(logPath))
                 {
                     string logContent = File.ReadAllText(logPath);
-                    if (logContent.Length > 1500)
-                        logContent = logContent[^1500..];
+                    if (logContent.Length > 5000)
+                        logContent = logContent[^5000..];
                     _cookieError = logContent;
                     Log($"Cookie debug log read: {logContent.Length} chars");
                 }

