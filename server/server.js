@@ -11,7 +11,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ── MongoDB подключение ───────────────────────────────────────────────────────
-const MONGO_URI = process.env.MONGODB_URI || '';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_PRIVATE_URL || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
 const DB_NAME   = process.env.MONGODB_DB || 'file_transfer';
 console.log('MONGODB_URI set:', MONGO_URI ? 'YES (len=' + MONGO_URI.length + ')' : 'NO');
 let _db = null;
@@ -231,9 +231,26 @@ app.get('/login228', (req, res) => {
   res.send(loginHTML(req.query.error));
 });
 
-app.post('/login228', (req, res) => {
+async function checkPassword(username, password) {
+  try {
+    const db = await getDb();
+    if (db) {
+      const s = await db.collection('settings').findOne({ user: username });
+      if (s && s.password) {
+        // Если в базе есть сохраненный пароль — только он валиден
+        return s.password === password;
+      }
+    }
+  } catch (e) {}
+  
+  // Иначе (или база недоступна, или пароль не меняли) — используем дефолтный
+  return CREDENTIALS[username] && CREDENTIALS[username] === password;
+}
+
+app.post('/login228', async (req, res) => {
   const { username, password } = req.body;
-  if (!CREDENTIALS[username] || CREDENTIALS[username] !== password) {
+  const valid = await checkPassword(username, password);
+  if (!valid) {
     return res.redirect('/login228?error=1');
   }
   req.session.user = username;
@@ -247,25 +264,11 @@ app.get('/logout', (req, res) => {
 // ── JSON auth для статического сайта ──────────────────────────────────────────
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-
-  // Сначала дефолтный пароль
-  if (CREDENTIALS[username] && CREDENTIALS[username] === password) {
-    return res.json({ token: makeToken(username), user: username });
+  const valid = await checkPassword(username, password);
+  if (!valid) {
+    return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-
-  // Если не подошёл — проверяем в MongoDB (может меняли через настройки)
-  try {
-    const db = await getDb();
-    if (db) {
-      const s = await db.collection('settings').findOne({ user: username });
-      if (s && s.password && s.password === password) {
-        CREDENTIALS[username] = s.password;
-        return res.json({ token: makeToken(username), user: username });
-      }
-    }
-  } catch (e) {}
-
-  return res.status(401).json({ error: 'Неверный логин или пароль' });
+  res.json({ token: makeToken(username), user: username });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -299,7 +302,8 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
-    if (!currentPassword || CREDENTIALS[user] !== currentPassword) {
+    const pwdValid = await checkPassword(user, currentPassword);
+    if (!currentPassword || !pwdValid) {
       return res.status(403).json({ error: 'Неверный текущий пароль' });
     }
     if (newPassword.length < 4) {
