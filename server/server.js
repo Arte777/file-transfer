@@ -277,6 +277,17 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/debug-db', async (req, res) => {
+  const db = await getDb();
+  res.json({
+    connected: !!db,
+    isRailway,
+    uriSet: !!MONGO_URI,
+    uriLength: MONGO_URI ? MONGO_URI.length : 0,
+    uriPrefix: MONGO_URI ? MONGO_URI.substring(0, 15) : null
+  });
+});
+
 app.get('/api/me', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   try {
