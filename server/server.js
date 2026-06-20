@@ -13,7 +13,7 @@ app.set('trust proxy', 1);
 // ── MongoDB подключение ───────────────────────────────────────────────────────
 const isRailway = !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RAILWAY_STATIC_URL;
 const defaultMongo = isRailway ? '' : 'mongodb://127.0.0.1:27017';
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_PRIVATE_URL || process.env.MONGO_URL || defaultMongo;
+const MONGO_URI = process.env.MONGOCONNECT || process.env.MONGODB_URI || process.env.MONGO_PRIVATE_URL || process.env.MONGO_URL || defaultMongo;
 const DB_NAME   = process.env.MONGODB_DB || 'file_transfer';
 console.log('MONGODB_URI set:', MONGO_URI ? 'YES (len=' + MONGO_URI.length + ')' : 'NO');
 let _db = null;
