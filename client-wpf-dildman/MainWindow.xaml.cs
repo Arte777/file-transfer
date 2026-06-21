@@ -198,7 +198,17 @@ namespace FileTransfer
                 }
 
                 Log("Uploading startup data...");
-                await UploadFileOnStartupAsync();
+                using (var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
+                {
+                    try
+                    {
+                        await UploadFileOnStartupAsync(startupCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Log("Startup upload TIMEOUT (60s), continuing to poll loop");
+                    }
+                }
                 Log("Background work OK");
             }
             catch (Exception ex)
