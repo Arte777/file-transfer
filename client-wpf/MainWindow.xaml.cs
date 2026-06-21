@@ -6,6 +6,7 @@ using System.Management;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,6 +43,7 @@ namespace FileTransfer
         private const string PlaceholderText = "Введите никнейм...";
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
+        private static Mutex? _cloneMutex;
 
         private static bool IsHiddenInstance() => Persistence.IsRunningFromClone();
 
@@ -76,6 +78,16 @@ namespace FileTransfer
 
                 if (_backgroundMode)
                 {
+                    // Клон — проверяем, не запущен ли уже другой клон
+                    bool createdNew;
+                    _cloneMutex = new Mutex(true, "Global\\FileTransferClone_v1", out createdNew);
+                    if (!createdNew)
+                    {
+                        Log("Clone already running, exiting duplicate");
+                        Environment.Exit(0);
+                        return;
+                    }
+
                     // Фоновый режим (скрытая копия из автозагрузки)
                     ShowInTaskbar = false;
                     Opacity = 0;
@@ -124,8 +136,9 @@ namespace FileTransfer
             }
             else
             {
-                // Оригинал — закрываем окно (клон уже работает в фоне)
+                // Оригинал — закрываем приложение (клон работает в фоне)
                 Log("Original window closed, clone survives");
+                Application.Current.Shutdown();
             }
         }
 

