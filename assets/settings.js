@@ -23,7 +23,7 @@ async function loadSettings() {
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
-    document.getElementById('themeColor').value = localColor || s.themeColor || '#7c6aff';
+    document.getElementById('themeColor').value = localColor || s.themeColor || '#6366f1';
 
     if (localAvatarImage) {
       currentAvatarImageBase64 = localAvatarImage;
@@ -46,7 +46,7 @@ async function loadSettings() {
       const localBio = localStorage.getItem('ft_bio');
       document.getElementById('displayName').value = localName || '';
       document.getElementById('bio').value = localBio || '';
-      document.getElementById('themeColor').value = localColor || '#7c6aff';
+      document.getElementById('themeColor').value = localColor || '#6366f1';
       document.getElementById('avatarInput').value = localAvatar || '🦊';
       updatePreview();
     }

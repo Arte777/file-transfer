@@ -3,16 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>База токенов Roblox</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=20">
+  <title>NEXUS — База токенов</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=30">
 </head>
 <body>
 
   <div id="headerSlot"></div>
 
   <div class="container">
-    <!-- Stats -->
     <div class="stats-bar" style="padding:0; margin-bottom:1.5rem;">
       <div class="stat-card">
         <div class="stat-label">Всего токенов</div>
@@ -28,16 +27,14 @@
       </div>
     </div>
 
-    <!-- Controls -->
     <div class="controls" style="display:flex; gap:1rem; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap;">
       <div style="display:flex; gap:0.5rem;">
-        <button class="sort-btn active" id="btnSortDate">📅 По дате</button>
-        <button class="sort-btn" id="btnSortRobux">💰 По Robux</button>
+        <button class="sort-btn active" id="btnSortDate">По дате</button>
+        <button class="sort-btn" id="btnSortRobux">По Robux</button>
       </div>
-      <button class="btn-refresh" id="btnCheckAll" style="border-color:var(--success); color:var(--success);">✓ Проверить все</button>
+      <button class="btn-refresh" id="btnCheckAll" style="border-color:rgba(34,197,94,0.2); color:var(--success);">Проверить все</button>
     </div>
 
-    <!-- Tokens list -->
     <div id="tokensContainer">
       <div class="loading">Загрузка токенов...</div>
     </div>
@@ -45,8 +42,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=20"></script>
-  <script src="assets/app.js?v=20"></script>
-  <script src="assets/tokens.js?v=20"></script>
+  <script src="assets/config.js?v=30"></script>
+  <script src="assets/app.js?v=30"></script>
+  <script src="assets/tokens.js?v=30"></script>
 </body>
 </html>

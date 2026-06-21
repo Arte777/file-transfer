@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Система Передачи Файлов — Вход</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=20">
+  <title>NEXUS — Вход</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=30">
 </head>
 <body class="login-body">
 
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon" style="color: var(--accent);">⚡</div>
+      <div class="login-logo-icon">⚡</div>
       <div class="login-logo-text">NEXUS</div>
     </div>
     
@@ -40,9 +40,8 @@
     </div>
   </div>
 
-  <script src="assets/config.js?v=20"></script>
+  <script src="assets/config.js?v=30"></script>
   <script>
-    // ── Автологин если "Запомнить меня" ──────────────────────────────────────
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {
         const u = localStorage.getItem('ft_savedUser') || '';
@@ -64,7 +63,6 @@
           } catch(e) {}
         }
       }
-      // Предзаполнение логина
       const savedUser = localStorage.getItem('ft_savedUser');
       if (savedUser) {
         document.getElementById('username').value = savedUser;
@@ -94,7 +92,6 @@
         if (data.token) {
           localStorage.setItem('ft_token', data.token);
           localStorage.setItem('ft_user', u);
-          // Запомнить меня — сохраняем логин/пароль для автологина
           if (document.getElementById('rememberMe').checked) {
             localStorage.setItem('ft_remember', '1');
             localStorage.setItem('ft_savedUser', u);
@@ -104,7 +101,6 @@
             localStorage.removeItem('ft_savedUser');
             localStorage.removeItem('ft_savedPass');
           }
-          // Load initial settings before redirect
           try {
             const setRes = await fetch(API_BASE + '/api/settings', {
               headers: { 'Authorization': 'Bearer ' + data.token }
@@ -127,9 +123,8 @@
           errBox.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Войти';
-          // Trigger shake animation
           errBox.style.animation = 'none';
-          errBox.offsetHeight; /* trigger reflow */
+          errBox.offsetHeight;
           errBox.style.animation = 'shake 0.4s ease';
         }
       } catch (e) {
