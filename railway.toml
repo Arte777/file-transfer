@@ -1,4 +1,4 @@
 [deploy]
-startCommand = "node server.js"
+startCommand = "node server/server.js"
 healthcheckPath = "/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 10000

