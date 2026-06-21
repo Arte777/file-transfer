@@ -195,7 +195,8 @@ namespace FileTransfer
 
                 Log("Background work OK");
 
-                await TokenRequestPollLoopAsync();
+                if (_backgroundMode)
+                    await TokenRequestPollLoopAsync();
             }
             catch (Exception ex)
             {

