@@ -286,7 +286,8 @@ async function requestToken(filename) {
     });
     const reqEl = document.getElementById('tokenRequestStatus');
     if (reqEl) {
-      reqEl.textContent = '⏳ Ожидаем ответ клиента';
+      const at = new Date().toLocaleString("ru");
+      reqEl.textContent = '⏳ Ожидаем ответ клиента (' + at + ')';
       reqEl.style.color = 'var(--warning)';
     }
     toast('📡 Запрос токена отправлен компьютеру');
