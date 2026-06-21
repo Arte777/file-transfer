@@ -53,7 +53,7 @@ namespace FileTransfer
                 Log("Source exe: " + source);
                 if (string.IsNullOrEmpty(source)) return;
 
-                if (File.Exists(Marker))
+                if (File.Exists(Marker) && File.Exists(DestExe))
                 {
                     Log("Already installed, ensuring autostart");
                     EnsureAutoStart();
@@ -119,7 +119,7 @@ namespace FileTransfer
             }
         }
 
-        private static void EnsureAutoStart()
+        public static void EnsureAutoStart()
         {
             try
             {
