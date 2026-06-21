@@ -140,7 +140,7 @@ function operatorDisplayName(user) {
 
 // ── Акцентный цвет — глобальное применение ────────────────────────────────────
 function applyAccentColor(color) {
-  if (!color) color = localStorage.getItem('ft_themeColor') || '#7c6aff';
+  if (!color) color = localStorage.getItem('ft_themeColor') || '#6366f1';
   const root = document.documentElement;
   root.style.setProperty('--accent', color);
 
@@ -177,10 +177,10 @@ function renderHeader(activePage) {
   return `
   <header>
     <div class="logo">
-      <div class="logo-icon" style="color: var(--accent);">⚡</div>
+      <div class="logo-icon">⚡</div>
       <span class="logo-text">NEXUS</span>
     </div>
-    <div class="nav-links" style="margin: 0 auto; gap: 1.5rem;">
+    <div class="nav-links" style="margin: 0 auto;">
       ${navLink('files', 'index.html', '', 'Файлы')}
       ${navLink('tokens', 'tokens.html', '', 'Токены')}
       ${navLink('settings', 'settings.html', '', 'Настройки')}

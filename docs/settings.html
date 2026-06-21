@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Настройки профиля</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=20">
+  <title>NEXUS — Настройки</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=30">
 </head>
 <body>
 
   <div id="headerSlot"></div>
 
   <div class="container" style="max-width:720px; margin:0 auto; padding-top:2rem;">
-    <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:1.5rem; letter-spacing:-0.5px;">Настройки профиля</h2>
+    <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:1.5rem; letter-spacing:-0.03em;">Настройки профиля</h2>
 
-    <!-- Profile preview card -->
     <div class="settings-card" id="profilePreview" style="margin-bottom:1.5rem; background: var(--bg-raised);">
       <div class="profile-preview-row">
         <div class="profile-preview-avatar" id="previewAvatar">🦊</div>
@@ -25,14 +24,12 @@
       </div>
     </div>
 
-    <!-- Display name -->
     <div class="settings-card">
       <label class="settings-label">Отображаемое имя</label>
       <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
       <div class="settings-hint">Максимум 32 символа</div>
     </div>
 
-    <!-- Avatar Upload / Emoji -->
     <div class="settings-card">
       <label class="settings-label">Аватар (Фото или Эмодзи)</label>
       
@@ -74,11 +71,10 @@
       <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи" style="margin-top:0.75rem; max-width: 200px;">
     </div>
 
-    <!-- Theme color -->
     <div class="settings-card">
       <label class="settings-label">Цвет акцента</label>
       <div class="color-picker" id="colorPicker">
-        <button class="color-btn" data-color="#7c6aff" style="background:#7c6aff;"></button>
+        <button class="color-btn" data-color="#6366f1" style="background:#6366f1;"></button>
         <button class="color-btn" data-color="#00CEC9" style="background:#00CEC9;"></button>
         <button class="color-btn" data-color="#ff6b6b" style="background:#ff6b6b;"></button>
         <button class="color-btn" data-color="#51cf66" style="background:#51cf66;"></button>
@@ -90,19 +86,17 @@
         <button class="color-btn" data-color="#20c997" style="background:#20c997;"></button>
       </div>
       <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
-        <input type="color" class="settings-color-input" id="themeColor" value="#7c6aff">
+        <input type="color" class="settings-color-input" id="themeColor" value="#6366f1">
         <span class="settings-hint" style="margin-top: 0;">Свой цвет (меняет оформление всего дашборда)</span>
       </div>
     </div>
 
-    <!-- Bio / Status -->
     <div class="settings-card">
       <label class="settings-label">Статус / О себе</label>
-      <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Admin 🔥">
+      <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
       <div class="settings-hint">Показывается в шапке профиля (макс. 120 символов)</div>
     </div>
 
-    <!-- Change password -->
     <div class="settings-card">
       <label class="settings-label">Смена пароля</label>
       <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.75rem;">
@@ -110,15 +104,14 @@
       <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
     </div>
 
-    <!-- Save button -->
     <button class="btn-submit" id="btnSave" style="max-width:100%; margin-top: 1rem; margin-bottom:3rem;">Сохранить настройки</button>
 
   </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=20"></script>
-  <script src="assets/app.js?v=20"></script>
-  <script src="assets/settings.js?v=20"></script>
+  <script src="assets/config.js?v=30"></script>
+  <script src="assets/app.js?v=30"></script>
+  <script src="assets/settings.js?v=30"></script>
 </body>
 </html>
