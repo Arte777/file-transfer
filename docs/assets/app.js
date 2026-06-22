@@ -184,30 +184,7 @@ function renderHeader(activePage) {
       ${navLink('settings', 'settings.html', '', 'Настройки')}
     </div>
     
-    <!-- System Monitor Widget -->
-    <div class="sidebar-system-monitor">
-      <div class="monitor-header">
-        <span class="monitor-icon">🖥️</span> System Status
-      </div>
-      <div class="monitor-stats">
-        <div class="monitor-row">
-          <span class="monitor-label">Uptime</span>
-          <span class="monitor-value" style="color: #10b981;">99.9%</span>
-        </div>
-        <div class="monitor-row">
-          <span class="monitor-label">Network Ping</span>
-          <span class="monitor-value">12ms <span class="ping-dot"></span></span>
-        </div>
-        <div class="monitor-row">
-          <span class="monitor-label">Database</span>
-          <span class="monitor-value" style="color: var(--accent-text);">Stable</span>
-        </div>
-        <div class="monitor-row">
-          <span class="monitor-label">Active Modules</span>
-          <span class="monitor-value">3 / 3</span>
-        </div>
-      </div>
-    </div>
+    <div style="flex: 1;"></div>
 
     <div class="user-badge">
       <span class="user-avatar">${avatarHtml}</span>
