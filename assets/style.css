@@ -132,6 +132,7 @@ body::before {
   color: var(--text);
   margin-bottom: 3rem;
   text-transform: uppercase;
+  padding: 0 1.2rem;
 }
 
 .logo-icon {
@@ -183,7 +184,6 @@ body::before {
   color: var(--text);
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.05);
-  transform: translateX(5px);
 }
 
 .nav-link:hover .nav-icon {
@@ -196,7 +196,6 @@ body::before {
   border: 1px solid rgba(99, 102, 241, 0.4);
   font-weight: 700;
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
-  transform: translateX(5px);
 }
 
 .nav-link.active .nav-icon {
@@ -208,19 +207,16 @@ body::before {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 1rem;
-  background: rgba(20, 22, 35, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1rem 1.2rem;
+  background: transparent;
+  border: none;
   border-radius: 16px;
   margin-top: auto;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
 .user-badge:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(99, 102, 241, 0.15);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .user-avatar {
