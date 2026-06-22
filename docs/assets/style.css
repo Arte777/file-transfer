@@ -515,93 +515,128 @@ body::before {
   border-radius: 6px;
   border: 1px solid rgba(255,255,255,0.1);
 }
-
-/* ═══ TOKENS TABLE ═══ */
-.tokens-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 10px;
-  background: transparent;
-  box-shadow: none;
-}
-
-.tokens-table th, .tokens-table td {
-  padding: 1.2rem 1.5rem;
-  text-align: left;
-}
-
-.tokens-table th {
-  background: transparent;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  border: none;
-  padding-bottom: 0.5rem;
-}
-
-.tokens-table td {
+.token-card {
   background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
-
-.tokens-table tr td:first-child {
-  border-left: 1px solid var(--border);
-  border-top-left-radius: var(--radius-lg);
-  border-bottom-left-radius: var(--radius-lg);
+.token-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.1);
 }
-
-.tokens-table tr td:last-child {
-  border-right: 1px solid var(--border);
-  border-top-right-radius: var(--radius-lg);
-  border-bottom-right-radius: var(--radius-lg);
+.token-card-status {
+  position: absolute;
+  top: 15px;
+  right: 15px;
 }
-
-.tokens-table tr {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.token-card-robux {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
-
-.tokens-table tr:hover td {
-  background: var(--surface-hover);
+.token-card-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+  border: 2px solid rgba(255,255,255,0.1);
 }
-
-.tokens-table tr:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+.token-card-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  text-align: center;
 }
-
-.check-all-btn {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+.token-card-computer {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.token-card-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btn-login {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
   font-weight: 700;
-  padding: 0.8rem 1.5rem;
-  border-radius: var(--radius-md);
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
   gap: 8px;
 }
-.check-all-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1));
+.btn-login:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.1));
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
 }
-
-.skeleton-row {
-  display: flex;
+.btn-login.logged-in {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+.btn-login.logged-in:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.1));
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.skeleton-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 1.5rem;
-  margin-bottom: 10px;
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  height: 280px;
 }
 .skeleton-block {
   height: 20px;
