@@ -163,30 +163,42 @@ function applyAccentColor(color) {
 // Применяем акцент при загрузке каждой страницы
 applyAccentColor();
 
-// ── UI Components ──────────────────────────────────────────────────────────────
 function renderHeader(activePage) {
   const user = getUser();
   const avatarHtml = operatorAvatarHTML(user);
   const name = operatorDisplayName(user);
 
-  function navLink(page, href, icon, label) {
+  function navLink(page, href, iconSvg, label) {
     const cls = activePage === page ? 'nav-link active' : 'nav-link';
-    return '<a href="' + href + '" class="' + cls + '">' + icon + ' ' + label + '</a>';
+    return `<a href="${href}" class="${cls}">
+      <div class="nav-icon">${iconSvg}</div>
+      <span class="nav-label">${label}</span>
+    </a>`;
   }
+
+  const iconDashboard = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`;
+  const iconTokens = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`;
+  const iconSettings = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 
   return `<aside class="sidebar">
     <div class="logo">
       <span class="logo-text">NEXUS</span>
     </div>
     <div class="nav-links">
-      ${navLink('files', 'index.html', '', 'Дашборд')}
-      ${navLink('tokens', 'tokens.html', '', 'Токены')}
-      ${navLink('settings', 'settings.html', '', 'Настройки')}
+      ${navLink('files', 'index.html', iconDashboard, 'Дашборд')}
+      ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
+      ${navLink('settings', 'settings.html', iconSettings, 'Настройки')}
+      
+      <!-- Mobile only Profile Link -->
+      <a href="settings.html" class="nav-link mobile-profile-link ${activePage === 'settings' ? 'active' : ''}">
+        <div class="nav-icon user-avatar" style="width: 24px; height: 24px; font-size: 1rem;">${avatarHtml}</div>
+        <span class="nav-label">Профиль</span>
+      </a>
     </div>
     
-    <div style="flex: 1;"></div>
+    <div class="sidebar-spacer" style="flex: 1;"></div>
 
-    <div class="user-badge">
+    <div class="user-badge desktop-only">
       <span class="user-avatar">${avatarHtml}</span>
       <div class="user-info">
         <span class="user-name">${escapeHtml(name)}</span>
