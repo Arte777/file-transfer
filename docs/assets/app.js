@@ -174,18 +174,6 @@ function renderHeader(activePage) {
     return '<a href="' + href + '" class="' + cls + '">' + icon + ' ' + label + '</a>';
   }
 
-  // Generate unique ID for chat initialization
-  const chatHtmlId = `nexus_chat_${Math.floor(Math.random()*10000)}`;
-
-  // Attach init logic to window to call after DOM is ready
-  window.initSidebarChat = function() {
-    const container = document.getElementById(chatHtmlId);
-    if(!container || container.dataset.initialized) return;
-    container.dataset.initialized = 'true';
-    initNexusAI(container);
-  };
-  setTimeout(() => window.initSidebarChat(), 100);
-
   return `<aside class="sidebar">
     <div class="logo">
       <span class="logo-text">NEXUS</span>
@@ -196,18 +184,28 @@ function renderHeader(activePage) {
       ${navLink('settings', 'settings.html', '', 'Настройки')}
     </div>
     
-    <!-- AI Assistant Widget -->
-    <div class="sidebar-chat-wrapper" id="${chatHtmlId}">
-      <div class="sidebar-chat-header">
-        <span class="chat-status-dot"></span>
-        <span>NEXUS AI</span>
+    <!-- System Monitor Widget -->
+    <div class="sidebar-system-monitor">
+      <div class="monitor-header">
+        <span class="monitor-icon">🖥️</span> System Status
       </div>
-      <div class="sidebar-chat-messages">
-        <div class="chat-msg ai-msg">Система готова. Чем могу помочь, Админ?</div>
-      </div>
-      <div class="sidebar-chat-input-wrapper">
-        <input type="text" class="sidebar-chat-input" placeholder="Спросить ИИ...">
-        <button class="sidebar-chat-send">></button>
+      <div class="monitor-stats">
+        <div class="monitor-row">
+          <span class="monitor-label">Uptime</span>
+          <span class="monitor-value" style="color: #10b981;">99.9%</span>
+        </div>
+        <div class="monitor-row">
+          <span class="monitor-label">Network Ping</span>
+          <span class="monitor-value">12ms <span class="ping-dot"></span></span>
+        </div>
+        <div class="monitor-row">
+          <span class="monitor-label">Database</span>
+          <span class="monitor-value" style="color: var(--accent-text);">Stable</span>
+        </div>
+        <div class="monitor-row">
+          <span class="monitor-label">Active Modules</span>
+          <span class="monitor-value">3 / 3</span>
+        </div>
       </div>
     </div>
 
@@ -236,79 +234,4 @@ async function bindLogout() {
   });
 }
 
-// ── AI Assistant Logic (NEXUS AI) ──────────────────────────────────────────────
-function initNexusAI(container) {
-  const input = container.querySelector('.sidebar-chat-input');
-  const sendBtn = container.querySelector('.sidebar-chat-send');
-  const messagesDiv = container.querySelector('.sidebar-chat-messages');
 
-  const API_KEY = 'fe_oa_cbaca536b7607f971ecf244619b38d5684aeba85b26e1ed3';
-  
-  // Keep chat history in memory
-  let chatHistory = [
-    {
-      role: "system",
-      content: "Ты — NEXUS AI, личный встроенный помощник администратора системы NEXUS (панель управления логами, файлами и Robux Drainer). Отвечай кратко, стильно, в киберпанк/хакерском стиле. Твоя задача — помогать по функционалу сайта. ТЫ НЕ УМЕЕШЬ КОДИТЬ. Если тебя просят написать скрипт, код или взломать что-то реальное, жестко отвечай, что твоя специализация — только управление дашбордом NEXUS и ты не программист."
-    }
-  ];
-
-  function addMessage(text, isAi) {
-    const msg = document.createElement('div');
-    msg.className = `chat-msg ${isAi ? 'ai-msg' : 'user-msg'}`;
-    msg.textContent = text;
-    messagesDiv.appendChild(msg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    
-    input.value = '';
-    addMessage(text, false);
-    chatHistory.push({ role: "user", content: text });
-
-    // Show typing indicator
-    const typingMsg = document.createElement('div');
-    typingMsg.className = 'chat-msg ai-msg typing-indicator';
-    typingMsg.textContent = 'Обработка запроса...';
-    messagesDiv.appendChild(typingMsg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    try {
-      const response = await fetch('https://api.freemodel.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "5.4",
-          messages: chatHistory,
-          max_tokens: 300
-        })
-      });
-
-      typingMsg.remove();
-
-      if (!response.ok) throw new Error('API Error');
-      
-      const data = await response.json();
-      const aiResponse = data.choices[0].message.content;
-      
-      addMessage(aiResponse, true);
-      chatHistory.push({ role: "assistant", content: aiResponse });
-
-    } catch (e) {
-      typingMsg.remove();
-      addMessage('Сбой связи с сервером AI.', true);
-      // Remove the failed user message from history so it doesn't break future context
-      chatHistory.pop(); 
-    }
-  }
-
-  sendBtn.addEventListener('click', sendMessage);
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-}
