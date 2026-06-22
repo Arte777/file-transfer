@@ -123,7 +123,7 @@ function renderFiles(list) {
     let indicator = "";
     if (hasRoblox) {
       const color = isValid ? "var(--success)" : "var(--danger)";
-      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 10px " + color + ";' title='" + (isValid ? "Roblox токен найден" : "Токен недействителен") + "'></div>";
+      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 10px " + color + "; z-index: 10;' title='" + (isValid ? "Roblox токен найден" : "Токен недействителен") + "'></div>";
     }
 
     html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\" style='position:relative'>" +
