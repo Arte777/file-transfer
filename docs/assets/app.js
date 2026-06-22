@@ -168,9 +168,9 @@ function renderHeader(activePage) {
   const avatarHtml = operatorAvatarHTML(user);
   const name = operatorDisplayName(user);
 
-  function navLink(page, href, iconSvg, label) {
-    const cls = activePage === page ? 'nav-link active' : 'nav-link';
-    return `<a href="${href}" class="${cls}">
+  function navLink(page, href, iconSvg, label, extraClass = '') {
+    const cls = activePage === page ? 'nav-link active ' + extraClass : 'nav-link ' + extraClass;
+    return `<a href="${href}" class="${cls.trim()}">
       <div class="nav-icon">${iconSvg}</div>
       <span class="nav-label">${label}</span>
     </a>`;
@@ -187,7 +187,7 @@ function renderHeader(activePage) {
     <div class="nav-links">
       ${navLink('files', 'index.html', iconDashboard, 'Дашборд')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
-      ${navLink('settings', 'settings.html', iconSettings, 'Настройки')}
+      ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
       
       <!-- Mobile only Profile Link -->
       <a href="settings.html" class="nav-link mobile-profile-link ${activePage === 'settings' ? 'active' : ''}">
