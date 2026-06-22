@@ -853,53 +853,75 @@ body::before {
 /* ═══ MOBILE OPTIMIZATION ═══ */
 @media (max-width: 768px) {
   .sidebar-layout {
-    flex-direction: column-reverse;
+    flex-direction: column;
+  }
+  .main-content {
+    padding: 1rem;
+    padding-bottom: 80px; /* Leave space for bottom nav */
   }
   .sidebar {
     width: 100%;
-    height: auto;
-    padding: 0.8rem 0.5rem;
+    height: 65px;
+    padding: 0 0.5rem;
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     border-right: none;
-    border-bottom: none;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(10, 11, 18, 0.95);
-    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 1000;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
   }
   .sidebar::after { display: none; }
   .logo { display: none; } /* Hide logo on mobile to save space */
+  .sidebar-spacer { display: none; }
+  .desktop-only { display: none !important; }
+  
   .nav-links {
     display: flex;
     flex-direction: row;
     margin: 0;
-    gap: 0.5rem;
-    overflow-x: auto;
-    flex: 1;
+    padding: 0;
+    gap: 0;
+    width: 100%;
     justify-content: space-around;
+    align-items: center;
   }
   .nav-link {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
+    padding: 0.4rem;
+    font-size: 0.65rem;
     margin-bottom: 0;
-    justify-content: center;
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 4px;
+    flex: 1;
+    border-radius: 12px;
+    background: transparent !important; /* Remove background on mobile to keep it clean */
   }
-  .user-badge {
-    margin-top: 0;
-    padding: 0 0.5rem;
-    background: none;
-    border: none;
+  .nav-link.active {
+    color: var(--accent);
   }
-  .user-info { display: none; }
-  .user-avatar { width: 36px; height: 36px; font-size: 1.2rem; }
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+  .mobile-profile-link {
+    display: flex;
+  }
   
-  .main-content {
-    padding: 1rem;
-  }
   .stats-bar {
     grid-template-columns: 1fr;
     gap: 1rem;
