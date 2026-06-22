@@ -1,7 +1,7 @@
 // ── Страница настроек (статическая версия) ────────────────────────────────────
 if (!requireLogin()) throw new Error('redirect');
 
-document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
+document.getElementById('headerSlot').innerHTML = renderHeader('settings');
 bindLogout();
 
 let currentSettings = {};
@@ -225,7 +225,7 @@ document.getElementById('btnSave').addEventListener('click', async function() {
       }
       
       // Перерисовываем шапку чтобы изменения вступили в силу
-      document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
+      document.getElementById('headerSlot').innerHTML = renderHeader('settings');
       bindLogout();
     } else {
       toast(resp.error || 'Ошибка сохранения', 'err');

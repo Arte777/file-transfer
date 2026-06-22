@@ -175,23 +175,22 @@ function renderHeader(activePage) {
   }
 
   return `
-  <aside class="sidebar">
+  <header>
     <div class="logo">
+      <div class="logo-icon">⚡</div>
       <span class="logo-text">NEXUS</span>
     </div>
-    <div class="nav-links">
-      ${navLink('files', 'index.html', '', 'Дашборд')}
+    <div class="nav-links" style="margin: 0 auto;">
+      ${navLink('files', 'index.html', '', 'Файлы')}
       ${navLink('tokens', 'tokens.html', '', 'Токены')}
       ${navLink('settings', 'settings.html', '', 'Настройки')}
     </div>
     <div class="user-badge">
       <span class="user-avatar">${avatarHtml}</span>
-      <div class="user-info">
-        <span class="user-name">${escapeHtml(name)}</span>
-        <button class="btn-logout" id="btnLogout">Выйти</button>
-      </div>
+      <span class="user-name">${escapeHtml(name)}</span>
+      <a href="#" class="btn-logout" id="btnLogout">Выйти</a>
     </div>
-  </aside>`;
+  </header>`;
 }
 
 async function bindLogout() {

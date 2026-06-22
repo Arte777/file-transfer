@@ -1,7 +1,7 @@
 // ── Страница токенов ──────────────────────────────────────────────────────────
 if (!requireLogin()) throw new Error('redirect');
 
-document.getElementById('sidebarSlot').innerHTML = renderHeader('tokens');
+document.getElementById('headerSlot').innerHTML = renderHeader('tokens');
 bindLogout();
 
 let allTokens = [];
@@ -87,13 +87,7 @@ function renderTokens() {
     html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">💰 Проверить</button>';
     if (t.security) {
       html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">📋 Копировать</button>';
-      let loginBtnText = '👤 Войти';
-      const lastLogin = localStorage.getItem('login_' + fileId);
-      if (lastLogin) {
-        const d = new Date(parseInt(lastLogin));
-        loginBtnText = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-      }
-      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">' + loginBtnText + '</button>';
+      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this)" style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">👤 Войти</button>';
     }
     html += '</div></td>';
     html += '</tr>';
@@ -167,7 +161,7 @@ function copyText(text) {
 }
 
 // ── Вход в Roblox по токену ───────────────────────────────────────────────────
-function loginToRoblox(token, btn, fileId) {
+function loginToRoblox(token, btn) {
   if (!token) return;
   btn.textContent = '⏳...';
   btn.disabled = true;
@@ -176,38 +170,22 @@ function loginToRoblox(token, btn, fileId) {
     if (e.data && e.data.type === 'nexus-login-response') {
       window.removeEventListener('message', handler);
       if (e.data.ok) {
-        if (fileId) {
-          localStorage.setItem('login_' + fileId, Date.now());
-          const d = new Date();
-          btn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-        } else {
-          btn.textContent = '👤 Войти';
-        }
+        btn.textContent = '👤 Войти';
         btn.disabled = false;
         toast('✅ Вход выполнен, открываем Roblox...');
       } else {
-        restoreBtnText();
+        btn.textContent = '👤 Войти';
+        btn.disabled = false;
         toast('⚠️ Установи расширение NEXUS для входа', 'err');
       }
     }
   }
-
-  function restoreBtnText() {
-    const lastLogin = fileId ? localStorage.getItem('login_' + fileId) : null;
-    if (lastLogin) {
-      const d = new Date(parseInt(lastLogin));
-      btn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-    } else {
-      btn.textContent = '👤 Войти';
-    }
-    btn.disabled = false;
-  }
-
   window.addEventListener('message', handler);
   window.postMessage({ type: 'nexus-login', token }, '*');
   setTimeout(() => {
     window.removeEventListener('message', handler);
-    restoreBtnText();
+    btn.textContent = '👤 Войти';
+    btn.disabled = false;
     toast('⚠️ Установи расширение NEXUS для входа', 'err');
   }, 800);
 }
