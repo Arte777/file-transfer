@@ -245,6 +245,7 @@ document.getElementById('btnSave').addEventListener('click', async function() {
       localStorage.setItem('ft_themeColor', data.themeColor);
       if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
       if (data.bio) localStorage.setItem('ft_bio', data.bio);
+      if (data.drainGamepasses) localStorage.setItem('ft_drainGamepasses', data.drainGamepasses);
 
       if (data.avatarImage) {
         localStorage.setItem('ft_avatarImage', data.avatarImage);

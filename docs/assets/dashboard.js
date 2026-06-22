@@ -229,6 +229,10 @@ function openModalByIndex(idx) {
   }
 
   // Preview pane removed
+  
+  document.getElementById("modalOpenBtn").onclick = function() {
+    window.location.href = "tokens.html?file=" + encodeURIComponent(f.name);
+  };
 
   // Removed modalRobuxBtn
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
