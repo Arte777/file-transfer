@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS - Обновления</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=45">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="top-bar">
+        <h1 class="page-title">Обновления</h1>
+      </div>
+      
+      <div class="container" style="max-width: 800px; margin: 0 auto;">
+        
+        <!-- Герой блок скачивания актуальной версии -->
+        <div class="update-hero-card" id="heroDownloadCard">
+          <div class="update-hero-content">
+            <h2 class="update-hero-title">Актуальный Билд</h2>
+            <div class="update-hero-version" id="heroVersion">Загрузка...</div>
+            <p class="update-hero-desc">Скачайте последнюю версию клиентского приложения для оптимальной работы и безопасности.</p>
+            <a href="#" id="btnDownloadLatest" class="download-hero-btn" target="_blank" download>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Скачать .exe</span>
+            </a>
+          </div>
+          <div class="update-hero-bg"></div>
+        </div>
+
+        <!-- История обновлений (Таймлайн) -->
+        <div class="changelog-container" id="changelogList">
+          <!-- SKELETON LOADER -->
+          <div class="skeleton-row" style="height: 100px; margin-bottom: 20px;">
+            <div class="skeleton-block" style="flex:1;"></div>
+          </div>
+          <div class="skeleton-row" style="height: 150px; opacity: 0.5;">
+            <div class="skeleton-block" style="flex:1;"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div> <!-- end of sidebar-layout -->
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=45"></script>
+  <script src="assets/app.js?v=45"></script>
+  <script src="assets/updates.js?v=45"></script>
+</body>
+</html>
