@@ -132,7 +132,7 @@ function renderChart(files) {
           yAxisID: 'y'
         },
         {
-          label: 'Логи',
+          label: 'Компьютеры',
           data: computersData,
           borderColor: '#6366f1',
           backgroundColor: 'rgba(99, 102, 241, 0.1)',
