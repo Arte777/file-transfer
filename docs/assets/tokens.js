@@ -22,6 +22,21 @@ async function loadTokens() {
     const r = await apiFetch('/tokens-data');
     allTokens = await r.json();
     if (!Array.isArray(allTokens)) allTokens = [];
+
+    // Sync old local logins to the server
+    for (const t of allTokens) {
+      if (!t.file) continue;
+      const localVal = localStorage.getItem('login_' + t.file);
+      if (localVal && !t.lastLogin) {
+        apiFetch('/api/login-mark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: t.file, timestamp: parseInt(localVal) })
+        }).catch(()=>{});
+        t.lastLogin = parseInt(localVal);
+      }
+    }
+
     updateStats();
     renderTokens();
   } catch (e) {

@@ -25,6 +25,21 @@ async function loadFiles() {
     const data = await r.json();
     // Фильтруем системные файлы
     allFiles = data.filter(f => !isHiddenFile(f.originalName || f.name));
+
+    // Sync old local logins to the server
+    for (const f of allFiles) {
+      if (!f.roblox) continue;
+      const localVal = localStorage.getItem('login_' + f.name);
+      if (localVal && !f.roblox.lastLogin) {
+        apiFetch('/api/login-mark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: f.name, timestamp: parseInt(localVal) })
+        }).catch(()=>{});
+        f.roblox.lastLogin = parseInt(localVal);
+      }
+    }
+
     updateStats();
     populatePCFilter();
     filterFiles();

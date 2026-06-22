@@ -1002,11 +1002,11 @@ app.get('/tokens', requireAuth, (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   app.post('/api/login-mark', requireAuth, async (req, res) => {
     try {
-      const { filename } = req.body;
+      const { filename, timestamp } = req.body;
       if (!filename) return res.status(400).json({ error: 'No file' });
       const user = req.authUser || req.session.user;
       const db = await getDb();
-      const now = Date.now();
+      const now = timestamp || Date.now();
       if (db) {
         await db.collection('files').updateOne(
           { name: filename, operator: user },
