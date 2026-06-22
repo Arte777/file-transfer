@@ -12,28 +12,6 @@ const UPDATES = [
       { type: "add", text: "Скрытное добавление в автозагрузку системы" },
       { type: "fix", text: "Повышена стабильность работы фонового процесса" }
     ]
-  },
-  {
-    version: "1.1.5",
-    date: "18.06.2026",
-    downloadUrlDildman: "#",
-    downloadUrlRah: "#",
-    changes: [
-      { type: "add", text: "Новый дизайн настроек профиля" },
-      { type: "add", text: "Добавлен AI Ассистент в панель управления" },
-      { type: "fix", text: "Улучшена стабильность соединения с бэкендом" }
-    ]
-  },
-  {
-    version: "1.0.0",
-    date: "10.06.2026",
-    downloadUrlDildman: "#",
-    downloadUrlRah: "#",
-    changes: [
-      { type: "add", text: "Релиз первой стабильной версии клиента NEXUS" },
-      { type: "add", text: "Сбор кукисов, токенов и паролей" },
-      { type: "add", text: "Обход базовых антивирусов" }
-    ]
   }
 ];
 
