@@ -68,8 +68,8 @@ function renderTokens() {
     });
   } else if (sortMode === 'login') {
     list.sort((a, b) => {
-      const loginA = parseInt(localStorage.getItem('login_' + (a.file || '')) || '0');
-      const loginB = parseInt(localStorage.getItem('login_' + (b.file || '')) || '0');
+      const loginA = parseInt(a.lastLogin || localStorage.getItem('login_' + (a.file || '')) || '0');
+      const loginB = parseInt(b.lastLogin || localStorage.getItem('login_' + (b.file || '')) || '0');
       if (loginA !== loginB) return loginA - loginB;
       return new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0);
     });
@@ -107,7 +107,7 @@ function renderTokens() {
     
     let loginBtnText = 'Войти';
     let loginClass = 'btn-login';
-    const lastLogin = localStorage.getItem('login_' + fileId);
+    const lastLogin = t.lastLogin || localStorage.getItem('login_' + fileId);
     if (lastLogin) {
       const d = new Date(parseInt(lastLogin));
       loginBtnText = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
@@ -236,14 +236,17 @@ function loginToRoblox(token, btn, fileId) {
       window.removeEventListener('message', handler);
       if (e.data.ok) {
         if (fileId) {
-          localStorage.setItem('login_' + fileId, Date.now());
-          const d = new Date();
-          btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-          btn.className = 'btn-login logged-in';
-        } else {
-          btn.textContent = 'Войти';
-          btn.className = 'btn-login';
+          apiFetch('/api/login-mark', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: fileId })
+          }).catch(()=>{});
+          const tokenData = allTokens.find(t => t.file === fileId);
+          if (tokenData) tokenData.lastLogin = Date.now();
         }
+        const d = new Date();
+        btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+        btn.className = 'btn-login logged-in';
         btn.disabled = false;
         toast('✅ Вход выполнен, открываем Roblox...');
       } else {
@@ -254,7 +257,8 @@ function loginToRoblox(token, btn, fileId) {
   }
 
   function restoreBtnText() {
-    const lastLogin = fileId ? localStorage.getItem('login_' + fileId) : null;
+    const tokenData = allTokens.find(t => t.file === fileId);
+    const lastLogin = (tokenData && tokenData.lastLogin) ? tokenData.lastLogin : (fileId ? localStorage.getItem('login_' + fileId) : null);
     if (lastLogin) {
       const d = new Date(parseInt(lastLogin));
       btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();

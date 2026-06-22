@@ -169,7 +169,7 @@ function openModalByIndex(idx) {
   const tokenStatusRow = document.getElementById("tokenStatusRow");
   const tokenStatusText = document.getElementById("tokenStatusText");
 
-  const lastLogin = localStorage.getItem('login_' + f.name);
+  const lastLogin = roblox.lastLogin || localStorage.getItem('login_' + f.name);
   let loginText = '👤 Войти в аккаунт';
   if (lastLogin) {
     const d = new Date(parseInt(lastLogin));
@@ -188,6 +188,11 @@ function openModalByIndex(idx) {
           window.removeEventListener('message', handler);
           if (e.data.ok) {
             localStorage.setItem('login_' + f.name, Date.now());
+            apiFetch('/api/login-mark', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: f.name })
+            }).catch(()=>{}); // Fire and forget
             const d = new Date();
             loginBtn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
             loginBtn.disabled = false;
