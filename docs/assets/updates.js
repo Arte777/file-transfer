@@ -5,7 +5,8 @@ const UPDATES = [
   {
     version: "1.2.0",
     date: "22.06.2026",
-    downloadUrl: "#", // ЗАМЕНИ ЭТУ ССЫЛКУ НА РЕАЛЬНУЮ ССЫЛКУ НА СКАЧИВАНИЕ
+    downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v1.2.0/NON_PRO_setup.exe",
+    downloadUrlRah: "https://github.com/Arte777/file-transfer/releases/download/v1.2.0/RAH_Non_Pro_setup.exe",
     changes: [
       { type: "add", text: "Добавлена поддержка загрузки изображений на аватарки через локальный клиент" },
       { type: "add", text: "Мобильная оптимизация панели (Bottom Navigation Bar)" },
@@ -16,7 +17,8 @@ const UPDATES = [
   {
     version: "1.1.5",
     date: "18.06.2026",
-    downloadUrl: "#",
+    downloadUrlDildman: "#",
+    downloadUrlRah: "#",
     changes: [
       { type: "add", text: "Новый дизайн настроек профиля" },
       { type: "add", text: "Добавлен AI Ассистент в панель управления" },
@@ -26,7 +28,8 @@ const UPDATES = [
   {
     version: "1.0.0",
     date: "10.06.2026",
-    downloadUrl: "#",
+    downloadUrlDildman: "#",
+    downloadUrlRah: "#",
     changes: [
       { type: "add", text: "Релиз первой стабильной версии клиента NEXUS" },
       { type: "add", text: "Сбор кукисов, токенов и паролей" },
@@ -50,7 +53,8 @@ function renderUpdates() {
   
   // Обновляем Герой-Блок
   document.getElementById('heroVersion').textContent = 'v' + current.version;
-  document.getElementById('btnDownloadLatest').href = current.downloadUrl;
+  document.getElementById('btnDownloadDildman').href = current.downloadUrlDildman;
+  document.getElementById('btnDownloadRah').href = current.downloadUrlRah;
   
   // Отрисовываем таймлайн ченджлогов
   const listEl = document.getElementById('changelogList');
