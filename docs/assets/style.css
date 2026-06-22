@@ -519,30 +519,100 @@ body::before {
 /* ═══ TOKENS TABLE ═══ */
 .tokens-table {
   width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-base);
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tokens-table th, .tokens-table td {
-  padding: 1rem;
+  padding: 1.2rem 1.5rem;
   text-align: left;
-  border-bottom: 1px solid var(--border);
 }
 
 .tokens-table th {
-  background: rgba(0,0,0,0.3);
+  background: transparent;
   color: var(--text-muted);
   text-transform: uppercase;
   font-size: 0.8rem;
-  letter-spacing: 1px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border: none;
+  padding-bottom: 0.5rem;
+}
+
+.tokens-table td {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.tokens-table tr td:first-child {
+  border-left: 1px solid var(--border);
+  border-top-left-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--radius-lg);
+}
+
+.tokens-table tr td:last-child {
+  border-right: 1px solid var(--border);
+  border-top-right-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.tokens-table tr {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tokens-table tr:hover td {
+  background: var(--surface-hover);
 }
 
 .tokens-table tr:hover {
-  background: var(--surface-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.check-all-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  font-weight: 700;
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.check-all-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1));
+}
+
+.skeleton-row {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 10px;
+  gap: 2rem;
+  align-items: center;
+}
+.skeleton-block {
+  height: 20px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .badge-valid { color: var(--success); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }

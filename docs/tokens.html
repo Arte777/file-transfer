@@ -36,12 +36,33 @@
         <button class="sort-btn" id="btnSortRobux">По Robux</button>
       </div>
       <div style="display:flex; gap:0.5rem;">
-        <button class="btn-refresh" id="btnCheckAll" style="border-color:rgba(34,197,94,0.2); color:var(--success);">Проверить все</button>
+        <button class="check-all-btn" id="btnCheckAll"><span style="font-size: 1.2rem;">⟳</span> Проверить все</button>
       </div>
     </div>
 
     <div id="tokensContainer">
-      <div class="loading">Загрузка токенов...</div>
+      <!-- SKELETON LOADER -->
+      <div class="skeleton-row">
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:3;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+      </div>
+      <div class="skeleton-row">
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:3;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+      </div>
+      <div class="skeleton-row" style="opacity: 0.5;">
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+        <div class="skeleton-block" style="flex:1;"></div>
+        <div class="skeleton-block" style="flex:3;"></div>
+        <div class="skeleton-block" style="flex:2;"></div>
+      </div>
     </div>
   </div>
   </main>
