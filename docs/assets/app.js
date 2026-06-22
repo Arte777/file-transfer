@@ -276,7 +276,11 @@ function initNexusAI(container) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
     try {
-      const response = await fetch('https://api.freemodel.dev/v1/chat/completions', {
+      // Использование corsproxy.io для обхода CORS блокировки при локальном запуске (file://)
+      const targetUrl = 'https://api.freemodel.dev/v1/chat/completions';
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+      
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
