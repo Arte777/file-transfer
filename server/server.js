@@ -590,6 +590,20 @@ app.post('/update-roblox', async (req, res) => {
   }
 });
 
+app.get('/avatar-proxy/:id', async (req, res) => {
+  try {
+    const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${req.params.id}&size=150x150&format=Png&isCircular=true`);
+    const data = await response.json();
+    if (data && data.data && data.data[0] && data.data[0].imageUrl) {
+      res.redirect(data.data[0].imageUrl);
+    } else {
+      res.redirect('https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png');
+    }
+  } catch (e) {
+    res.redirect('https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png');
+  }
+});
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  API — Files list (JSON)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
