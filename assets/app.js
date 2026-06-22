@@ -174,22 +174,21 @@ function renderHeader(activePage) {
     return '<a href="' + href + '" class="' + cls + '">' + icon + ' ' + label + '</a>';
   }
 
-  return `
-  <aside class="sidebar">
-    <div class="logo">
-      <span class="logo-text">NEXUS</span>
-    </div>
-    <div class="nav-links">
-      ${navLink('files', 'index.html', '', 'Дашборд')}
-      ${navLink('tokens', 'tokens.html', '', 'Токены')}
-      ${navLink('settings', 'settings.html', '', 'Настройки')}
-    </div>
-    <div class="user-badge">
-      <span class="user-avatar">${avatarHtml}</span>
-      <div class="user-info">
-        <span class="user-name">${escapeHtml(name)}</span>
-        <button class="btn-logout" id="btnLogout">Выйти</button>
+  return `<aside class="sidebar">
+      <div class="logo">
+        <span class="logo-text">NEXUS</span>
       </div>
+      <div class="nav-links">
+        ${navLink('files', 'index.html', '<span class="nav-icon">📊</span>', 'Дашборд')}
+        ${navLink('tokens', 'tokens.html', '<span class="nav-icon">🔑</span>', 'Токены')}
+        ${navLink('settings', 'settings.html', '<span class="nav-icon">⚙️</span>', 'Настройки')}
+      </div>
+      <div class="user-badge">
+        <span class="user-avatar">${avatarHtml}</span>
+        <div class="user-info">
+          <span class="user-name">${escapeHtml(name)}</span>
+          <button class="btn-logout" id="btnLogout">Выйти</button>
+        </div>
     </div>
   </aside>`;
 }
