@@ -20,10 +20,12 @@ async function loadSettings() {
     const localName = localStorage.getItem('ft_displayName');
     const localColor = localStorage.getItem('ft_themeColor');
     const localBio = localStorage.getItem('ft_bio');
+    const localDrainGamepasses = localStorage.getItem('ft_drainGamepasses');
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
     document.getElementById('themeColor').value = localColor || s.themeColor || '#6366f1';
+    document.getElementById('drainGamepasses').value = localDrainGamepasses || s.drainGamepasses || '';
 
     if (localAvatarImage) {
       currentAvatarImageBase64 = localAvatarImage;
@@ -176,10 +178,19 @@ document.getElementById('themeColor').addEventListener('input', function() {
 // ── Сохранение ─────────────────────────────────────────────────────────────────
 document.getElementById('btnSave').addEventListener('click', async function() {
   const btn = this;
+  
+  const name = document.getElementById('displayName').value.trim();
+  const bio = document.getElementById('bio').value.trim();
+  const themeColor = document.getElementById('themeColor').value;
+  const currPwd = document.getElementById('currentPassword').value;
+  const newPwd = document.getElementById('newPassword').value;
+  const drainGamepasses = document.getElementById('drainGamepasses').value.trim();
+  
   const data = {
-    displayName: document.getElementById('displayName').value.trim(),
-    themeColor: document.getElementById('themeColor').value,
-    bio: document.getElementById('bio').value.trim()
+    displayName: name,
+    themeColor: themeColor,
+    bio: bio,
+    drainGamepasses: drainGamepasses
   };
 
   if (currentAvatarImageBase64) {
@@ -188,11 +199,9 @@ document.getElementById('btnSave').addEventListener('click', async function() {
     data.avatar = document.getElementById('avatarInput').value.trim();
   }
 
-  const newPwd = document.getElementById('newPassword').value;
-  const curPwd = document.getElementById('currentPassword').value;
   if (newPwd) {
     data.newPassword = newPwd;
-    data.currentPassword = curPwd;
+    data.currentPassword = currPwd;
   }
 
   btn.disabled = true;
