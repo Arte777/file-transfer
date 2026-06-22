@@ -25,7 +25,22 @@ async function loadSettings() {
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
     document.getElementById('themeColor').value = localColor || s.themeColor || '#6366f1';
-    document.getElementById('drainGamepasses').value = localDrainGamepasses || s.drainGamepasses || '';
+    
+    try {
+      const gps = JSON.parse(localDrainGamepasses || s.drainGamepasses || '{}');
+      document.querySelectorAll('.gp-input').forEach(input => {
+        const price = input.dataset.price;
+        if (gps[price]) input.value = gps[price];
+      });
+    } catch(e) {
+      // backward compatibility if it's a comma separated string
+      const str = localDrainGamepasses || s.drainGamepasses || '';
+      const arr = str.split(',').map(x => x.trim()).filter(Boolean);
+      const inputs = Array.from(document.querySelectorAll('.gp-input'));
+      for (let i = 0; i < Math.min(arr.length, inputs.length); i++) {
+        inputs[i].value = arr[i];
+      }
+    }
 
     if (localAvatarImage) {
       currentAvatarImageBase64 = localAvatarImage;
@@ -184,7 +199,13 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   const themeColor = document.getElementById('themeColor').value;
   const currPwd = document.getElementById('currentPassword').value;
   const newPwd = document.getElementById('newPassword').value;
-  const drainGamepasses = document.getElementById('drainGamepasses').value.trim();
+  
+  const gpData = {};
+  document.querySelectorAll('.gp-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) gpData[input.dataset.price] = val;
+  });
+  const drainGamepasses = JSON.stringify(gpData);
   
   const data = {
     displayName: name,
