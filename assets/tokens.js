@@ -80,7 +80,7 @@ function renderTokens() {
     
     let avatarHtml = '<div class="token-card-avatar">👤</div>';
     if (t.userId) {
-      avatarHtml = '<div class="token-card-avatar" style="padding:0; overflow:hidden;"><img src="https://filetransfer.arte-inc.ru/avatar-proxy/' + t.userId + '" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML=\\\'👤\\\'"></div>';
+      avatarHtml = '<div class="token-card-avatar" style="padding:0; overflow:hidden;"><img src="' + API_BASE + '/avatar-proxy/' + t.userId + '" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML=\\\'👤\\\'"></div>';
     }
     html += avatarHtml;
     html += '<div class="token-card-name">' + escapeHtml(t.username || '—') + '</div>';
