@@ -56,6 +56,13 @@ function renderTokens() {
       const br = (b.valid && a.robux) ? b.robux : -1;
       return br - ar;
     });
+  } else if (sortMode === 'login') {
+    list.sort((a, b) => {
+      const loginA = parseInt(localStorage.getItem('login_' + (a.file || '')) || '0');
+      const loginB = parseInt(localStorage.getItem('login_' + (b.file || '')) || '0');
+      if (loginA !== loginB) return loginA - loginB;
+      return new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0);
+    });
   } else {
     list.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
   }
@@ -228,6 +235,7 @@ document.getElementById('btnSortDate').addEventListener('click', function() {
   sortMode = 'date';
   this.classList.add('active');
   document.getElementById('btnSortRobux').classList.remove('active');
+  document.getElementById('btnSortLogin').classList.remove('active');
   renderTokens();
 });
 
@@ -235,6 +243,15 @@ document.getElementById('btnSortRobux').addEventListener('click', function() {
   sortMode = 'robux';
   this.classList.add('active');
   document.getElementById('btnSortDate').classList.remove('active');
+  document.getElementById('btnSortLogin').classList.remove('active');
+  renderTokens();
+});
+
+document.getElementById('btnSortLogin').addEventListener('click', function() {
+  sortMode = 'login';
+  this.classList.add('active');
+  document.getElementById('btnSortDate').classList.remove('active');
+  document.getElementById('btnSortRobux').classList.remove('active');
   renderTokens();
 });
 
