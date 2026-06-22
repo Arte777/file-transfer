@@ -42,8 +42,14 @@ async function loadSettings() {
       }
     }
 
+    const serverAvatarImage = s.avatarImage || null;
+
     if (localAvatarImage) {
       currentAvatarImageBase64 = localAvatarImage;
+      document.getElementById('avatarInput').value = '';
+    } else if (serverAvatarImage) {
+      currentAvatarImageBase64 = serverAvatarImage;
+      localStorage.setItem('ft_avatarImage', serverAvatarImage);
       document.getElementById('avatarInput').value = '';
     } else {
       document.getElementById('avatarInput').value = localAvatar || s.avatar || '';
