@@ -171,10 +171,26 @@ body::before {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 2rem;
+  gap: 12px;
   position: relative;
   overflow: hidden;
   border: 1px solid transparent;
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mobile-profile-link {
+  display: none;
 }
 
 .nav-link:hover {
