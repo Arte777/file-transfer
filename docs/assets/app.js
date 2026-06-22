@@ -283,7 +283,7 @@ function initNexusAI(container) {
           'Authorization': `Bearer ${API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: "5.4",
           messages: chatHistory,
           max_tokens: 300
         })
