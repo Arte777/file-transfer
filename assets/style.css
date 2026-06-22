@@ -853,23 +853,24 @@ body::before {
 /* ═══ MOBILE OPTIMIZATION ═══ */
 @media (max-width: 768px) {
   .sidebar-layout {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
   .sidebar {
     width: 100%;
     height: auto;
-    padding: 0.8rem 1rem;
+    padding: 0.8rem 0.5rem;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(10, 11, 18, 0.95);
     z-index: 100;
   }
   .sidebar::after { display: none; }
-  .logo { margin-bottom: 0; font-size: 1.2rem; }
-  .logo-icon { width: 30px; height: 30px; font-size: 1rem; }
+  .logo { display: none; } /* Hide logo on mobile to save space */
   .nav-links {
     display: flex;
     flex-direction: row;
@@ -877,17 +878,19 @@ body::before {
     gap: 0.5rem;
     overflow-x: auto;
     flex: 1;
-    justify-content: center;
+    justify-content: space-around;
   }
   .nav-link {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
     margin-bottom: 0;
     justify-content: center;
+    flex-direction: column;
+    gap: 4px;
   }
   .user-badge {
     margin-top: 0;
-    padding: 0;
+    padding: 0 0.5rem;
     background: none;
     border: none;
   }
