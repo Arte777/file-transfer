@@ -114,29 +114,21 @@ document.getElementById('btnResetAvatar').addEventListener('click', function() {
   updatePreview();
 });
 
-// ── Превью профиля ─────────────────────────────────────────────────────────────
+// ── ОБНОВЛЕНИЕ ПРЕВЬЮ ────────────────────────────────────────────────────────
 function updatePreview() {
   const name = document.getElementById('displayName').value || getUser();
-  const bio = document.getElementById('bio').value || '—';
+  const bio = document.getElementById('bio').value || '...';
   
   document.getElementById('previewName').textContent = name;
   document.getElementById('previewBio').textContent = bio;
 
   const previewEl = document.getElementById('previewAvatar');
-  const uploadImg = document.getElementById('uploadPreviewImg');
-  const uploadPlaceholder = document.getElementById('uploadPreviewPlaceholder');
 
   if (currentAvatarImageBase64) {
-    previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;">';
-    uploadImg.src = currentAvatarImageBase64;
-    uploadImg.style.display = 'block';
-    uploadPlaceholder.style.display = 'none';
+    previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
   } else {
-    const emoji = document.getElementById('avatarInput').value || '⭐';
+    const emoji = document.getElementById('avatarInput').value || '🤖';
     previewEl.innerHTML = escapeHtml(emoji);
-    uploadImg.style.display = 'none';
-    uploadImg.src = '';
-    uploadPlaceholder.style.display = 'inline-block';
   }
 }
 
