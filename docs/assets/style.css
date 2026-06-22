@@ -86,6 +86,7 @@ body::before {
   display: flex;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Better mobile viewport support */
   overflow: hidden;
 }
 
