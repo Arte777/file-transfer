@@ -157,7 +157,6 @@ function openModalByIndex(idx) {
   document.getElementById("specRam").textContent = pc.ram || "—";
   document.getElementById("specGpu").textContent = pc.gpu || "—";
   document.getElementById("specDate").textContent = fmtDate(f.uploadedAt);
-  document.getElementById("specSize").textContent = fmtSize(f.size || 0);
 
   const roblox = f.roblox || {};
   const robuxInfo = f.robuxInfo || {};
