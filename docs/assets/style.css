@@ -608,6 +608,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: auto;
 }
 .btn-login {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
