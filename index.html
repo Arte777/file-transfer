@@ -23,8 +23,9 @@
   <div class="controls-panel">
     <div class="search-bar-wrapper">
       <input type="text" class="search-input" id="searchBar" placeholder="Поиск по имени файла..." oninput="filterFiles()">
-      <select class="filter-select" id="filterPC" onchange="filterFiles()">
-        <option value="">Все отправители</option>
+      <select class="filter-select" id="sortFiles" onchange="filterFiles()">
+        <option value="date">По дате (новые)</option>
+        <option value="roblox">Сначала зеленые</option>
       </select>
     </div>
     <button class="btn-refresh" onclick="loadFiles()">↻ Обновить</button>

