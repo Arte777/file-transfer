@@ -149,7 +149,7 @@ function highlightSelectedEmoji(emoji) {
 
 // ── Подсветка выбранного цвета ─────────────────────────────────────────────────
 function highlightSelectedColor(color) {
-  document.querySelectorAll('.color-btn').forEach(btn => {
+  document.querySelectorAll('.color-dot').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.color === color);
   });
 }
@@ -172,7 +172,7 @@ function handleColorChange(color) {
   applyAccentColor(color); // Live update of CSS variables
 }
 
-document.querySelectorAll('.color-btn').forEach(btn => {
+document.querySelectorAll('.color-dot').forEach(btn => {
   btn.addEventListener('click', function() { handleColorChange(this.dataset.color); });
 });
 
