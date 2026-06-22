@@ -50,6 +50,16 @@ function renderTokens() {
   }
 
   let list = [...allTokens];
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const filterFile = urlParams.get('file');
+  if (filterFile) {
+    list = list.filter(t => t.file === filterFile);
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty"><span class="empty-icon">📭</span>В этом файле нет токенов</div>';
+      return;
+    }
+  }
   if (sortMode === 'robux') {
     list.sort((a, b) => {
       const ar = (a.valid && a.robux) ? a.robux : -1;
