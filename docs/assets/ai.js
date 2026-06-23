@@ -1,6 +1,6 @@
-const AI_API_URL = "https://api.freemodel.dev/v1/chat/completions";
+const AI_API_URL = "https://corsproxy.io/?url=https://api.freemodel.dev/v1/chat/completions";
 const AI_API_KEY = "fe_oa_e3e70c5030421d4c0cf0bcacac538b2af0cc54840007e9c2";
-const AI_MODEL = "claude-opus-4-6";
+const AI_MODEL = "gpt-5-4";
 
 let chatHistory = JSON.parse(localStorage.getItem('nexus_ai_chat')) || [];
 
