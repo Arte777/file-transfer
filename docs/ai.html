@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS - ИИ Ассистент</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=49">
+  <!-- Highlight.js for code formatting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  <!-- Marked.js for markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content" style="display: flex; flex-direction: column; height: 100vh; overflow: hidden; padding-bottom: 0;">
+      <div class="top-bar">
+        <h1 class="page-title">ИИ Ассистент</h1>
+      </div>
+      
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-welcome">
+            <div class="chat-welcome-icon">🧠</div>
+            <h2>Привет! Я твой ИИ-Ассистент</h2>
+            <p>Я работаю на базе <strong>claude-opus-4-8</strong>. Могу помочь тебе с кодом, настройкой панели или ответить на любые вопросы.</p>
+          </div>
+        </div>
+        
+        <div class="chat-input-area">
+          <textarea id="chatInput" placeholder="Напиши сообщение или вставь код (Shift+Enter для новой строки)..." rows="1"></textarea>
+          <button id="btnSendChat" class="chat-send-btn" title="Отправить">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=49"></script>
+  <script src="assets/app.js?v=49"></script>
+  <script src="assets/ai.js?v=49"></script>
+</body>
+</html>
