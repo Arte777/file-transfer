@@ -1,6 +1,6 @@
-const AI_API_URL = "https://agentrouter.org/v1/chat/completions";
-const AI_API_KEY = "sk-HQkctx2JUGtz5VPjNPewbGBs8MeLnR79q9SBIn5ecOtEi1E1";
-const AI_MODEL = "claude-opus-4-8";
+const AI_API_URL = "https://api.freemodel.dev/v1/chat/completions";
+const AI_API_KEY = "fe_oa_e3e70c5030421d4c0cf0bcacac538b2af0cc54840007e9c2";
+const AI_MODEL = "claude-opus-4-6";
 
 let chatHistory = JSON.parse(localStorage.getItem('nexus_ai_chat')) || [];
 
@@ -142,7 +142,10 @@ async function sendMessage() {
 
   // Prepare messages for API
   const messages = [
-    { role: "system", content: "You are NEXUS AI, a helpful coding assistant integrated into a web control panel. Use markdown for formatting. Provide clear and concise answers." }
+    { 
+      role: "system", 
+      content: "You are NEXUS AI, a coding assistant. Follow the Ponytail rules: Before writing code, stop at the first rung that holds: 1. Does this need to exist? -> no: skip it (YAGNI). 2. Already in this codebase? -> reuse it. 3. Stdlib does it? -> use it. 4. Native platform feature? -> use it. 5. Installed dependency? -> use it. 6. One line? -> one line. 7. Only then: the minimum that works. Never cut validation, error handling, security, or accessibility. Use markdown. Be extremely concise." 
+    }
   ];
   
   // Only send the last 10 messages to save context limit
