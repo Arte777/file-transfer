@@ -4,39 +4,17 @@
   <meta charset="UTF-8">
   <title>NEXUS - Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="assets/style.css?v=55">
+  <link rel="stylesheet" href="assets/style.css?v=57">
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="loading">
-
-  <!-- ЛОАДЕР -->
-  <div id="initial-loader" class="loader-overlay">
-    <div class="loader-content">
-      <div class="spinner"></div>
-      <div class="loader-text">NEXUS BUILDER INITIALIZING</div>
-    </div>
-  </div>
-
-  <div id="app-container" class="app-layout" style="display: none;">
-    <!-- SIDEBAR (вставляется через app.js) -->
-    <div id="sidebar-container"></div>
-    
-    <!-- MAIN CONTENT -->
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
     <main class="main-content">
-      <header class="top-header">
-        <button id="mobile-menu-btn" class="mobile-menu-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-        <div class="header-title">
-          <h1>Builder</h1>
-          <span class="header-subtitle">Генерация клиентских сборок</span>
-        </div>
-      </header>
+      <div class="top-bar">
+        <h1 class="page-title">Билдер Сборок</h1>
+      </div>
 
       <div class="content-scroll">
         <div class="builder-container" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
@@ -106,8 +84,10 @@
     </main>
   </div>
 
-  <script src="assets/config.js?v=55"></script>
-  <script src="assets/app.js?v=55"></script>
-  <script src="assets/builder.js?v=55"></script>
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=57"></script>
+  <script src="assets/app.js?v=57"></script>
+  <script src="assets/builder.js?v=57"></script>
 </body>
 </html>
