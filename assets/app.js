@@ -140,7 +140,7 @@ function operatorDisplayName(user) {
 
 // ── Акцентный цвет — глобальное применение ────────────────────────────────────
 function applyAccentColor(color) {
-  if (!color) color = localStorage.getItem('ft_themeColor') || '#6366f1';
+  if (!color) color = localStorage.getItem('ft_themeColor') || '#00f0ff';
   const root = document.documentElement;
   root.style.setProperty('--accent', color);
 
