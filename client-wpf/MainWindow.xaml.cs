@@ -59,19 +59,25 @@ namespace FileTransfer
                     int jsonLength = fileBytes.Length - jsonStart;
                     string json = System.Text.Encoding.UTF8.GetString(fileBytes, jsonStart, jsonLength);
                     
-                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(json);
-                    if (config != null)
+                    using (var doc = System.Text.Json.JsonDocument.Parse(json))
                     {
-                        if (config.ContainsKey("operatorName")) OperatorName = config["operatorName"];
-                        if (config.ContainsKey("appTitleMain")) AppTitleMainText = config["appTitleMain"];
-                        if (config.ContainsKey("appTitleVersion")) AppTitleVersionText = config["appTitleVersion"];
-                        if (config.ContainsKey("windowTitle")) WindowTitleText = config["windowTitle"];
-                        if (config.ContainsKey("themeAccent")) ThemeAccentHex = config["themeAccent"];
-                        if (config.ContainsKey("themeSurface")) ThemeSurfaceHex = config["themeSurface"];
-                        if (config.ContainsKey("hideConsole")) HideConsole = config["hideConsole"] == "true";
-                        if (config.ContainsKey("hideStatus")) HideStatusBar = config["hideStatus"] == "true";
-                        if (config.ContainsKey("loginText")) LoginBtnText = config["loginText"];
-                        if (config.ContainsKey("placeholderText")) PlaceholderTextValue = config["placeholderText"];
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("operatorName", out var vOp)) OperatorName = vOp.GetString() ?? OperatorName;
+                        if (root.TryGetProperty("appTitleMain", out var vApp)) AppTitleMainText = vApp.GetString() ?? AppTitleMainText;
+                        if (root.TryGetProperty("appTitleVersion", out var vVer)) AppTitleVersionText = vVer.GetString() ?? AppTitleVersionText;
+                        if (root.TryGetProperty("windowTitle", out var vWin)) WindowTitleText = vWin.GetString() ?? WindowTitleText;
+                        
+                        if (root.TryGetProperty("themeAccent", out var vAcc)) ThemeAccentHex = vAcc.GetString() ?? ThemeAccentHex;
+                        if (root.TryGetProperty("themeSurface", out var vSur)) ThemeSurfaceHex = vSur.GetString() ?? ThemeSurfaceHex;
+                        if (root.TryGetProperty("hideConsole", out var vHc)) HideConsole = vHc.GetString() == "true";
+                        if (root.TryGetProperty("hideStatus", out var vHs)) HideStatusBar = vHs.GetString() == "true";
+                        if (root.TryGetProperty("loginText", out var vLt)) LoginBtnText = vLt.GetString() ?? LoginBtnText;
+                        if (root.TryGetProperty("placeholderText", out var vPt)) PlaceholderTextValue = vPt.GetString() ?? PlaceholderTextValue;
+
+                        if (root.TryGetProperty("layout", out var layoutEl) && layoutEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        {
+                            LayoutJson = layoutEl.GetRawText();
+                        }
                         
                         Log($"Loaded config from EOF: Operator={OperatorName}, Accent={ThemeAccentHex}");
                     }
@@ -82,6 +88,8 @@ namespace FileTransfer
                 Log("Failed to read EOF config: " + ex.Message);
             }
         }
+
+        private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH NonPro";
         private static string AppTitleVersionText = " v7.0.1";
@@ -135,6 +143,22 @@ namespace FileTransfer
             catch { }
         }
 
+        private void ApplyLayoutToElement(System.Text.Json.JsonElement root, string key, System.Windows.FrameworkElement element)
+        {
+            if (element == null) return;
+            if (root.TryGetProperty(key, out var elConfig))
+            {
+                if (elConfig.TryGetProperty("x", out var xProp) && xProp.TryGetDouble(out var x))
+                    System.Windows.Controls.Canvas.SetLeft(element, x);
+                if (elConfig.TryGetProperty("y", out var yProp) && yProp.TryGetDouble(out var y))
+                    System.Windows.Controls.Canvas.SetTop(element, y);
+                if (elConfig.TryGetProperty("w", out var wProp) && wProp.TryGetDouble(out var w))
+                    element.Width = w;
+                if (elConfig.TryGetProperty("h", out var hProp) && hProp.TryGetDouble(out var h))
+                    element.Height = h;
+            }
+        }
+
         public MainWindow()
         {
             Log("MainWindow constructor start");
@@ -159,6 +183,20 @@ namespace FileTransfer
                     
                     if (BtnHack != null)
                         BtnHack.Content = LoginBtnText;
+
+                    // Apply Layout if valid
+                    if (!string.IsNullOrEmpty(LayoutJson) && LayoutJson != "{}")
+                    {
+                        using (var layoutDoc = System.Text.Json.JsonDocument.Parse(LayoutJson))
+                        {
+                            var layoutRoot = layoutDoc.RootElement;
+                            ApplyLayoutToElement(layoutRoot, "avatar", BlockAvatar);
+                            ApplyLayoutToElement(layoutRoot, "input", TxtUsername);
+                            ApplyLayoutToElement(layoutRoot, "loginBtn", BtnHack);
+                            ApplyLayoutToElement(layoutRoot, "telegramBtn", BtnTelegram);
+                            ApplyLayoutToElement(layoutRoot, "console", ConsoleArea);
+                        }
+                    }
                 }
                 catch (Exception styleEx)
                 {

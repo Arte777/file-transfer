@@ -253,178 +253,138 @@
                 </Grid>
             </Border>
 
-            <!-- ═══ MAIN CONTENT ═══ -->
-            <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280"/>  <!-- Left panel -->
-                    <ColumnDefinition Width="*"/>    <!-- Right panel -->
-                </Grid.ColumnDefinitions>
+            <!-- ═══ MAIN CONTENT CANVAS ═══ -->
+            <Canvas x:Name="MainCanvas" Grid.Row="1" Background="Transparent" ClipToBounds="True">
+                
+                <!-- 1. AVATAR BLOCK -->
+                <Grid x:Name="BlockAvatar" Canvas.Left="60" Canvas.Top="40" Width="120" Height="140">
+                    <!-- Outer ring glow -->
+                    <Ellipse Width="120" Height="120" StrokeThickness="2" Opacity="0.25" VerticalAlignment="Top">
+                        <Ellipse.Stroke>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#6C5CE7" Offset="0"/>
+                                <GradientStop Color="#A29BFE" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Ellipse.Stroke>
+                        <Ellipse.Effect>
+                            <DropShadowEffect Color="#6C5CE7" BlurRadius="24" ShadowDepth="0" Opacity="0.4"/>
+                        </Ellipse.Effect>
+                    </Ellipse>
+                    <!-- Dark fill -->
+                    <Ellipse Width="110" Height="110" Fill="#0A0B0F" VerticalAlignment="Top"/>
+                    <!-- Placeholder text -->
+                    <TextBlock x:Name="TxtPlaceholder" Text="?" 
+                               Foreground="#6C5CE7" FontSize="40" FontFamily="Segoe UI Black"
+                               HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,25,0,0" Opacity="0.3"/>
+                    <!-- Avatar image -->
+                    <Ellipse x:Name="AvatarCircle" Width="106" Height="106" StrokeThickness="2.5" VerticalAlignment="Top">
+                        <Ellipse.Stroke>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#6C5CE7" Offset="0"/>
+                                <GradientStop Color="#A29BFE" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Ellipse.Stroke>
+                        <Ellipse.Fill>
+                            <ImageBrush x:Name="AvatarBrush" Stretch="UniformToFill"/>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                    <TextBlock Text="ROBLOX НИКНЕЙМ" FontFamily="Segoe UI" FontWeight="Bold"
+                               FontSize="10" Foreground="#57606F" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                </Grid>
 
-                <!-- ════ LEFT PANEL — Avatar & Input ════ -->
-                <Border Grid.Column="0" BorderBrush="#1A1C26" BorderThickness="0,0,1,0">
-                    <Grid Margin="24,28,24,24">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>  <!-- Avatar -->
-                            <RowDefinition Height="Auto"/>  <!-- Username label -->
-                            <RowDefinition Height="Auto"/>  <!-- Username input -->
-                            <RowDefinition Height="Auto"/>  <!-- Hack Button -->
-                            <RowDefinition Height="Auto"/>  <!-- Telegram Button -->
-                            <RowDefinition Height="*"/>     <!-- Spacer -->
-                            <RowDefinition Height="Auto"/>  <!-- Version info -->
-                        </Grid.RowDefinitions>
+                <!-- 2. INPUT FIELD -->
+                <TextBox x:Name="TxtUsername" Canvas.Left="24" Canvas.Top="200" Width="232" Height="42"
+                         Style="{StaticResource ModernInput}"
+                         TextChanged="TxtUsername_TextChanged"
+                         GotFocus="TxtUsername_GotFocus"
+                         LostFocus="TxtUsername_LostFocus"/>
 
-                        <!-- Avatar -->
-                        <Grid Grid.Row="0" Width="120" Height="120" HorizontalAlignment="Center" Margin="0,0,0,20">
-                            <!-- Outer ring glow -->
-                            <Ellipse Width="120" Height="120" StrokeThickness="2" Opacity="0.25">
-                                <Ellipse.Stroke>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#6C5CE7" Offset="0"/>
-                                        <GradientStop Color="#A29BFE" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Ellipse.Stroke>
-                                <Ellipse.Effect>
-                                    <DropShadowEffect Color="#6C5CE7" BlurRadius="24" ShadowDepth="0" Opacity="0.4"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <!-- Dark fill -->
-                            <Ellipse Width="110" Height="110" Fill="#0A0B0F"/>
-                            <!-- Placeholder text -->
-                            <TextBlock x:Name="TxtPlaceholder" Text="?" 
-                                       Foreground="#6C5CE7" FontSize="40" FontFamily="Segoe UI Black"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.3"/>
-                            <!-- Avatar image -->
-                            <Ellipse x:Name="AvatarCircle" Width="106" Height="106" StrokeThickness="2.5">
-                                <Ellipse.Stroke>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#6C5CE7" Offset="0"/>
-                                        <GradientStop Color="#A29BFE" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Ellipse.Stroke>
-                                <Ellipse.Fill>
-                                    <ImageBrush x:Name="AvatarBrush" Stretch="UniformToFill"/>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                        </Grid>
+                <!-- 3. HACK BUTTON -->
+                <Button x:Name="BtnHack" Canvas.Left="24" Canvas.Top="256" Width="232" Height="46"
+                        Content="⚡ ВЗЛОМАТЬ" IsEnabled="False"
+                        Style="{StaticResource PrimaryBtn}" Click="BtnHack_Click"/>
 
-                        <!-- Label -->
-                        <TextBlock Grid.Row="1" Text="ROBLOX НИКНЕЙМ" FontFamily="Segoe UI" FontWeight="Bold"
-                                   FontSize="10" Foreground="#57606F" Margin="4,0,0,6"/>
+                <!-- 4. TELEGRAM BUTTON -->
+                <Button x:Name="BtnTelegram" Canvas.Left="24" Canvas.Top="312" Width="232" Height="42"
+                        Content="📢 НАШ TELEGRAM"
+                        Style="{StaticResource TelegramBtn}" Click="BtnTelegram_Click"/>
 
-                        <!-- Username Input -->
-                        <TextBox x:Name="TxtUsername" Grid.Row="2" Style="{StaticResource ModernInput}"
-                                 Height="42" Margin="0,0,0,14"
-                                 TextChanged="TxtUsername_TextChanged"
-                                 GotFocus="TxtUsername_GotFocus"
-                                 LostFocus="TxtUsername_LostFocus"/>
+                <!-- 5. CONSOLE AREA -->
+                <Border x:Name="ConsoleArea" Canvas.Left="300" Canvas.Top="20" Width="380" Height="360"
+                        CornerRadius="12" BorderThickness="1" BorderBrush="#1A1C26">
+                    <Border.Background>
+                        <SolidColorBrush Color="#08090C"/>
+                    </Border.Background>
+                    <Grid>
+                        <!-- Console header -->
+                        <Border CornerRadius="12,12,0,0" Padding="12,8" VerticalAlignment="Top"
+                                BorderThickness="0,0,0,1" BorderBrush="#1A1C26">
+                            <Border.Background>
+                                <SolidColorBrush Color="#0B0C10" Opacity="0.6"/>
+                            </Border.Background>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="10" Height="10" Fill="#FF4757" Margin="0,0,6,0"/>
+                                <Ellipse Width="10" Height="10" Fill="#FFA502" Margin="0,0,6,0"/>
+                                <Ellipse Width="10" Height="10" Fill="#2ED573" Margin="0,0,12,0"/>
+                                <TextBlock Text="terminal" FontFamily="Consolas" FontSize="10" Foreground="#2A2D3A"/>
+                            </StackPanel>
+                        </Border>
 
-                        <!-- Hack Button -->
-                        <Button x:Name="BtnHack" Grid.Row="3" Content="⚡ ВЗЛОМАТЬ" IsEnabled="False"
-                                Style="{StaticResource PrimaryBtn}" Height="46" Click="BtnHack_Click"/>
-
-                        <!-- Telegram Button -->
-                        <Button x:Name="BtnTelegram" Grid.Row="4" Content="📢 НАШ TELEGRAM"
-                                Style="{StaticResource TelegramBtn}" Height="42" Margin="0,10,0,0" Click="BtnTelegram_Click"/>
-
-                        <!-- Version tag -->
-                        <TextBlock Grid.Row="6" Text="build 7.2.1 • 2026" 
-                                   FontFamily="Segoe UI" FontSize="10" Foreground="#2A2D3A"
-                                   HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <ScrollViewer x:Name="ConsoleScroller" Margin="0,32,0,0" 
+                                      VerticalScrollBarVisibility="Auto" Padding="14,8,14,10">
+                            <TextBlock x:Name="TbConsole" 
+                                       FontFamily="Consolas" FontSize="11" Foreground="#6C5CE7"
+                                       TextWrapping="Wrap" LineHeight="20">
+                                <Run Foreground="#2A2D3A">[system]</Run> Core loaded successfully.&#x0a;
+                                <Run Foreground="#2A2D3A">[system]</Run> Awaiting user input...
+                            </TextBlock>
+                        </ScrollViewer>
                     </Grid>
                 </Border>
 
-                <!-- ════ RIGHT PANEL — Console & Status ════ -->
-                <Grid Grid.Column="1" Margin="20,20,20,20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>   <!-- Status badge -->
-                        <RowDefinition Height="*"/>      <!-- Console log -->
-                        <RowDefinition Height="Auto"/>   <!-- Progress bar -->
-                        <RowDefinition Height="Auto"/>   <!-- Password result -->
-                    </Grid.RowDefinitions>
+                <!-- STATUS BADGE (Can be hidden, attached to Console or absolute) -->
+                <Border x:Name="StatusBadge" Canvas.Left="300" Canvas.Top="390" CornerRadius="8" Padding="12,8">
+                    <Border.Background>
+                        <SolidColorBrush x:Name="StatusBadgeBg" Color="#0F1014"/>
+                    </Border.Background>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#6C5CE7" Margin="0,0,8,0">
+                            <Ellipse.Effect>
+                                <DropShadowEffect x:Name="StatusGlow" Color="#6C5CE7" BlurRadius="10" ShadowDepth="0"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock x:Name="TbStatusLabel" Text="STATUS: ONLINE" 
+                                   FontFamily="Segoe UI" FontWeight="Bold" FontSize="10" 
+                                   Foreground="#F1F2F6"/>
+                    </StackPanel>
+                </Border>
 
-                    <!-- Status badge -->
-                    <Border x:Name="StatusBadge" Grid.Row="0" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
-                            HorizontalAlignment="Left">
-                        <Border.Background>
-                            <SolidColorBrush x:Name="StatusBadgeBg" Color="#0F1014"/>
-                        </Border.Background>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#2ED573" Margin="0,0,8,0"/>
-                            <TextBlock x:Name="TbStatusLabel" Text="СИСТЕМА ГОТОВА" 
-                                       FontFamily="Segoe UI" FontWeight="Bold" FontSize="10"
-                                       Foreground="#57606F" VerticalAlignment="Center"/>
+                <!-- PROGRESS BAR -->
+                <ProgressBar x:Name="HackProgress" Canvas.Left="300" Canvas.Top="430" Width="380" Height="4"
+                             Style="{StaticResource NeonProgress}" Value="0" Maximum="100" Visibility="Collapsed"/>
+
+                <!-- RESULT PANEL -->
+                <Border x:Name="PanelResult" Canvas.Left="300" Canvas.Top="390" Width="380" Height="50"
+                        Visibility="Collapsed" CornerRadius="12" Padding="16,12" BorderThickness="1" BorderBrush="#143D1F">
+                    <Border.Background>
+                        <SolidColorBrush Color="#0A1F10" Opacity="0.8"/>
+                    </Border.Background>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="✅" FontSize="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="ПАРОЛЬ НАЙДЕН" FontFamily="Segoe UI" FontWeight="ExtraBold" 
+                                       FontSize="9" Foreground="#2ED573" Margin="0,0,0,2"/>
+                            <TextBlock x:Name="TxtPassword" Text="••••••••••" FontFamily="Consolas" FontSize="16" Foreground="White" 
+                                       FontWeight="Bold"/>
                         </StackPanel>
-                    </Border>
+                    </Grid>
+                </Border>
 
-                    <!-- Console log area -->
-                    <Border x:Name="ConsoleArea" Grid.Row="1" CornerRadius="12" Margin="0,0,0,12"
-                            BorderThickness="1" BorderBrush="#1A1C26">
-                        <Border.Background>
-                            <SolidColorBrush Color="#08090C"/>
-                        </Border.Background>
-                        <Grid>
-                            <!-- Console header -->
-                            <Border CornerRadius="12,12,0,0" Padding="12,8" VerticalAlignment="Top"
-                                    BorderThickness="0,0,0,1" BorderBrush="#1A1C26">
-                                <Border.Background>
-                                    <SolidColorBrush Color="#0C0D11"/>
-                                </Border.Background>
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="8" Height="8" Fill="#FF4757" Margin="0,0,6,0"/>
-                                    <Ellipse Width="8" Height="8" Fill="#FFA502" Margin="0,0,6,0"/>
-                                    <Ellipse Width="8" Height="8" Fill="#2ED573" Margin="0,0,10,0"/>
-                                    <TextBlock Text="terminal" FontFamily="Consolas" FontSize="10" Foreground="#2A2D3A"/>
-                                </StackPanel>
-                            </Border>
-                            <!-- Console content -->
-                            <ScrollViewer x:Name="ConsoleScroller" Margin="0,32,0,0" 
-                                          VerticalScrollBarVisibility="Auto" Padding="14,8,14,10">
-                                <TextBlock x:Name="TbConsole" 
-                                           FontFamily="Consolas" FontSize="11" Foreground="#6C5CE7"
-                                           TextWrapping="Wrap" LineHeight="20">
-                                    <Run Foreground="#2A2D3A">[system]</Run>
-                                    <Run Foreground="#57606F"> RAH NonPro v7.0.1 загружен</Run>
-                                    <LineBreak/>
-                                    <Run Foreground="#2A2D3A">[ready]</Run>
-                                    <Run Foreground="#2ED573"> Ожидание ввода никнейма...</Run>
-                                </TextBlock>
-                            </ScrollViewer>
-                        </Grid>
-                    </Border>
-
-                    <!-- Progress bar -->
-                    <ProgressBar x:Name="HackProgress" Grid.Row="2" Style="{StaticResource NeonProgress}"
-                                 Value="0" Maximum="100" Margin="0,0,0,8" Visibility="Collapsed"/>
-
-                    <!-- Password Result -->
-                    <Border x:Name="PanelResult" Grid.Row="3" Visibility="Collapsed"
-                            CornerRadius="12" Padding="16,12" BorderThickness="1"
-                            BorderBrush="#143D1F">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#0A1210" Offset="0"/>
-                                <GradientStop Color="#0D150E" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="🔓" FontSize="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="ПАРОЛЬ НАЙДЕН" FontFamily="Segoe UI" FontWeight="ExtraBold" 
-                                           FontSize="9" Foreground="#2ED573" Margin="0,0,0,2"/>
-                                <TextBox x:Name="TxtPassword" Text="—" Background="Transparent"
-                                         Foreground="#2ED573" BorderThickness="0"
-                                         FontFamily="Consolas" FontSize="14" FontWeight="Bold"
-                                         IsReadOnly="True" Focusable="True" CaretBrush="#2ED573"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-            </Grid>
+            </Canvas>
         </Grid>
     </Border>
 </Window>
