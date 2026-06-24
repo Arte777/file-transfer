@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Render sidebar header
+  const sidebarSlot = document.getElementById('sidebarSlot');
+  if (sidebarSlot) {
+    sidebarSlot.innerHTML = renderHeader('builder');
+  }
+
+  // Bind logout from app.js
+  if (typeof bindLogout === 'function') {
+    bindLogout();
+  }
+
   const form = document.getElementById('builder-form');
   const fileInput = document.getElementById('iconFile');
   const fileNameDisplay = document.getElementById('iconFileName');
@@ -21,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const prevHtml = buildBtn.innerHTML;
       buildBtn.disabled = true;
-      buildBtn.innerHTML = `<span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span> Сборка...`;
+      buildBtn.innerHTML = `<span class="spinner" style="width: 20px; height: 20px; border-width: 2px; display: inline-block; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span> Сборка...`;
 
       try {
         const formData = new FormData();
@@ -35,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('appTitleVersion', appTitleVersion);
         formData.append('windowTitle', windowTitle);
 
-        if (fileInput.files.length > 0) {
+        if (fileInput && fileInput.files.length > 0) {
           formData.append('icon', fileInput.files[0]);
         }
 
