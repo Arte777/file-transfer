@@ -86,19 +86,85 @@
                 </div>
               </div>
 
-              <div style="display: flex; gap: 2rem; margin-bottom: 0.5rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
-                  <input type="checkbox" id="hideConsole" style="width: 18px; height: 18px; accent-color: var(--accent);">
-                  Скрыть блок Консоли
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
-                  <input type="checkbox" id="hideStatus" style="width: 18px; height: 18px; accent-color: var(--accent);">
-                  Скрыть блок Статус-Бара
-                </label>
-              </div>
+                <div style="display: flex; gap: 2rem; margin-bottom: 0.5rem;">
+                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
+                    <input type="checkbox" id="hideConsole" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                    Скрыть блок консоли
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
+                    <input type="checkbox" id="hideStatus" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                    Скрыть статус-бар
+                  </label>
+                </div>
 
-              <!-- Разделитель -->
-              <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+                <!-- ВИЗУАЛЬНЫЙ РЕДАКТОР -->
+                <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <h3 style="margin: 0; font-size: 1.2rem; color: #fff;">Визуальный редактор (Drag & Drop)</h3>
+                  <button type="button" id="resetLayoutBtn" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">Сбросить макет</button>
+                </div>
+                
+                <div style="position: relative; width: 100%; max-width: 720px; height: 500px; background: #0D0E12; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; margin: 0 auto; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);">
+                  
+                  <!-- Window Title Bar Preview -->
+                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 48px; background: #0B0C10; border-bottom: 1px solid #1A1C26; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; z-index: 10;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #6C5CE7, #A29BFE); border-radius: 6px;"></div>
+                      <span id="previewTitle" style="color: #F1F2F6; font-family: 'Segoe UI', sans-serif; font-weight: bold; font-size: 13px;">RAH NonPro v7.0.1</span>
+                    </div>
+                  </div>
+
+                  <!-- Canvas Area for Draggables -->
+                  <div id="dragCanvas" style="position: absolute; top: 48px; left: 0; right: 0; bottom: 0; background: transparent;">
+                    
+                    <!-- Avatar Draggable -->
+                    <div class="draggable-item" data-id="avatar" style="position: absolute; left: 60px; top: 40px; width: 120px; height: 140px; cursor: move; border: 1px dashed transparent;">
+                      <div style="width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(108, 92, 231, 0.25); display: flex; justify-content: center; align-items: center; background: #0A0B0F;">
+                        <span style="color: rgba(108, 92, 231, 0.3); font-size: 40px; font-weight: 900;">?</span>
+                      </div>
+                      <div style="text-align: center; font-family: 'Segoe UI', sans-serif; font-weight: bold; font-size: 10px; color: #57606F; margin-top: 5px;">ROBLOX НИКНЕЙМ</div>
+                      <div class="resize-handle"></div>
+                    </div>
+
+                    <!-- Input Draggable -->
+                    <div class="draggable-item" data-id="input" style="position: absolute; left: 24px; top: 200px; width: 232px; height: 42px; cursor: move; background: #0B0C11; border: 1px solid #1A1C26; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; box-sizing: border-box;">
+                      <span id="previewPlaceholder" style="color: #57606F; font-family: 'Segoe UI', sans-serif; font-size: 13px;">Username</span>
+                      <div class="resize-handle"></div>
+                    </div>
+
+                    <!-- Hack Button Draggable -->
+                    <div class="draggable-item" data-id="loginBtn" style="position: absolute; left: 24px; top: 256px; width: 232px; height: 46px; cursor: move; background: #6C5CE7; border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; font-family: 'Segoe UI', sans-serif; font-weight: 600; font-size: 14px;">
+                      <span id="previewLoginBtn">⚡ ВЗЛОМАТЬ</span>
+                      <div class="resize-handle"></div>
+                    </div>
+
+                    <!-- Telegram Button Draggable -->
+                    <div class="draggable-item" data-id="telegramBtn" style="position: absolute; left: 24px; top: 312px; width: 232px; height: 42px; cursor: move; background: #229ED9; border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; font-family: 'Segoe UI', sans-serif; font-weight: 600; font-size: 13px;">
+                      <span>📢 НАШ TELEGRAM</span>
+                      <div class="resize-handle"></div>
+                    </div>
+
+                    <!-- Console Draggable -->
+                    <div class="draggable-item" data-id="console" style="position: absolute; left: 300px; top: 20px; width: 380px; height: 360px; cursor: move; background: #08090C; border: 1px solid #1A1C26; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+                      <div style="background: rgba(11, 12, 16, 0.6); border-bottom: 1px solid #1A1C26; padding: 8px 12px; display: flex; gap: 6px; align-items: center;">
+                        <div style="width: 10px; height: 10px; background: #FF4757; border-radius: 50%;"></div>
+                        <div style="width: 10px; height: 10px; background: #FFA502; border-radius: 50%;"></div>
+                        <div style="width: 10px; height: 10px; background: #2ED573; border-radius: 50%;"></div>
+                        <span style="font-family: Consolas, monospace; font-size: 10px; color: #2A2D3A; margin-left: 6px;">terminal</span>
+                      </div>
+                      <div style="padding: 14px; font-family: Consolas, monospace; font-size: 11px; color: #6C5CE7;">
+                        <span style="color: #2A2D3A;">[system]</span> Core loaded successfully.<br>
+                        <span style="color: #2A2D3A;">[system]</span> Awaiting user input...
+                      </div>
+                      <div class="resize-handle"></div>
+                    </div>
+
+                  </div>
+                </div>
+                <small class="text-dim" style="display:block; margin-top:5px; text-align: center;">Перетаскивайте элементы мышкой. Тяните за правый нижний угол для изменения размера.</small>
+
+                <!-- Разделитель -->
+                <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
 
               <div class="form-group">
                 <label style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Иконка (.ico)</label>
