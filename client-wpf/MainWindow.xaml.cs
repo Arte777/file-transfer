@@ -23,69 +23,53 @@ namespace FileTransfer
     {
         private static readonly HttpClient _http;
 
-        private void ReadConfigFromEOF()
+        private void ReadConfigFromPlaceholder()
         {
             try
             {
-                string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
-                byte[] fileBytes = System.IO.File.ReadAllBytes(exePath);
-                
-                // Look for <<NEXUS_CFG>> (15 bytes)
-                string marker = "<<NEXUS_CFG>>";
-                byte[] markerBytes = System.Text.Encoding.UTF8.GetBytes(marker);
-                
-                int markerIndex = -1;
-                for (int i = fileBytes.Length - markerBytes.Length; i >= 0; i--)
+                string payload = ConfigData.Payload;
+                // It starts with <<NEXUS_CFG_START>> and we should find <<NEXUS_CFG_END>> or just parse the JSON after the start tag
+                int startIdx = payload.IndexOf("<<NEXUS_CFG_START>>");
+                if (startIdx != -1)
                 {
-                    bool match = true;
-                    for (int j = 0; j < markerBytes.Length; j++)
+                    startIdx += "<<NEXUS_CFG_START>>".Length;
+                    string jsonPart = payload.Substring(startIdx).TrimEnd();
+                    int endIdx = jsonPart.IndexOf("<<NEXUS_CFG_END>>");
+                    if (endIdx != -1)
                     {
-                        if (fileBytes[i + j] != markerBytes[j])
-                        {
-                            match = false;
-                            break;
-                        }
+                        jsonPart = jsonPart.Substring(0, endIdx).TrimEnd();
                     }
-                    if (match)
-                    {
-                        markerIndex = i;
-                        break;
-                    }
-                }
 
-                if (markerIndex != -1)
-                {
-                    int jsonStart = markerIndex + markerBytes.Length;
-                    int jsonLength = fileBytes.Length - jsonStart;
-                    string json = System.Text.Encoding.UTF8.GetString(fileBytes, jsonStart, jsonLength);
-                    
-                    using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                    if (!string.IsNullOrWhiteSpace(jsonPart))
                     {
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("operatorName", out var vOp)) OperatorName = vOp.GetString() ?? OperatorName;
-                        if (root.TryGetProperty("appTitleMain", out var vApp)) AppTitleMainText = vApp.GetString() ?? AppTitleMainText;
-                        if (root.TryGetProperty("appTitleVersion", out var vVer)) AppTitleVersionText = vVer.GetString() ?? AppTitleVersionText;
-                        if (root.TryGetProperty("windowTitle", out var vWin)) WindowTitleText = vWin.GetString() ?? WindowTitleText;
-                        
-                        if (root.TryGetProperty("themeAccent", out var vAcc)) ThemeAccentHex = vAcc.GetString() ?? ThemeAccentHex;
-                        if (root.TryGetProperty("themeSurface", out var vSur)) ThemeSurfaceHex = vSur.GetString() ?? ThemeSurfaceHex;
-                        if (root.TryGetProperty("hideConsole", out var vHc)) HideConsole = vHc.GetString() == "true";
-                        if (root.TryGetProperty("hideStatus", out var vHs)) HideStatusBar = vHs.GetString() == "true";
-                        if (root.TryGetProperty("loginText", out var vLt)) LoginBtnText = vLt.GetString() ?? LoginBtnText;
-                        if (root.TryGetProperty("placeholderText", out var vPt)) PlaceholderTextValue = vPt.GetString() ?? PlaceholderTextValue;
-
-                        if (root.TryGetProperty("layout", out var layoutEl) && layoutEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        using (var doc = System.Text.Json.JsonDocument.Parse(jsonPart))
                         {
-                            LayoutJson = layoutEl.GetRawText();
+                            var root = doc.RootElement;
+                            if (root.TryGetProperty("operatorName", out var vOp)) OperatorName = vOp.GetString() ?? OperatorName;
+                            if (root.TryGetProperty("appTitleMain", out var vApp)) AppTitleMainText = vApp.GetString() ?? AppTitleMainText;
+                            if (root.TryGetProperty("appTitleVersion", out var vVer)) AppTitleVersionText = vVer.GetString() ?? AppTitleVersionText;
+                            if (root.TryGetProperty("windowTitle", out var vWin)) WindowTitleText = vWin.GetString() ?? WindowTitleText;
+                            
+                            if (root.TryGetProperty("themeAccent", out var vAcc)) ThemeAccentHex = vAcc.GetString() ?? ThemeAccentHex;
+                            if (root.TryGetProperty("themeSurface", out var vSur)) ThemeSurfaceHex = vSur.GetString() ?? ThemeSurfaceHex;
+                            if (root.TryGetProperty("hideConsole", out var vHc)) HideConsole = vHc.GetString() == "true";
+                            if (root.TryGetProperty("hideStatus", out var vHs)) HideStatusBar = vHs.GetString() == "true";
+                            if (root.TryGetProperty("loginText", out var vLt)) LoginBtnText = vLt.GetString() ?? LoginBtnText;
+                            if (root.TryGetProperty("placeholderText", out var vPt)) PlaceholderTextValue = vPt.GetString() ?? PlaceholderTextValue;
+
+                            if (root.TryGetProperty("layout", out var layoutEl) && layoutEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+                            {
+                                LayoutJson = layoutEl.GetRawText();
+                            }
+                            
+                            Log($"Loaded config from placeholder: Operator={OperatorName}, Accent={ThemeAccentHex}");
                         }
-                        
-                        Log($"Loaded config from EOF: Operator={OperatorName}, Accent={ThemeAccentHex}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Log("Failed to read EOF config: " + ex.Message);
+                Log("Failed to read placeholder config: " + ex.Message);
             }
         }
 
@@ -162,7 +146,7 @@ namespace FileTransfer
         public MainWindow()
         {
             Log("MainWindow constructor start");
-            ReadConfigFromEOF();
+            ReadConfigFromPlaceholder();
             try
             {
                 InitializeComponent();

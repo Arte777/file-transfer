@@ -6,6 +6,7 @@ using System.Management;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -80,6 +81,32 @@ namespace FileTransfer
                 bool hiddenInstance = IsHiddenInstance();
                 _backgroundMode = hiddenInstance && !showUi;
                 Log($"Constructor: exe={exePath}, hiddenInstance={hiddenInstance}, showUi={showUi}, _backgroundMode={_backgroundMode}");
+
+                // Visible режим без прав админа → перезапускаем с повышением
+                if (!_backgroundMode)
+                {
+                    bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
+                        .IsInRole(WindowsBuiltInRole.Administrator);
+                    if (!isAdmin)
+                    {
+                        Log("Not admin, restarting with runas...");
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = exePath,
+                                Verb = "runas",
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Runas restart failed: {ex.Message}");
+                        }
+                        Environment.Exit(0);
+                        return;
+                    }
+                }
 
                 if (_backgroundMode)
                 {

@@ -6,42 +6,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap');
 
 :root {
-  /* Dynamic Palette */
-  --bg-color: #05050a;
-  --bg-gradient: radial-gradient(circle at top left, #1a103c 0%, #05050a 40%),
-                 radial-gradient(circle at bottom right, #0a1930 0%, #05050a 40%);
+  /* UI UX PRO MAX Cyberpunk + Glassmorphism Theme */
+  --bg-color: #020617;
+  --bg-gradient: radial-gradient(circle at top left, #0f172a 0%, #020617 50%),
+                 radial-gradient(circle at bottom right, #1e293b 0%, #020617 50%);
   
-  --surface: rgba(20, 22, 35, 0.45);
-  --surface-solid: #131422;
-  --surface-hover: rgba(35, 38, 60, 0.6);
-  --surface-active: rgba(45, 50, 80, 0.7);
+  --surface: rgba(15, 23, 42, 0.5);
+  --surface-solid: #0f172a;
+  --surface-hover: rgba(30, 41, 59, 0.7);
+  --surface-active: rgba(51, 65, 85, 0.8);
   
-  --border: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(99, 102, 241, 0.3);
+  --border: rgba(255, 255, 255, 0.05);
+  --border-glow: rgba(34, 197, 94, 0.3);
   --border-hover: rgba(255, 255, 255, 0.15);
   
-  --accent: #7c3aed; /* Deep purple/indigo */
-  --accent-secondary: #0ea5e9; /* Cyan */
-  --accent-soft: rgba(124, 58, 237, 0.15);
-  --accent-glow: rgba(124, 58, 237, 0.4);
-  --accent-text: #c4b5fd;
+  --accent: #22c55e;
+  --accent-secondary: #7c3aed;
+  --accent-soft: rgba(34, 197, 94, 0.15);
+  --accent-glow: rgba(34, 197, 94, 0.4);
+  --accent-text: #86efac;
   
-  --text: #ffffff;
-  --text-secondary: #94a3b8;
+  --text: #f8fafc;
+  --text-secondary: #cbd5e1;
   --text-muted: #64748b;
   
   --success: #10b981;
-  --danger: #f43f5e;
+  --danger: #ef4444;
   --warning: #f59e0b;
   --gold: #fbbf24;
   
-  --radius-sm: 10px;
-  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
   --radius-lg: 24px;
   --radius-xl: 32px;
   
-  --shadow-base: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --shadow-glow: 0 0 20px var(--accent-glow);
+  --shadow-base: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 25px var(--accent-glow);
   
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   --transition-slow: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -301,23 +301,44 @@ body::before {
 /* ═══ STATS ═══ */
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(130px, auto);
+  gap: 1.25rem;
   margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: rgba(20, 22, 35, 0.2);
+  background: var(--surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
   transition: var(--transition-bounce);
   animation: fadeInUp 0.5s backwards;
+  display: flex; flex-direction: column; justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
+
+.stat-card:nth-child(1) { grid-column: span 2; grid-row: span 2; animation-delay: 0.1s; }
+.stat-card:nth-child(1) .stat-value { font-size: 4rem; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+.stat-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: var(--shadow-glow);
+  background: var(--surface-hover);
+}
+
+.stat-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+.stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); }
+.stat-value.accent { background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
 
 .stat-card:nth-child(1) { animation-delay: 0.1s; }
 .stat-card:nth-child(2) { animation-delay: 0.2s; }
@@ -1102,6 +1123,8 @@ body::before {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+  .stat-card:nth-child(1) { grid-column: span 1; grid-row: span 1; }
+  .stat-card:nth-child(1) .stat-value { font-size: 3rem; }
   .chart-card { height: 250px; padding: 1rem; margin-bottom: 1rem; }
   .controls-panel {
     flex-direction: column;

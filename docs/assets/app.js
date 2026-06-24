@@ -189,7 +189,6 @@ function renderHeader(activePage) {
     <div class="nav-links">
       ${navLink('files', 'index.html', iconDashboard, 'Файлы')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
-      ${navLink('builder', 'builder.html', iconBuilder, 'Билдер')}
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления')}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
       
