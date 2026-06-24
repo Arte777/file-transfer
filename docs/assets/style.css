@@ -7,40 +7,41 @@
 
 :root {
   /* UI UX PRO MAX Cyberpunk + Glassmorphism Theme */
-  --bg-color: #020617;
-  --bg-gradient: radial-gradient(circle at top left, #0f172a 0%, #020617 50%),
-                 radial-gradient(circle at bottom right, #1e293b 0%, #020617 50%);
+  --bg-color: #030306;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.06) 0%, transparent 40%),
+                 radial-gradient(circle at 90% 80%, rgba(255, 0, 127, 0.05) 0%, transparent 40%),
+                 #030306;
   
-  --surface: rgba(15, 23, 42, 0.5);
-  --surface-solid: #0f172a;
-  --surface-hover: rgba(30, 41, 59, 0.7);
-  --surface-active: rgba(51, 65, 85, 0.8);
+  --surface: rgba(10, 10, 16, 0.6);
+  --surface-solid: #09090e;
+  --surface-hover: rgba(18, 18, 28, 0.85);
+  --surface-active: rgba(28, 28, 40, 0.95);
   
   --border: rgba(255, 255, 255, 0.05);
-  --border-glow: rgba(34, 197, 94, 0.3);
+  --border-glow: rgba(0, 240, 255, 0.3);
   --border-hover: rgba(255, 255, 255, 0.15);
   
-  --accent: #22c55e;
-  --accent-secondary: #7c3aed;
-  --accent-soft: rgba(34, 197, 94, 0.15);
-  --accent-glow: rgba(34, 197, 94, 0.4);
-  --accent-text: #86efac;
+  --accent: #00f0ff; /* Neon Cyber Cyan */
+  --accent-secondary: #ff007f; /* Neon Pink */
+  --accent-soft: rgba(0, 240, 255, 0.12);
+  --accent-glow: rgba(0, 240, 255, 0.25);
+  --accent-text: #7efff5;
   
-  --text: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
   
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --gold: #fbbf24;
+  --success: #00ff88; /* Neon green */
+  --danger: #ff0055; /* Neon red */
+  --warning: #ff9f1c; /* Neon orange */
+  --gold: #ffd60a;
   
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 24px;
   --radius-xl: 32px;
   
-  --shadow-base: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
+  --shadow-base: 0 10px 40px -10px rgba(0, 0, 0, 0.7);
   --shadow-glow: 0 0 25px var(--accent-glow);
   
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -201,10 +202,10 @@ body::before {
 
 .nav-link.active {
   color: #fff;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-glow);
   font-weight: 700;
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
 
@@ -529,21 +530,10 @@ body::before {
   border: 1px solid rgba(255,255,255,0.1);
 }
 .token-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-.token-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-  border-color: rgba(255,255,255,0.1);
 }
 .token-card-status {
   position: absolute;

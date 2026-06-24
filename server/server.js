@@ -169,8 +169,8 @@ const CREDENTIALS = {
 
 // ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
 const DEFAULT_SETTINGS = {
-  'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#7c6aff', bio: 'Root Admin' },
-  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#00CEC9', bio: 'Operator' }
+  'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#00f0ff', bio: 'Root Admin' },
+  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' }
 };
 
 // In-memory fallback when MongoDB is not available
@@ -310,7 +310,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
     const s = await getOperatorSettings(user);
     res.json({ user, ...s });
   } catch (e) {
-    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#7c6aff', bio: '' });
+    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#00f0ff', bio: '' });
   }
 });
 
@@ -322,7 +322,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
     const { password, ...safe } = s;
     res.json({ user, ...safe });
   } catch (e) {
-    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#7c6aff', bio: '' });
+    res.json({ user, avatar: '🦊', displayName: user, themeColor: '#00f0ff', bio: '' });
   }
 });
 
