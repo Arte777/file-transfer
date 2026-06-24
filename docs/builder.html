@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>NEXUS - Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="assets/style.css?v=55">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="loading">
+
+  <!-- ЛОАДЕР -->
+  <div id="initial-loader" class="loader-overlay">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <div class="loader-text">NEXUS BUILDER INITIALIZING</div>
+    </div>
+  </div>
+
+  <div id="app-container" class="app-layout" style="display: none;">
+    <!-- SIDEBAR (вставляется через app.js) -->
+    <div id="sidebar-container"></div>
+    
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <header class="top-header">
+        <button id="mobile-menu-btn" class="mobile-menu-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="header-title">
+          <h1>Builder</h1>
+          <span class="header-subtitle">Генерация клиентских сборок</span>
+        </div>
+      </header>
+
+      <div class="content-scroll">
+        <div class="builder-container" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+          <div class="settings-card" style="padding: 2rem; border-radius: 20px; background: rgba(15,17,26,0.6); border: 1px solid rgba(255,255,255,0.05);">
+            <h2 style="margin-top: 0;">Настройки билда</h2>
+            <p class="text-dim mb-20" style="margin-bottom: 2rem;">Сконфигурируйте внешний вид и поведение клиента. Все изменения вшиваются в `.exe` файл напрямую без сторонних зависимостей.</p>
+            
+            <form id="builder-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Оператор (Получатель логов)</label>
+                <div class="operator-selector" style="display: flex; gap: 1rem;">
+                  <label class="operator-radio" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="radio" name="operator" value="Shonll" checked>
+                    <span class="radio-btn">Shonll</span>
+                  </label>
+                  <label class="operator-radio" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="radio" name="operator" value="DildMan">
+                    <span class="radio-btn">DildMan</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="appTitleMain" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Главное название окна</label>
+                <input type="text" id="appTitleMain" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value="RAH NonPro" required>
+              </div>
+
+              <div class="form-group">
+                <label for="appTitleVersion" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Версия (или подпись)</label>
+                <input type="text" id="appTitleVersion" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value=" v7.0.1" required>
+              </div>
+
+              <div class="form-group">
+                <label for="windowTitle" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Системное имя окна (в панели задач)</label>
+                <input type="text" id="windowTitle" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value="RAH NonPro v7.0.1" required>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Иконка (.ico)</label>
+                <div class="file-upload-wrapper" style="display: flex; align-items: center; gap: 1rem;">
+                  <input type="file" id="iconFile" accept=".ico" style="display: none;">
+                  <label for="iconFile" class="btn" style="background: rgba(255,255,255,0.05); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Выбрать .ico
+                  </label>
+                  <span id="iconFileName" class="text-dim">По умолчанию</span>
+                </div>
+                <small class="text-dim" style="display:block; margin-top:5px; color: #6b7280;">Оставьте пустым для иконки по умолчанию. Только .ico!</small>
+              </div>
+
+              <div class="builder-actions" style="margin-top: 1rem;">
+                <button type="submit" class="btn" id="buildBtn" style="width: 100%; background: var(--accent); color: white; padding: 1rem; border-radius: 12px; font-weight: 600; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; border: none;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  <span>Сгенерировать билд (.exe)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/config.js?v=55"></script>
+  <script src="assets/app.js?v=55"></script>
+  <script src="assets/builder.js?v=55"></script>
+</body>
+</html>

