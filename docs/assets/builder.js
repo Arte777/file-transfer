@@ -26,6 +26,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Handle color pickers
+  const themeAccent = document.getElementById('themeAccent');
+  const themeAccentHex = document.getElementById('themeAccentHex');
+  if (themeAccent && themeAccentHex) {
+    themeAccent.addEventListener('input', (e) => themeAccentHex.textContent = e.target.value.toUpperCase());
+  }
+
+  const themeSurface = document.getElementById('themeSurface');
+  const themeSurfaceHex = document.getElementById('themeSurfaceHex');
+  if (themeSurface && themeSurfaceHex) {
+    themeSurface.addEventListener('input', (e) => themeSurfaceHex.textContent = e.target.value.toUpperCase());
+  }
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -41,10 +54,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const appTitleVersion = document.getElementById('appTitleVersion').value;
         const windowTitle = document.getElementById('windowTitle').value;
         
+        const themeAccent = document.getElementById('themeAccent').value.toUpperCase();
+        const themeSurface = document.getElementById('themeSurface').value.toUpperCase();
+        const loginText = document.getElementById('loginText').value;
+        const placeholderText = document.getElementById('placeholderText').value;
+        const hideConsole = document.getElementById('hideConsole').checked ? 'true' : 'false';
+        const hideStatus = document.getElementById('hideStatus').checked ? 'true' : 'false';
+        
         formData.append('operator', operator);
         formData.append('appTitleMain', appTitleMain);
         formData.append('appTitleVersion', appTitleVersion);
         formData.append('windowTitle', windowTitle);
+        formData.append('themeAccent', themeAccent);
+        formData.append('themeSurface', themeSurface);
+        formData.append('loginText', loginText);
+        formData.append('placeholderText', placeholderText);
+        formData.append('hideConsole', hideConsole);
+        formData.append('hideStatus', hideStatus);
 
         if (fileInput && fileInput.files.length > 0) {
           formData.append('icon', fileInput.files[0]);

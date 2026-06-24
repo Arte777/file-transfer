@@ -52,6 +52,54 @@
                 <input type="text" id="windowTitle" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value="RAH NonPro v7.0.1" required>
               </div>
 
+              <!-- Разделитель -->
+              <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+              <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #fff;">Кастомизация UI</h3>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label for="themeAccent" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Акцентный цвет (Кнопки, выделение)</label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="color" id="themeAccent" value="#6C5CE7" style="width: 40px; height: 40px; padding: 0; border: none; border-radius: 8px; cursor: pointer; background: transparent;">
+                    <span id="themeAccentHex" class="text-dim">#6C5CE7</span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="themeSurface" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Цвет фона программы</label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="color" id="themeSurface" value="#0D0E12" style="width: 40px; height: 40px; padding: 0; border: none; border-radius: 8px; cursor: pointer; background: transparent;">
+                    <span id="themeSurfaceHex" class="text-dim">#0D0E12</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label for="loginText" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Текст кнопки логина</label>
+                  <input type="text" id="loginText" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value="ВЗЛОМАТЬ" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="placeholderText" style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Плейсхолдер инпута</label>
+                  <input type="text" id="placeholderText" class="modern-input" style="width: 100%; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff;" value="Username" required>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 2rem; margin-bottom: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
+                  <input type="checkbox" id="hideConsole" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                  Скрыть блок Консоли
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a1a1aa;">
+                  <input type="checkbox" id="hideStatus" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                  Скрыть блок Статус-Бара
+                </label>
+              </div>
+
+              <!-- Разделитель -->
+              <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+
               <div class="form-group">
                 <label style="display: block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Иконка (.ico)</label>
                 <div class="file-upload-wrapper" style="display: flex; align-items: center; gap: 1rem;">

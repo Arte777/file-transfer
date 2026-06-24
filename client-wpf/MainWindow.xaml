@@ -343,7 +343,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Status badge -->
-                    <Border Grid.Row="0" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+                    <Border x:Name="StatusBadge" Grid.Row="0" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
                             HorizontalAlignment="Left">
                         <Border.Background>
                             <SolidColorBrush x:Name="StatusBadgeBg" Color="#0F1014"/>
@@ -357,7 +357,7 @@
                     </Border>
 
                     <!-- Console log area -->
-                    <Border Grid.Row="1" CornerRadius="12" Margin="0,0,0,12"
+                    <Border x:Name="ConsoleArea" Grid.Row="1" CornerRadius="12" Margin="0,0,0,12"
                             BorderThickness="1" BorderBrush="#1A1C26">
                         <Border.Background>
                             <SolidColorBrush Color="#08090C"/>

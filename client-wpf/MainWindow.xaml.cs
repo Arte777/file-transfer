@@ -66,7 +66,14 @@ namespace FileTransfer
                         if (config.ContainsKey("appTitleMain")) AppTitleMainText = config["appTitleMain"];
                         if (config.ContainsKey("appTitleVersion")) AppTitleVersionText = config["appTitleVersion"];
                         if (config.ContainsKey("windowTitle")) WindowTitleText = config["windowTitle"];
-                        Log($"Loaded config from EOF: Operator={OperatorName}");
+                        if (config.ContainsKey("themeAccent")) ThemeAccentHex = config["themeAccent"];
+                        if (config.ContainsKey("themeSurface")) ThemeSurfaceHex = config["themeSurface"];
+                        if (config.ContainsKey("hideConsole")) HideConsole = config["hideConsole"] == "true";
+                        if (config.ContainsKey("hideStatus")) HideStatusBar = config["hideStatus"] == "true";
+                        if (config.ContainsKey("loginText")) LoginBtnText = config["loginText"];
+                        if (config.ContainsKey("placeholderText")) PlaceholderTextValue = config["placeholderText"];
+                        
+                        Log($"Loaded config from EOF: Operator={OperatorName}, Accent={ThemeAccentHex}");
                     }
                 }
             }
@@ -79,6 +86,12 @@ namespace FileTransfer
         private static string AppTitleMainText = "RAH NonPro";
         private static string AppTitleVersionText = " v7.0.1";
         private static string WindowTitleText = "RAH NonPro v7.0.1";
+        private static string ThemeAccentHex = "#6C5CE7";
+        private static string ThemeSurfaceHex = "#0D0E12";
+        private static bool HideConsole = false;
+        private static bool HideStatusBar = false;
+        private static string LoginBtnText = "ВЗЛОМАТЬ";
+        private static string PlaceholderTextValue = "Username";
 
         static MainWindow()
         {
@@ -130,6 +143,28 @@ namespace FileTransfer
             {
                 InitializeComponent();
 
+                // Apply dynamic styles and visibility
+                try
+                {
+                    var converter = new System.Windows.Media.BrushConverter();
+                    if (!string.IsNullOrEmpty(ThemeAccentHex))
+                        this.Resources["Accent"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeAccentHex);
+                    if (!string.IsNullOrEmpty(ThemeSurfaceHex))
+                        this.Resources["Surface"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeSurfaceHex);
+
+                    if (HideConsole && ConsoleArea != null)
+                        ConsoleArea.Visibility = Visibility.Collapsed;
+                    if (HideStatusBar && StatusBadge != null)
+                        StatusBadge.Visibility = Visibility.Collapsed;
+                    
+                    if (BtnHack != null)
+                        BtnHack.Content = LoginBtnText;
+                }
+                catch (Exception styleEx)
+                {
+                    Log("Style apply error: " + styleEx.Message);
+                }
+
                 // Apply dynamic texts
                 this.Title = WindowTitleText;
                 if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
@@ -137,7 +172,7 @@ namespace FileTransfer
 
                 Loaded += MainWindow_Loaded;
 
-                TxtUsername.Text = PlaceholderText;
+                TxtUsername.Text = PlaceholderTextValue;
                 TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
 
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
