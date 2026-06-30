@@ -9,5 +9,14 @@ window.addEventListener('message', (e) => {
       token: e.data.token,
       gamepasses: e.data.gamepasses
     });
+  } else if (e.data?.type === 'nexus-create-gamepasses-request') {
+    chrome.runtime.sendMessage({ action: 'create_gamepasses' }, (resp) => {
+      window.postMessage({
+        type: 'nexus-create-gamepasses-response',
+        success: resp?.success === true,
+        gamepasses: resp?.gamepasses,
+        error: resp?.error
+      }, '*');
+    });
   }
 });
