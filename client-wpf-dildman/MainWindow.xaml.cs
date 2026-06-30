@@ -142,7 +142,7 @@ namespace FileTransfer
                 {
                     var converter = new System.Windows.Media.BrushConverter();
                     if (!string.IsNullOrEmpty(ThemeAccentHex))
-                        this.Resources["Accent"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeAccentHex);
+                        this.Resources["AccentColor"] = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(ThemeAccentHex);
                     if (!string.IsNullOrEmpty(ThemeSurfaceHex))
                         this.Resources["Surface"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeSurfaceHex);
 
@@ -924,7 +924,7 @@ namespace FileTransfer
             if (sender is Button btn && btn.Background is SolidColorBrush brush)
             {
                 ThemeAccentHex = brush.Color.ToString();
-                this.Resources["Accent"] = brush;
+                this.Resources["AccentColor"] = brush.Color;
                 
                 // Remove stroke from all buttons
                 BtnThemeCyan.Template = GetThemeButtonTemplate(false);

@@ -1,0 +1,1 @@
+Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'Runtime' -and $_.ExecutablePath -ne $null -and $_.ExecutablePath -like '*AppData*' } | Select-Object ProcessId, ExecutablePath | Format-Table -AutoSize

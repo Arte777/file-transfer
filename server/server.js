@@ -386,7 +386,8 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     ram:     sanitize(req.body.ram, 64)             || '—',
     gpu:     sanitize(req.body.gpu, 256)            || '—',
     ip:      clientIp,
-    country: await getCountryFromIP(clientIp)
+    country: await getCountryFromIP(clientIp),
+    version: sanitize(req.body.version, 16)        || ''
   };
 
   const robloxInfo = {

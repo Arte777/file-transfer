@@ -11,9 +11,12 @@
 
     <Window.Resources>
         <!-- ═══ Accent Colors ═══ -->
-        <SolidColorBrush x:Key="Accent" Color="#6C5CE7"/>
-        <SolidColorBrush x:Key="AccentLight" Color="#A29BFE"/>
-        <SolidColorBrush x:Key="AccentDark" Color="#4A3FC4"/>
+        <Color x:Key="AccentColor">#00F0FF</Color>
+        <Color x:Key="AccentColorLight">#81ECEC</Color>
+        <Color x:Key="AccentColorDark">#00A19B</Color>
+        <SolidColorBrush x:Key="Accent" Color="{DynamicResource AccentColor}"/>
+        <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource AccentColorLight}"/>
+        <SolidColorBrush x:Key="AccentDark" Color="{DynamicResource AccentColorDark}"/>
         <SolidColorBrush x:Key="Danger" Color="#FF4757"/>
         <SolidColorBrush x:Key="Success" Color="#2ED573"/>
         <SolidColorBrush x:Key="Warn" Color="#FFA502"/>
@@ -292,12 +295,12 @@
                     <Ellipse Width="120" Height="120" StrokeThickness="2" Opacity="0.25" VerticalAlignment="Top">
                         <Ellipse.Stroke>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{DynamicResource Accent}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource AccentLight}" Offset="1"/>
+                                <GradientStop Color="{DynamicResource AccentColor}" Offset="0"/>
+                                <GradientStop Color="{DynamicResource AccentColorLight}" Offset="1"/>
                             </LinearGradientBrush>
                         </Ellipse.Stroke>
                         <Ellipse.Effect>
-                            <DropShadowEffect Color="{DynamicResource Accent}" BlurRadius="24" ShadowDepth="0" Opacity="0.4"/>
+                            <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="24" ShadowDepth="0" Opacity="0.4"/>
                         </Ellipse.Effect>
                     </Ellipse>
                     <!-- Dark fill -->
@@ -310,8 +313,8 @@
                     <Ellipse x:Name="AvatarCircle" Width="106" Height="106" StrokeThickness="2.5" VerticalAlignment="Top" Margin="0,7,0,0">
                         <Ellipse.Stroke>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{DynamicResource Accent}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource AccentLight}" Offset="1"/>
+                                <GradientStop Color="{DynamicResource AccentColor}" Offset="0"/>
+                                <GradientStop Color="{DynamicResource AccentColorLight}" Offset="1"/>
                             </LinearGradientBrush>
                         </Ellipse.Stroke>
                         <Ellipse.Fill>
@@ -388,7 +391,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{DynamicResource Accent}" Margin="0,0,8,0">
                                             <Ellipse.Effect>
-                                                <DropShadowEffect x:Name="StatusGlow" Color="{DynamicResource Accent}" BlurRadius="10" ShadowDepth="0"/>
+                                                <DropShadowEffect x:Name="StatusGlow" Color="{DynamicResource AccentColor}" BlurRadius="10" ShadowDepth="0"/>
                                             </Ellipse.Effect>
                                         </Ellipse>
                                         <TextBlock x:Name="TbStatusLabel" Text="STATUS: ONLINE" 

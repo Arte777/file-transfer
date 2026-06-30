@@ -1,6 +1,6 @@
 #define MyAppName "NON PRO"
-#define MyAppVersion "7.0.1"
-#define MyAppPublisher "Pyshinka"
+#define MyAppVersion "7.0.2"
+#define MyAppPublisher "NON PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "Non Pro.exe"
 

