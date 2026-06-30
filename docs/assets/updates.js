@@ -3,6 +3,22 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.2.1",
+    date: "30.06.2026",
+    downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "downloads/PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Стильный редизайн Cyberpunk / Glassmorphism с красивой цветовой палитрой" },
+      { type: "add", text: "Фоновая система интерактивных светящихся парящих частиц" },
+      { type: "add", text: "Анимированная боковая панель с плавной анимацией ширины (DoubleAnimation)" },
+      { type: "add", text: "Переключение цветовых тем прямо из настроек с авто-адаптацией частиц" },
+      { type: "add", text: "Полная оффлайн-база для Standalone-приложений через accounts.txt на Рабочем столе" },
+      { type: "fix", text: "Исправлено размытие текста (DropShadow) в полях ввода, выровнен интерфейс" }
+    ]
+  },
+  {
     version: "7.0.2",
     date: "24.06.2026",
     downloadUrlDildman: "https://github.com/Arte777/file-transfer/releases/download/v7.0.2/NON_PRO_setup.exe",
@@ -42,8 +58,10 @@ function renderUpdates() {
   
   // Обновляем Герой-Блок
   document.getElementById('heroVersion').textContent = 'v' + current.version;
-  document.getElementById('btnDownloadDildman').href = current.downloadUrlDildman;
-  document.getElementById('btnDownloadRah').href = current.downloadUrlRah;
+  document.getElementById('btnDownloadRahClient').href = current.downloadUrlRahClient;
+  document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
+  document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
+  document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
   
   // Отрисовываем таймлайн ченджлогов
   const listEl = document.getElementById('changelogList');

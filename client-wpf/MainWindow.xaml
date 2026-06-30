@@ -1,7 +1,7 @@
 <Window x:Class="FileTransfer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="RAH NonPro v7.0.2"
+        Title="RAH NonPro"
         Height="540" Width="850"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -11,57 +11,36 @@
 
     <Window.Resources>
         <!-- ═══ Accent Colors ═══ -->
-        <Color x:Key="AccentColor">#00F0FF</Color>
-        <Color x:Key="AccentColorLight">#81ECEC</Color>
-        <Color x:Key="AccentColorDark">#00A19B</Color>
-        <SolidColorBrush x:Key="Accent" Color="{DynamicResource AccentColor}"/>
-        <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource AccentColorLight}"/>
-        <SolidColorBrush x:Key="AccentDark" Color="{DynamicResource AccentColorDark}"/>
-        <SolidColorBrush x:Key="Danger" Color="#FF4757"/>
-        <SolidColorBrush x:Key="Success" Color="#2ED573"/>
-        <SolidColorBrush x:Key="Warn" Color="#FFA502"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#F1F2F6"/>
-        <SolidColorBrush x:Key="TextDim" Color="#57606F"/>
-        <SolidColorBrush x:Key="Surface" Color="#0D0E12"/>
-        <SolidColorBrush x:Key="SurfaceLight" Color="#141620"/>
-
+        <Color x:Key="AppAppAccentColor">#00F0FF</Color>
+        <Color x:Key="AppAppAccentColorLight">#81ECEC</Color>
+        <Color x:Key="AppAppAccentColorDark">#00A19B</Color>
+        <SolidColorBrush x:Key="Accent" Color="{DynamicResource AppAccentColor}"/>
+        <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource AppAccentColorLight}"/>
+        <SolidColorBrush x:Key="AccentDark" Color="{DynamicResource AppAccentColorDark}"/>
+        <SolidColorBrush x:Key="Danger" Color="#FF0055"/>
+        <SolidColorBrush x:Key="Success" Color="#00FF88"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="TextDim" Color="#94A3B8"/>
+        
         <!-- ═══ Title Bar Button ═══ -->
         <Style x:Key="TitleBtn" TargetType="Button">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#57606F"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1C1E28"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ═══ Close Button (Red Hover) ═══ -->
-        <Style x:Key="CloseBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Width="32" Height="32">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF4757"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#1A1C26"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -70,30 +49,18 @@
             </Setter>
         </Style>
 
-        <!-- ═══ Modern TextBox ═══ -->
-        <Style x:Key="ModernInput" TargetType="TextBox">
-            <Setter Property="Background" Value="#0A0B0F"/>
-            <Setter Property="Foreground" Value="#F1F2F6"/>
-            <Setter Property="CaretBrush" Value="#6C5CE7"/>
-            <Setter Property="SelectionBrush" Value="#6C5CE7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#1C1E28"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+        <!-- ═══ Close Button ═══ -->
+        <Style x:Key="CloseBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Bd" CornerRadius="12"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="4,0"/>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="18" Width="36" Height="36">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#6C5CE7"/>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF0055"/>
+                                <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -101,8 +68,95 @@
             </Setter>
         </Style>
 
-        <!-- ═══ Primary Action Button ═══ -->
-        <Style x:Key="PrimaryBtn" TargetType="Button">
+        <!-- ═══ Sidebar Nav Button ═══ -->
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12" Margin="16,0,16,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Glowing left indicator, initially hidden -->
+                                <Border x:Name="Indicator" Width="4" Height="24" CornerRadius="2" 
+                                        Background="{DynamicResource Accent}" Margin="-16,0,12,0"
+                                        HorizontalAlignment="Left" Visibility="Hidden">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="10" ShadowDepth="0"/>
+                                    </Border.Effect>
+                                </Border>
+                                <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0F111A"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="Bd" Property="Background" Value="#141724"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══ App Input ═══ -->
+        <Style x:Key="CyberInput" TargetType="TextBox">
+            <Setter Property="Background" Value="#09090E"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Accent}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#1A1C26"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Grid>
+                            <!-- Glow background, sibling to Bd to avoid blurring the text -->
+                            <Border x:Name="GlowBd" CornerRadius="16" Background="#09090E" Visibility="Collapsed">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="15" ShadowDepth="0" Opacity="0.5"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border x:Name="Bd" CornerRadius="16"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="4,0" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="GlowBd" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══ App Button ═══ -->
+        <Style x:Key="CyberBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="14"/>
@@ -112,15 +166,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" CornerRadius="12" Padding="0,14">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#6C5CE7" Offset="0"/>
-                                    <GradientStop Color="#A29BFE" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                        <Border x:Name="Bg" CornerRadius="16" Padding="0,14" Background="{TemplateBinding Background}">
                             <Border.Effect>
-                                <DropShadowEffect Color="#6C5CE7" BlurRadius="20" ShadowDepth="0" Opacity="0.3"/>
+                                <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="25" ShadowDepth="0" Opacity="0.6"/>
                             </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -128,16 +176,12 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bg" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="#6C5CE7" BlurRadius="32" ShadowDepth="0" Opacity="0.55"/>
+                                        <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="35" ShadowDepth="0" Opacity="0.8"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bg" Property="Background">
-                                    <Setter.Value>
-                                        <SolidColorBrush Color="#1C1E28"/>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter TargetName="Bg" Property="Background" Value="#1A1C26"/>
                                 <Setter TargetName="Bg" Property="Effect">
                                     <Setter.Value>
                                         <DropShadowEffect Opacity="0"/>
@@ -151,21 +195,12 @@
             </Setter>
         </Style>
 
-        <!-- ═══ Telegram Button ═══ -->
-        <Style x:Key="TelegramBtn" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style x:Key="TelegramCyberBtn" TargetType="Button" BasedOn="{StaticResource CyberBtn}">
+            <Setter Property="Background" Value="#229ED9"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" CornerRadius="12" Padding="0,12">
-                            <Border.Background>
-                                <SolidColorBrush Color="#229ED9"/>
-                            </Border.Background>
+                        <Border x:Name="Bg" CornerRadius="16" Padding="0,14" Background="{TemplateBinding Background}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -177,294 +212,324 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <!-- ═══ Progress Bar Style ═══ -->
-        <Style x:Key="NeonProgress" TargetType="ProgressBar">
-            <Setter Property="Background" Value="#0A0B0F"/>
-            <Setter Property="Foreground" Value="#6C5CE7"/>
-            <Setter Property="Height" Value="4"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Border CornerRadius="2" Background="{TemplateBinding Background}" ClipToBounds="True">
-                            <Border x:Name="PART_Track">
-                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="2">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Color="#6C5CE7" Offset="0"/>
-                                            <GradientStop Color="#A29BFE" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                            </Border>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
-    <!-- ═══ OUTER SHELL ═══ -->
-    <Border x:Name="WindowBorder" CornerRadius="16" ClipToBounds="True"
-            MouseLeftButtonDown="Border_MouseLeftButtonDown"
-            BorderThickness="1" BorderBrush="#1A1C26">
+    <!-- ═══ MAIN LAYOUT ═══ -->
+    <Border CornerRadius="20" ClipToBounds="True" MouseLeftButtonDown="Border_MouseLeftButtonDown">
         <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#0D0E12" Offset="0"/>
-                <GradientStop Color="#111320" Offset="0.5"/>
-                <GradientStop Color="#0D0E12" Offset="1"/>
+                <GradientStop Color="#030306" Offset="0"/>
+                <GradientStop Color="#07080F" Offset="0.5"/>
+                <GradientStop Color="#030306" Offset="1"/>
             </LinearGradientBrush>
         </Border.Background>
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="50" ShadowDepth="0" Opacity="0.6"/>
+            <DropShadowEffect Color="#000000" BlurRadius="50" ShadowDepth="0" Opacity="0.8"/>
         </Border.Effect>
 
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="48"/>   <!-- Title bar -->
-                <RowDefinition Height="*"/>    <!-- Content -->
-            </Grid.RowDefinitions>
+            <!-- Background Glow Effects -->
+            <Ellipse Width="400" Height="400" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-200,-200,0,0" IsHitTestVisible="False">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="0"/>
+                        <GradientStop Color="Transparent" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.Opacity>0.08</Ellipse.Opacity>
+            </Ellipse>
 
-            <!-- ═══ TITLE BAR ═══ -->
-            <Border Grid.Row="0" BorderBrush="#1A1C26" BorderThickness="0,0,0,1">
-                <Border.Background>
-                    <SolidColorBrush Color="#0B0C10"/>
-                </Border.Background>
-                <Grid Margin="16,0">
-                    <!-- Left: Logo -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                        <Border Width="24" Height="24" CornerRadius="6" Margin="0,0,10,0">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#6C5CE7" Offset="0"/>
-                                    <GradientStop Color="#A29BFE" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="⚡" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock x:Name="AppTitleMain" Text="RAH NonPro" FontFamily="Segoe UI" FontWeight="Bold" FontSize="13"
-                                   Foreground="#F1F2F6" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="AppTitleVersion" Text=" v7.0.2" FontFamily="Segoe UI" FontSize="13"
-                                   Foreground="#57606F" VerticalAlignment="Center"/>
-                    </StackPanel>
+            <Ellipse Width="400" Height="400" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-200,-200" IsHitTestVisible="False">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="0"/>
+                        <GradientStop Color="Transparent" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.Opacity>0.05</Ellipse.Opacity>
+            </Ellipse>
 
-                    <!-- Right: Window Controls -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-4,0">
-                        <Button Content="—" Style="{StaticResource TitleBtn}" Click="MinimizeWindow_Click"/>
-                        <Button Content="✕" Style="{StaticResource CloseBtn}" Click="CloseWindow_Click" Margin="4,0,0,0"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <!-- Floating Particles Canvas -->
+            <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" Opacity="0.5"/>
 
-            <!-- ═══ MAIN CONTENT ═══ -->
-            <Grid Grid.Row="1">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200"/> <!-- Sidebar -->
-                    <ColumnDefinition Width="*"/>   <!-- Main area -->
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- SIDEBAR -->
-                <Border Grid.Column="0" Background="#0A0B0F" BorderBrush="#1A1C26" BorderThickness="0,0,1,0" CornerRadius="0,0,0,16">
-                    <StackPanel Margin="0,20,0,0">
-                        <Button x:Name="BtnNavDashboard" Content="ГЛАВНАЯ" Style="{StaticResource PrimaryBtn}" Margin="16,0,16,10" Height="40" Background="Transparent" Foreground="White" Click="BtnNavDashboard_Click"/>
-                        <Button x:Name="BtnNavSettings" Content="НАСТРОЙКИ" Style="{StaticResource PrimaryBtn}" Margin="16,0,16,10" Height="40" Background="Transparent" Foreground="#57606F" Click="BtnNavSettings_Click"/>
-                        <Button x:Name="BtnNavLogs" Content="ЛОГИ" Style="{StaticResource PrimaryBtn}" Margin="16,0,16,10" Height="40" Background="Transparent" Foreground="#57606F" Click="BtnNavLogs_Click"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- CONTENT AREA -->
-                <Grid Grid.Column="1" Margin="24">
-                    
-                    <!-- VIEW: DASHBOARD -->
-                    <Grid x:Name="ViewDashboard" Visibility="Visible">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="250"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                <!-- ═══ SIDEBAR ═══ -->
+                <Border x:Name="SidebarBorder" Grid.Column="0" Width="240" Background="#09090E" Opacity="0.95" BorderBrush="#141724" BorderThickness="0,0,1,0" ClipToBounds="True">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- LEFT COL: Avatar, Input, Buttons -->
-                        <StackPanel Grid.Column="0" Grid.RowSpan="3" VerticalAlignment="Top">
-                            <!-- 1. AVATAR BLOCK -->
-                            <Grid x:Name="BlockAvatar" Width="120" Height="140" HorizontalAlignment="Center" Margin="0,0,0,24">
-                    <!-- Outer ring glow -->
-                    <Ellipse Width="120" Height="120" StrokeThickness="2" Opacity="0.25" VerticalAlignment="Top">
-                        <Ellipse.Stroke>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{DynamicResource AccentColor}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource AccentColorLight}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Ellipse.Stroke>
-                        <Ellipse.Effect>
-                            <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="24" ShadowDepth="0" Opacity="0.4"/>
-                        </Ellipse.Effect>
-                    </Ellipse>
-                    <!-- Dark fill -->
-                    <Ellipse Width="110" Height="110" Fill="#0A0B0F" VerticalAlignment="Top"/>
-                    <!-- Placeholder text -->
-                    <TextBlock x:Name="TxtPlaceholder" Text="?" 
-                               Foreground="{DynamicResource Accent}" FontSize="40" FontFamily="Segoe UI Black"
-                               HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,25,0,0" Opacity="0.3"/>
-                    <!-- Avatar image -->
-                    <Ellipse x:Name="AvatarCircle" Width="106" Height="106" StrokeThickness="2.5" VerticalAlignment="Top" Margin="0,7,0,0">
-                        <Ellipse.Stroke>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{DynamicResource AccentColor}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource AccentColorLight}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Ellipse.Stroke>
-                        <Ellipse.Fill>
-                            <ImageBrush x:Name="AvatarBrush" Stretch="UniformToFill"/>
-                        </Ellipse.Fill>
-                    </Ellipse>
-                                <TextBlock Text="ROBLOX НИКНЕЙМ" FontFamily="Segoe UI" FontWeight="Bold"
-                                           FontSize="10" Foreground="#57606F" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
-                            </Grid>
-
-                            <!-- 2. INPUT FIELD -->
-                            <TextBox x:Name="TxtUsername" Width="232" Height="42" Margin="0,0,0,16"
-                                     Style="{StaticResource ModernInput}"
-                                     TextChanged="TxtUsername_TextChanged"
-                                     GotFocus="TxtUsername_GotFocus"
-                                     LostFocus="TxtUsername_LostFocus"/>
-
-                            <!-- 3. HACK BUTTON -->
-                            <Button x:Name="BtnHack" Width="232" Height="46" Margin="0,0,0,16"
-                                    Content="⚡ ВЗЛОМАТЬ" IsEnabled="False"
-                                    Style="{StaticResource PrimaryBtn}" Click="BtnHack_Click"/>
-
-                            <!-- 4. TELEGRAM BUTTON -->
-                            <Button x:Name="BtnTelegram" Width="232" Height="42"
-                                    Content="📢 НАШ TELEGRAM"
-                                    Style="{StaticResource TelegramBtn}" Click="BtnTelegram_Click"/>
-                        </StackPanel>
-
-                        <!-- RIGHT COL: Console Area -->
-                        <Grid Grid.Column="1" Grid.RowSpan="3" Margin="24,0,0,0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- 5. CONSOLE AREA -->
-                            <Border x:Name="ConsoleArea" Grid.Row="0" CornerRadius="12" BorderThickness="1" BorderBrush="#1A1C26" VerticalAlignment="Stretch">
-                                <Border.Background>
-                                    <SolidColorBrush Color="#08090C"/>
-                                </Border.Background>
-                                <Grid>
-                                    <!-- Console header -->
-                                    <Border CornerRadius="12,12,0,0" Padding="12,8" VerticalAlignment="Top"
-                                            BorderThickness="0,0,0,1" BorderBrush="#1A1C26">
-                                        <Border.Background>
-                                            <SolidColorBrush Color="#0B0C10" Opacity="0.6"/>
-                                        </Border.Background>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="10" Height="10" Fill="#FF4757" Margin="0,0,6,0"/>
-                                            <Ellipse Width="10" Height="10" Fill="#FFA502" Margin="0,0,6,0"/>
-                                            <Ellipse Width="10" Height="10" Fill="#2ED573" Margin="0,0,12,0"/>
-                                            <TextBlock Text="terminal" FontFamily="Consolas" FontSize="10" Foreground="#2A2D3A"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <ScrollViewer x:Name="ConsoleScroller" Margin="0,32,0,0" 
-                                                  VerticalScrollBarVisibility="Auto" Padding="14,8,14,10">
-                                        <TextBlock x:Name="TbConsole" 
-                                                   FontFamily="Consolas" FontSize="11" Foreground="{DynamicResource Accent}"
-                                                   TextWrapping="Wrap" LineHeight="16">
-                                            <Run Foreground="#2A2D3A">[system]</Run><Run Text=" Core loaded successfully."/><LineBreak/>
-                                            <Run Foreground="#2A2D3A">[system]</Run><Run Text=" Awaiting user input..."/>
-                                        </TextBlock>
-                                    </ScrollViewer>
-                                </Grid>
-                            </Border>
-
-                            <StackPanel Grid.Row="1" Margin="0,16,0,0">
-                                <!-- STATUS BADGE -->
-                                <Border x:Name="StatusBadge" CornerRadius="8" Padding="12,8" HorizontalAlignment="Left" Margin="0,0,0,8">
-                                    <Border.Background>
-                                        <SolidColorBrush x:Name="StatusBadgeBg" Color="#0F1014"/>
-                                    </Border.Background>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{DynamicResource Accent}" Margin="0,0,8,0">
-                                            <Ellipse.Effect>
-                                                <DropShadowEffect x:Name="StatusGlow" Color="{DynamicResource AccentColor}" BlurRadius="10" ShadowDepth="0"/>
-                                            </Ellipse.Effect>
-                                        </Ellipse>
-                                        <TextBlock x:Name="TbStatusLabel" Text="STATUS: ONLINE" 
-                                                   FontFamily="Segoe UI" FontWeight="Bold" FontSize="10" 
-                                                   Foreground="#F1F2F6"/>
-                                    </StackPanel>
+                        <!-- Logo Area -->
+                        <Grid Grid.Row="0" Margin="18,32,18,40" Height="36">
+                            <!-- Logo and Title Panel -->
+                            <StackPanel x:Name="LogoTitlePanel" Orientation="Horizontal" HorizontalAlignment="Left" Margin="6,0,0,0">
+                                <Border x:Name="LogoBorder" Width="36" Height="36" CornerRadius="12" Background="{DynamicResource Accent}" Margin="0,0,12,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="15" ShadowDepth="0" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <TextBlock x:Name="LogoIcon" Text="⚡" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="AppTitleMain" Text="RAH NonPro" FontFamily="Segoe UI" FontWeight="Black" FontSize="16" Foreground="{StaticResource TextPrimary}" />
+                                    <TextBlock x:Name="AppTitleVersion" Text="v7.0.2" FontFamily="Segoe UI" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource Accent}" />
+                                </StackPanel>
+                            </StackPanel>
 
-                                <!-- PROGRESS BAR -->
-                                <ProgressBar x:Name="HackProgress" Height="4" Margin="0,0,0,8"
-                                             Style="{StaticResource NeonProgress}" Value="0" Maximum="100" Visibility="Collapsed"/>
+                            <!-- Menu Toggle Button -->
+                            <Button x:Name="BtnToggleMenu" HorizontalAlignment="Right" VerticalAlignment="Center" Width="28" Height="28" Background="#141724" Foreground="{StaticResource TextDim}" FontSize="14" FontFamily="Segoe UI" Content="☰" Cursor="Hand" Click="BtnToggleMenu_Click" ToolTip="Свернуть/развернуть меню">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Width="28" Height="28">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
 
-                                <!-- RESULT PANEL -->
-                                <Border x:Name="PanelResult" Height="50"
-                                        Visibility="Collapsed" CornerRadius="12" Padding="16,12" BorderThickness="1" BorderBrush="#143D1F">
-                                    <Border.Background>
-                                        <SolidColorBrush Color="#0A1F10" Opacity="0.8"/>
-                                    </Border.Background>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="✅" FontSize="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="ПАРОЛЬ НАЙДЕН" FontFamily="Segoe UI" FontWeight="ExtraBold" 
-                                                       FontSize="9" Foreground="#2ED573" Margin="0,0,0,2"/>
-                                            <TextBlock x:Name="TxtPassword" Text="••••••••••" FontFamily="Consolas" FontSize="16" Foreground="White" 
-                                                       FontWeight="Bold"/>
+                        <!-- Nav Buttons -->
+                        <StackPanel x:Name="NavPanel" Grid.Row="1">
+                            <Button x:Name="BtnNavDashboard" Style="{StaticResource NavBtn}" Tag="Active" Click="BtnNavDashboard_Click">
+                                <StackPanel Orientation="Horizontal" Width="200">
+                                    <TextBlock Text="📊" FontFamily="Segoe UI Emoji" FontSize="16" Margin="-4,0,18,0" VerticalAlignment="Center" Width="24" TextAlignment="Center"/>
+                                    <TextBlock Text="ГЛАВНАЯ" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="BtnNavSettings" Style="{StaticResource NavBtn}" Click="BtnNavSettings_Click">
+                                <StackPanel Orientation="Horizontal" Width="200">
+                                    <TextBlock Text="⚙️" FontFamily="Segoe UI Emoji" FontSize="16" Margin="-4,0,18,0" VerticalAlignment="Center" Width="24" TextAlignment="Center"/>
+                                    <TextBlock Text="НАСТРОЙКИ" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ═══ MAIN AREA ═══ -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="60"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Bar -->
+                    <Grid Grid.Row="0" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Content="—" Style="{StaticResource TitleBtn}" Click="MinimizeWindow_Click"/>
+                            <Button Content="✕" Style="{StaticResource CloseBtn}" Click="CloseWindow_Click" Margin="4,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Content Container -->
+                    <Grid Grid.Row="1" Margin="32,16,32,32">
+                        
+                        <!-- VIEW: DASHBOARD -->
+                        <Grid x:Name="ViewDashboard" Visibility="Visible">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
+                                <!-- Action Card -->
+                                <Border Background="#0C0D14" CornerRadius="24" BorderBrush="#141724" BorderThickness="1" Padding="32">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="30" ShadowDepth="0" Opacity="0.15"/>
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        
+                                        <!-- Avatar Area -->
+                                        <Grid HorizontalAlignment="Center" Margin="0,0,0,20">
+                                            <!-- Glowing Border -->
+                                            <Ellipse Width="94" Height="94">
+                                                <Ellipse.Stroke>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="0"/>
+                                                        <GradientStop Color="Transparent" Offset="0.5"/>
+                                                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Ellipse.Stroke>
+                                                <Ellipse.StrokeThickness>2</Ellipse.StrokeThickness>
+                                                <Ellipse.Effect>
+                                                    <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
+                                                </Ellipse.Effect>
+                                            </Ellipse>
+                                            
+                                            <!-- Actual Avatar Image -->
+                                            <Ellipse Width="90" Height="90" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Ellipse.Fill>
+                                                    <ImageBrush x:Name="AvatarBrush" Stretch="UniformToFill"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Grid>
+                                        
+                                        <TextBlock x:Name="TxtRobloxAccountHeader" Text="Roblox Account" FontFamily="Segoe UI" FontWeight="Black" FontSize="20" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,28" HorizontalAlignment="Center"/>
+                                        
+                                        <!-- Input Group (visible by default) -->
+                                        <StackPanel x:Name="PanelInputGroup" Visibility="Visible">
+                                            <!-- Input with placeholder -->
+                                            <Grid x:Name="TxtUsernameGrid" Margin="0,0,0,20">
+                                                <TextBox x:Name="TxtUsername" Height="48"
+                                                         Style="{StaticResource CyberInput}"
+                                                         TextChanged="TxtUsername_TextChanged"/>
+                                                <TextBlock x:Name="TxtPlaceholder" Text="Username" IsHitTestVisible="False" Foreground="#57606F" FontFamily="Segoe UI" FontSize="14" VerticalAlignment="Center" Margin="20,0,0,0"/>
+                                            </Grid>
+                                            
+                                            <!-- Progress Bar -->
+                                            <ProgressBar x:Name="HackProgress" Height="4" BorderThickness="0" Background="#141724" Foreground="{DynamicResource Accent}" Value="0" Maximum="100" Visibility="Collapsed" Margin="0,0,0,20">
+                                                <ProgressBar.Template>
+                                                    <ControlTemplate TargetType="ProgressBar">
+                                                        <Border CornerRadius="2" Background="{TemplateBinding Background}">
+                                                            <Border x:Name="PART_Track">
+                                                                 <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="2">
+                                                                    <Border.Background>
+                                                                        <SolidColorBrush Color="{DynamicResource AppAccentColor}"/>
+                                                                    </Border.Background>
+                                                                    <Border.Effect>
+                                                                        <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="8" ShadowDepth="0"/>
+                                                                    </Border.Effect>
+                                                                </Border>
+                                                            </Border>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </ProgressBar.Template>
+                                            </ProgressBar>
+                                            
+                                            <Button x:Name="BtnHack" Height="48" Margin="0,0,0,20"
+                                                    Content="ВЗЛОМАТЬ" IsEnabled="False"
+                                                    Style="{StaticResource CyberBtn}" Click="BtnHack_Click"/>
                                         </StackPanel>
-                                    </Grid>
+
+                                        <!-- Result Group (hidden by default) -->
+                                        <StackPanel x:Name="PanelResultGroup" Visibility="Collapsed">
+                                            <Border x:Name="PanelResult" Background="#0C1410" BorderBrush="#00FF88" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,20">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="✅" FontSize="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="ДАННЫЕ НАЙДЕНЫ" FontFamily="Segoe UI" FontWeight="Bold" FontSize="9" Foreground="#00FF88" Margin="0,0,0,2"/>
+                                                        <TextBlock x:Name="TxtPassword" Text="••••••••••" FontFamily="Consolas" FontSize="16" Foreground="White" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+
+                                            <Button x:Name="BtnReset" Height="48" Margin="0,0,0,20"
+                                                    Content="↩️ НАЗАД"
+                                                    Style="{StaticResource CyberBtn}" Click="BtnReset_Click"/>
+                                        </StackPanel>
+                                                
+                                        <Button x:Name="BtnTelegram" Height="48"
+                                                Content="📢 НАШ TELEGRAM"
+                                                Style="{StaticResource TelegramCyberBtn}" Click="BtnTelegram_Click"/>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Grid>
-                    </Grid>
 
-                    <!-- VIEW: SETTINGS -->
-                    <Grid x:Name="ViewSettings" Visibility="Collapsed">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="НАСТРОЙКИ" FontFamily="Segoe UI" FontWeight="Bold" FontSize="20" Foreground="White" Margin="0,0,0,24" HorizontalAlignment="Center"/>
-                            
-                            <TextBlock Text="ТЕМА ОФОРМЛЕНИЯ" FontFamily="Segoe UI" FontSize="12" Foreground="#57606F" Margin="0,0,0,8"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
-                                <Button x:Name="BtnThemeCyan" Width="32" Height="32" Margin="0,0,12,0" Background="#00F0FF" Click="BtnTheme_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Ellipse Fill="{TemplateBinding Background}" Stroke="White" StrokeThickness="2"/>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-                                <Button x:Name="BtnThemePink" Width="32" Height="32" Margin="0,0,12,0" Background="#FF007F" Click="BtnTheme_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Ellipse Fill="{TemplateBinding Background}" Stroke="Transparent" StrokeThickness="0"/>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-                                <Button x:Name="BtnThemePurple" Width="32" Height="32" Margin="0,0,12,0" Background="#6C5CE7" Click="BtnTheme_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Ellipse Fill="{TemplateBinding Background}" Stroke="Transparent" StrokeThickness="0"/>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
+                        <!-- VIEW: SETTINGS -->
+                        <Grid x:Name="ViewSettings" Visibility="Collapsed">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <!-- Section: Theme -->
+                                <Border Background="#0C0D14" CornerRadius="20" BorderBrush="#141724" BorderThickness="1" Padding="32,28" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock Text="ОФОРМЛЕНИЕ" FontFamily="Segoe UI" FontWeight="Black" FontSize="13" Foreground="{StaticResource TextDim}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Выберите акцентный цвет интерфейса" FontFamily="Segoe UI" FontSize="12" Foreground="#57606F" Margin="0,0,0,20"/>
+                                        
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="BtnThemeCyan" Width="40" Height="40" Margin="0,0,16,0" Background="#00F0FF" Click="BtnTheme_Click" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="20" BorderBrush="White" BorderThickness="2">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#00F0FF" BlurRadius="15" ShadowDepth="0" Opacity="0.6"/>
+                                                            </Border.Effect>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button x:Name="BtnThemePink" Width="40" Height="40" Margin="0,0,16,0" Background="#FF007F" Click="BtnTheme_Click" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="20" BorderBrush="Transparent" BorderThickness="0"/>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button x:Name="BtnThemePurple" Width="40" Height="40" Margin="0,0,16,0" Background="#6C5CE7" Click="BtnTheme_Click" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="20" BorderBrush="Transparent" BorderThickness="0"/>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button x:Name="BtnThemeGreen" Width="40" Height="40" Margin="0,0,16,0" Background="#00FF88" Click="BtnTheme_Click" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="20" BorderBrush="Transparent" BorderThickness="0"/>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button x:Name="BtnThemeOrange" Width="40" Height="40" Background="#FF9F1C" Click="BtnTheme_Click" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="20" BorderBrush="Transparent" BorderThickness="0"/>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Section: App Info -->
+                                <Border Background="#0C0D14" CornerRadius="20" BorderBrush="#141724" BorderThickness="1" Padding="32,28">
+                                    <StackPanel>
+                                        <TextBlock Text="О ПРИЛОЖЕНИИ" FontFamily="Segoe UI" FontWeight="Black" FontSize="13" Foreground="{StaticResource TextDim}" Margin="0,0,0,16"/>
+                                        
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Версия" FontFamily="Segoe UI" FontSize="13" Foreground="{StaticResource TextPrimary}"/>
+                                            <TextBlock Grid.Column="1" Text="7.0.2" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextDim}"/>
+                                        </Grid>
+                                        <Border Height="1" Background="#141724" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Платформа" FontFamily="Segoe UI" FontSize="13" Foreground="{StaticResource TextPrimary}"/>
+                                            <TextBlock Grid.Column="1" Text=".NET 8 / WPF" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextDim}"/>
+                                        </Grid>
+                                        <Border Height="1" Background="#141724" Margin="0,0,0,10"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Статус" FontFamily="Segoe UI" FontSize="13" Foreground="{StaticResource TextPrimary}"/>
+                                            <TextBlock Grid.Column="1" Text="● Активен" FontFamily="Segoe UI" FontSize="13" Foreground="#00FF88"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+
                     </Grid>
-                    
-                    <!-- VIEW: LOGS -->
-                    <Grid x:Name="ViewLogs" Visibility="Collapsed">
-                         <TextBlock Text="ЛОГИ ОТСУТСТВУЮТ" FontFamily="Segoe UI" FontSize="14" Foreground="#57606F" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Grid>
-                    
                 </Grid>
             </Grid>
         </Grid>
