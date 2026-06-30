@@ -193,7 +193,13 @@ function filterFiles() {
       list = list.filter(function(f) { return (f.originalName || f.name).toLowerCase().includes(searchVal); });
     }
     
-    if (sortVal === "roblox") {
+    if (sortVal === "version") {
+      list.sort((a, b) => {
+        const aVer = a.computer?.version || "7.0.0";
+        const bVer = b.computer?.version || "7.0.0";
+        return bVer.localeCompare(aVer, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    } else if (sortVal === "roblox") {
       list.sort((a, b) => {
         const aRoblox = a.roblox && a.roblox.user ? 1 : 0;
         const bRoblox = b.roblox && b.roblox.user ? 1 : 0;
