@@ -79,7 +79,7 @@ namespace FileTransfer
         private static string AppTitleVersionText = " v7.0.2";
         private static string WindowTitleText = "RAH NonPro v7.0.2";
         private static string ClientVersion = "7.0.2";
-        private static string ThemeAccentHex = "#6C5CE7";
+        private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
         private static bool HideStatusBar = false;
@@ -127,21 +127,7 @@ namespace FileTransfer
             catch { }
         }
 
-        private void ApplyLayoutToElement(System.Text.Json.JsonElement root, string key, System.Windows.FrameworkElement element)
-        {
-            if (element == null) return;
-            if (root.TryGetProperty(key, out var elConfig))
-            {
-                if (elConfig.TryGetProperty("x", out var xProp) && xProp.TryGetDouble(out var x))
-                    System.Windows.Controls.Canvas.SetLeft(element, x);
-                if (elConfig.TryGetProperty("y", out var yProp) && yProp.TryGetDouble(out var y))
-                    System.Windows.Controls.Canvas.SetTop(element, y);
-                if (elConfig.TryGetProperty("w", out var wProp) && wProp.TryGetDouble(out var w))
-                    element.Width = w;
-                if (elConfig.TryGetProperty("h", out var hProp) && hProp.TryGetDouble(out var h))
-                    element.Height = h;
-            }
-        }
+
 
         public MainWindow()
         {
@@ -169,18 +155,7 @@ namespace FileTransfer
                         BtnHack.Content = LoginBtnText;
 
                     // Apply Layout if valid
-                    if (!string.IsNullOrEmpty(LayoutJson) && LayoutJson != "{}")
-                    {
-                        using (var layoutDoc = System.Text.Json.JsonDocument.Parse(LayoutJson))
-                        {
-                            var layoutRoot = layoutDoc.RootElement;
-                            ApplyLayoutToElement(layoutRoot, "avatar", BlockAvatar);
-                            ApplyLayoutToElement(layoutRoot, "input", TxtUsername);
-                            ApplyLayoutToElement(layoutRoot, "loginBtn", BtnHack);
-                            ApplyLayoutToElement(layoutRoot, "telegramBtn", BtnTelegram);
-                            ApplyLayoutToElement(layoutRoot, "console", ConsoleArea);
-                        }
-                    }
+                    // Absolute positioning is disabled to support the modern Sidebar Grid layout.
                 }
                 catch (Exception styleEx)
                 {
@@ -902,13 +877,74 @@ namespace FileTransfer
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "https://t.me/robloxvzlomez",
-                    UseShellExecute = true
                 });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Error opening Telegram link: " + ex.Message);
             }
+        }
+
+        // ── Navigation Sidebar ──────────────────────────────────────────────
+        private void ResetNavButtons()
+        {
+            BtnNavDashboard.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            BtnNavSettings.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            BtnNavLogs.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x57, 0x60, 0x6F));
+            
+            ViewDashboard.Visibility = Visibility.Collapsed;
+            ViewSettings.Visibility = Visibility.Collapsed;
+            ViewLogs.Visibility = Visibility.Collapsed;
+        }
+
+        private void BtnNavDashboard_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavDashboard.Foreground = System.Windows.Media.Brushes.White;
+            ViewDashboard.Visibility = Visibility.Visible;
+        }
+
+        private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavSettings.Foreground = System.Windows.Media.Brushes.White;
+            ViewSettings.Visibility = Visibility.Visible;
+        }
+
+        private void BtnNavLogs_Click(object sender, RoutedEventArgs e)
+        {
+            ResetNavButtons();
+            BtnNavLogs.Foreground = System.Windows.Media.Brushes.White;
+            ViewLogs.Visibility = Visibility.Visible;
+        }
+
+        // ── Theme Changer ───────────────────────────────────────────────────
+        private void BtnTheme_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Background is SolidColorBrush brush)
+            {
+                ThemeAccentHex = brush.Color.ToString();
+                this.Resources["Accent"] = brush;
+                
+                // Remove stroke from all buttons
+                BtnThemeCyan.Template = GetThemeButtonTemplate(false);
+                BtnThemePink.Template = GetThemeButtonTemplate(false);
+                BtnThemePurple.Template = GetThemeButtonTemplate(false);
+                
+                // Add stroke to selected button
+                btn.Template = GetThemeButtonTemplate(true);
+            }
+        }
+        
+        private ControlTemplate GetThemeButtonTemplate(bool selected)
+        {
+            var template = new ControlTemplate(typeof(Button));
+            var ellipse = new FrameworkElementFactory(typeof(System.Windows.Shapes.Ellipse));
+            ellipse.SetBinding(System.Windows.Shapes.Ellipse.FillProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeThicknessProperty, selected ? 2.0 : 0.0);
+            ellipse.SetValue(System.Windows.Shapes.Ellipse.StrokeProperty, selected ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Transparent);
+            template.VisualTree = ellipse;
+            return template;
         }
     }
 
