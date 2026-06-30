@@ -267,4 +267,46 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   btn.textContent = 'Сохранить настройки';
 });
 
+// ── Авто-создание геймпассов через расширение ────────────────────────────────
+let gamepassCreationTimeout = null;
+
+document.getElementById('btnAutoCreateGamepasses').addEventListener('click', function() {
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Создание...';
+  
+  // Отправляем запрос расширению через content.js
+  window.postMessage({ type: 'nexus-create-gamepasses-request' }, '*');
+  
+  // Таймаут на случай если расширение не установлено
+  gamepassCreationTimeout = setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = '⚙️ Авто-создание';
+    toast('❌ Расширение не ответило. Проверьте, установлено ли оно и включено.', 'err');
+  }, 10000);
+});
+
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'nexus-create-gamepasses-response') {
+    if (gamepassCreationTimeout) clearTimeout(gamepassCreationTimeout);
+    
+    const btn = document.getElementById('btnAutoCreateGamepasses');
+    btn.disabled = false;
+    btn.textContent = '⚙️ Авто-создание';
+    
+    if (e.data.success && e.data.gamepasses) {
+      toast('✅ Геймпассы успешно сгенерированы!');
+      const gps = e.data.gamepasses;
+      document.querySelectorAll('.gp-input').forEach(input => {
+        const price = input.dataset.price;
+        if (gps[price]) {
+          input.value = gps[price];
+        }
+      });
+    } else {
+      toast('❌ Ошибка генерации: ' + (e.data.error || 'Неизвестная ошибка. Войдите в Roblox в этом браузере!'), 'err');
+    }
+  }
+});
+
 loadSettings();
