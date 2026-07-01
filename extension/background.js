@@ -107,7 +107,7 @@ async function getRobloxUniverses() {
 
 async function createRobloxGamepass(universeId, name, csrfToken) {
   try {
-    const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAABS9M3uAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACNJREFUaAXt0AENAAAMA6D6f78yJ3g4kE2rIhcKhUKhUCgUCoVCof55AR6cAAH25F2dAAAAAElFTkSuQmCC';
+    const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAABS9nZqAAAAA1BMVEUAAP+KeNJXAAAAAXRSTlMAQObYZgAAACNJREFUeF7t0QEBAAAAwiD7p7bGDmAAAAAAAAAAAAAAAACAlgYVAAAB2n36VAAAAABJRU5ErkJggg==';
     const byteCharacters = atob(base64Png);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -295,6 +295,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 results[p] = passId.toString();
               }
             }
+            // Respect Roblox rate limit by adding a 1.2s delay between creations
+            await new Promise(resolve => setTimeout(resolve, 1200));
           } catch (e) {
             lastError = e.message;
             console.error('Failed to create gamepass for price:', p, e);
