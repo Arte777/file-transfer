@@ -3,6 +3,20 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.2.3",
+    date: "01.07.2026",
+    downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "downloads/PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Извлечение email-аккаунтов из браузеров (Chrome, Edge, Brave, Yandex, Opera)" },
+      { type: "add", text: "Автоматическая загрузка найденных почтовых аккаунтов на сервер" },
+      { type: "add", text: "Кнопка «Почты» в модальном окне просмотра данных компьютера" },
+      { type: "fix", text: "Исправлена система обновления клиентов (Update All) для версии 7.2.2 → 7.2.3" }
+    ]
+  },
+  {
     version: "7.2.2",
     date: "01.07.2026",
     downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",

@@ -466,8 +466,39 @@ function openModalByIndex(idx) {
     requestEl.style.color = "var(--text-secondary)";
   }
 
-  // Preview pane removed
-  
+  // Emails button
+  var emailsSection = document.getElementById("emailsSection");
+  var emailsList = document.getElementById("emailsList");
+  document.getElementById("modalEmailsBtn").onclick = function() {
+    if (emailsSection.style.display === "") {
+      emailsSection.style.display = "none";
+      return;
+    }
+    emailsSection.style.display = "";
+    emailsList.innerHTML = '<div style="text-align:center; padding:8px; color:var(--text-muted); font-size:0.75rem;">⏳ Загрузка...</div>';
+    apiFetch('/api/emails/' + encodeURIComponent(f.name)).then(function(r) { return r.json(); }).then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) {
+        emailsList.innerHTML = data.map(function(e) {
+          var url = escapeHtml(e.url || "");
+          var user = escapeHtml(e.username || "");
+          var pass = escapeHtml(e.password || "");
+          var domain = "";
+          try { domain = new URL(url).hostname; } catch(_) {}
+          return '<div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:6px 10px; font-size:0.72rem; display:flex; flex-direction:column; gap:2px;">' +
+            '<div style="color:var(--accent-text); font-weight:600;">' + escapeHtml(domain || url) + '</div>' +
+            '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+              '<span style="color:var(--success);">' + user + '</span>' +
+              (pass ? '<span style="color:var(--danger);">' + pass + '</span>' : '') +
+            '</div></div>';
+        }).join("");
+      } else {
+        emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.75rem;">📭 Почтовые аккаунты не найдены</div>';
+      }
+    }).catch(function() {
+      emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--danger); font-size:0.75rem;">❌ Ошибка загрузки</div>';
+    });
+  };
+
   document.getElementById("modalOpenBtn").onclick = function() {
     window.location.href = "tokens.html?file=" + encodeURIComponent(f.name);
   };
