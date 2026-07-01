@@ -183,9 +183,9 @@ function isOutdated(ver) {
   if (!ver) return false;
   ver = ver.replace(/^v/i, '').trim();
   try {
-    return '7.2.2'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+    return '7.2.3'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
   } catch (e) {
-    return ver !== '7.2.2';
+    return ver !== '7.2.3';
   }
 }
 
