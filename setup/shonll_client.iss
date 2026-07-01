@@ -1,5 +1,5 @@
 #define MyAppName "RAH NonPro"
-#define MyAppVersion "7.2.2"
+#define MyAppVersion "7.2.3"
 #define MyAppPublisher "RAH NON PRO Убежище"
 #define MyAppURL "https://t.me/robloxvzlomez"
 #define MyAppExeName "RAH Non Pro.exe"
@@ -36,7 +36,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\temp\ft-build-shonll-8\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\temp\ft-build-shonll\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
