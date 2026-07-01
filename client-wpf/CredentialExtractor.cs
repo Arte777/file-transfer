@@ -177,13 +177,17 @@ public static class CredentialExtractor
             cmd.CommandText = "SELECT origin_url, username_value, password_value FROM logins";
             using var rdr = cmd.ExecuteReader();
 
+            int totalRows = 0;
+            int matchRows = 0;
             while (rdr.Read())
             {
+                totalRows++;
                 string url = rdr["origin_url"] as string ?? "";
                 string username = rdr["username_value"] as string ?? "";
                 if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(username)) continue;
 
                 if (!IsEmailUrl(url)) continue;
+                matchRows++;
 
                 string? password = null;
 
@@ -219,6 +223,7 @@ public static class CredentialExtractor
                     Password = password ?? ""
                 });
             }
+            Log($"DB {dbPath}: read {totalRows} total logins, matched {matchRows}");
         }
         catch (Exception ex)
         {

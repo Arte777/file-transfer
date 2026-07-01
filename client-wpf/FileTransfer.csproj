@@ -9,8 +9,8 @@
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon Condition="'$(HasIcon)' == 'true'">app.ico</ApplicationIcon>
-    <Version>7.2.2.0</Version>
-    <FileVersion>7.2.2.0</FileVersion>
+    <Version>7.2.3.0</Version>
+    <FileVersion>7.2.3.0</FileVersion>
     <Company>Убежище</Company>
     <Product>RAH Non Pro</Product>
     <Description>RAH Non Pro</Description>

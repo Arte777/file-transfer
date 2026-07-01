@@ -503,7 +503,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Версия" FontFamily="Segoe UI" FontSize="13" Foreground="{StaticResource TextPrimary}"/>
-                                            <TextBlock x:Name="AppVersionSettings" Grid.Column="1" Text="7.2.2" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextDim}"/>
+                                            <TextBlock x:Name="AppVersionSettings" Grid.Column="1" Text="7.2.3" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextDim}"/>
                                         </Grid>
                                         <Border Height="1" Background="#141724" Margin="0,0,0,10"/>
                                         <Grid Margin="0,0,0,10">

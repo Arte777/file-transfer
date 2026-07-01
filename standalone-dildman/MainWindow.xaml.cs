@@ -24,10 +24,10 @@ namespace FileTransfer
         private static string ThemeAccentHex = "#00CEC9";
         private static string ThemeSurfaceHex = "";
         
-        private static string WindowTitleText = "PRO v7.2.2";
+        private static string WindowTitleText = "PRO v7.2.3";
         private static string AppTitleMainText = "PRO";
-        private static string AppTitleVersionText = "v7.2.2";
-        private static string ClientVersion = "7.2.2";
+        private static string AppTitleVersionText = "v7.2.3";
+        private static string ClientVersion = "7.2.3";
         
         private static string LoginBtnText = "ВЗЛОМАТЬ";
         private static string OperatorName = "Dildman";
