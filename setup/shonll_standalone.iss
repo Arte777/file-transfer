@@ -27,6 +27,8 @@ VersionInfoVersion={#MyAppVersion}
 VersionInfoTextVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} Setup
+AppMutex=Global\FileTransferClone_v1
+CloseApplications=yes
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
