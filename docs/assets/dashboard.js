@@ -523,7 +523,7 @@ async function checkRobux(name) {
 
 function getOperatorDownloadUrl() {
   const user = getUser();
-  const base = window.location.origin;
+  const base = window.API_BASE || window.location.origin;
   if (user === 'Shonll') {
     return base + '/downloads/RAH_Non_Pro.exe';
   } else {
