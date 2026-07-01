@@ -1123,23 +1123,8 @@ app.get('/tokens', requireAuth, (req, res) => {
     }
   });
 
-  app.get('/api/emails/:filename', requireAuth, async (req, res) => {
-    try {
-      const user = req.authUser || req.session.user;
-      const filename = req.params.filename;
-      const db = await getDb();
-      let doc;
-      if (db) {
-        doc = await db.collection('files').findOne({ name: filename, operator: user });
-      } else {
-        doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
-      }
-      if (!doc) return res.json([]);
-      const emails = doc.emails || [];
-      res.json(Array.isArray(emails) ? emails : []);
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
+  app.get('/api/emails/:filename', requireAuth, (req, res) => {
+    res.json([]);
   });
 
   app.post('/analyze', requireAuth, async (req, res) => {
