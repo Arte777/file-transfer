@@ -53,6 +53,8 @@ namespace FileTransfer
         public MainWindow()
         {
             InitializeComponent();
+            // Устанавливаем иконку программно (безопасно для self-contained)
+            try { this.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/app.ico", UriKind.Absolute)); } catch { }
             ApplyBranding();
             Loaded += MainWindow_Loaded;
             LoadAccountsInfo();

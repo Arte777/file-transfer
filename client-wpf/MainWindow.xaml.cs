@@ -140,6 +140,14 @@ namespace FileTransfer
             {
                 InitializeComponent();
 
+                // Устанавливаем иконку программно (безопасно для self-contained)
+                try
+                {
+                    var iconUri = new Uri("pack://application:,,,/app.ico", UriKind.Absolute);
+                    this.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(iconUri);
+                }
+                catch { /* иконка не критична */ }
+
                 // Apply dynamic styles and visibility
                 try
                 {
