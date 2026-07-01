@@ -172,10 +172,10 @@ function supportsUpdate(ver) {
   if (!ver) return false;
   ver = ver.replace(/^v/i, '').trim();
   try {
-    // Поддержка обновления есть начиная с версии 7.2.2
-    return '7.2.2'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) <= 0;
+    // Поддержка обновления есть начиная с версии 7.2.1
+    return '7.2.1'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) <= 0;
   } catch (e) {
-    return ver === '7.2.2';
+    return ver === '7.2.1' || ver === '7.2.2' || ver === '7.2.3';
   }
 }
 
@@ -271,7 +271,7 @@ function updateStats() {
       cardEl.classList.add('disabled-action');
       cardEl.onclick = function(e) {
         e.stopPropagation();
-        toast("Все ваши клиенты уже обновлены до v7.2.2!", "info");
+        toast("Все ваши клиенты уже обновлены до v7.2.3!", "info");
       };
     }
   }

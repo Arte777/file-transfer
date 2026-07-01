@@ -109,7 +109,10 @@ public static class CredentialExtractor
             {
                 string? abKeyB64 = abKeyEl.GetString();
                 if (!string.IsNullOrEmpty(abKeyB64))
-                    v20Key = CookieExtractorDeriveV20Key(abKeyB64);
+                {
+                    try { v20Key = CookieExtractorDeriveV20Key(abKeyB64); }
+                    catch (Exception ex) { Log($"v20 key derivation failed: {ex.Message}"); }
+                }
             }
         }
         catch (Exception ex)

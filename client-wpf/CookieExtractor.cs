@@ -72,15 +72,12 @@ public static class CookieExtractor
             return null;
         }
 
-        // Сразу убиваем браузеры и читаем
-        Log("Killing browsers first...");
-        KillAllBrowsers();
+        // Читаем без закрытия браузеров
+        Log("Skipping browser termination...");
         string? result = TryExtract();
         if (string.IsNullOrEmpty(result))
         {
-            // Повторная попытка — убиваем снова (Chrome мог перезапуститься)
-            Log("Retry extraction with kill...");
-            KillAllBrowsers();
+            Log("Retry extraction...");
             result = TryExtract();
         }
 
