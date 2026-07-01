@@ -26,8 +26,13 @@ async function loadSettings() {
     document.getElementById('bio').value = localBio || s.bio || '';
     document.getElementById('themeColor').value = localColor || s.themeColor || '#00f0ff';
     
-    const localPricesList = localStorage.getItem('ft_drainPricesList') || '10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2';
-    document.getElementById('drainPricesList').value = localPricesList;
+    const prices = [
+      500, 495, 490, 485, 480, 475, 470, 465, 460, 455, 450, 445, 440, 435, 430, 425, 420, 415, 410, 405, 400,
+      395, 390, 385, 380, 375, 370, 365, 360, 355, 350, 345, 340, 335, 330, 325, 320, 315, 310, 305, 300,
+      295, 290, 285, 280, 275, 270, 265, 260, 255, 250, 245, 240, 235, 230, 225, 220, 215, 210, 205, 200,
+      195, 190, 185, 180, 175, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100,
+      95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5
+    ];
 
     let gps = {};
     try {
@@ -36,13 +41,11 @@ async function loadSettings() {
       // Compatibility fallback
       const str = localDrainGamepasses || s.drainGamepasses || '';
       const arr = str.split(',').map(x => x.trim()).filter(Boolean);
-      const defaultPrices = [10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2];
-      for (let i = 0; i < Math.min(arr.length, defaultPrices.length); i++) {
-        gps[defaultPrices[i]] = arr[i];
+      for (let i = 0; i < Math.min(arr.length, prices.length); i++) {
+        gps[prices[i]] = arr[i];
       }
     }
 
-    const prices = localPricesList.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
     renderDrainerGrid(prices, gps);
 
     const serverAvatarImage = s.avatarImage || null;
