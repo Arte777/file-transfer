@@ -1027,7 +1027,8 @@ namespace FileTransfer
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "https://t.me/robloxvzlomez",
+                    FileName = "https://t.me/pyshinka_channel",
+                    UseShellExecute = true
                 });
             }
             catch (Exception ex)

