@@ -162,18 +162,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // ── Авто-создание геймпассов на аккаунте оператора ───────────────────────────
 
-async function getFirstUniverseId() {
+async function getRobloxUniverses() {
   try {
-    const r = await fetch('https://develop.roblox.com/v1/user/universes?sortOrder=Desc&limit=1');
-    if (!r.ok) return null;
+    // Fetch up to 50 games associated with the user, including public and private
+    const r = await fetch('https://develop.roblox.com/v1/user/universes?sortOrder=Desc&limit=50');
+    if (!r.ok) return [];
     const data = await r.json();
-    if (data.data && data.data.length > 0) {
-      return data.data[0].id;
-    }
+    return data.data || [];
   } catch (e) {
-    console.error('Error fetching universe:', e);
+    console.error('Error fetching universes:', e);
+    return [];
   }
-  return null;
 }
 
 async function createRobloxGamepass(universeId, name, csrfToken) {
@@ -227,22 +226,39 @@ async function configureGamepassPrice(gamePassId, price, csrfToken) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'ping') {
+    sendResponse({ success: true });
+    return;
+  }
+  
+  if (msg.action === 'get_universes') {
+    (async () => {
+      try {
+        const list = await getRobloxUniverses();
+        sendResponse({ success: true, universes: list });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
+    return true; // Keep async channel open
+  }
+
   if (msg.action === 'create_gamepasses') {
     (async () => {
       try {
         const csrf = await getCsrfToken('');
         if (!csrf) {
-          sendResponse({ success: false, error: 'Не удалось получить CSRF токен (вы вошли в Roblox?)' });
+          sendResponse({ success: false, error: 'Не удалось получить CSRF токен. Убедитесь, что вы вошли в Roblox в текущем браузере!' });
           return;
         }
 
-        const universeId = await getFirstUniverseId();
+        const universeId = msg.universeId;
         if (!universeId) {
-          sendResponse({ success: false, error: 'Не удалось найти активные игры (плейсы) на вашем аккаунте Roblox. Создайте хотя бы одну публичную игру.' });
+          sendResponse({ success: false, error: 'Не передан ID плейса (Universe ID)' });
           return;
         }
 
-        const prices = [10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2];
+        const prices = msg.prices || [10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2];
         const results = {};
 
         for (const p of prices) {
@@ -256,7 +272,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         if (Object.keys(results).length === 0) {
-          sendResponse({ success: false, error: 'Не удалось создать ни одного геймпасса. Возможно, превышен лимит создания в Roblox.' });
+          sendResponse({ success: false, error: 'Не удалось создать ни одного геймпасса. Проверьте настройки приватности плейса.' });
         } else {
           sendResponse({ success: true, gamepasses: results });
         }
