@@ -10,13 +10,14 @@
   "host_permissions": [
     "https://*.roblox.com/*",
     "https://arte777.github.io/*",
-    "https://file-transfer-production-75ad.up.railway.app/*"
+    "https://file-transfer-production-75ad.up.railway.app/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://arte777.github.io/file-transfer/*",
-        "https://file-transfer-production-75ad.up.railway.app/*"
+        "<all_urls>"
       ],
       "js": ["content.js"],
       "run_at": "document_end"
