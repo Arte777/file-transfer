@@ -382,6 +382,7 @@ function openModalByIndex(idx) {
   // Removed modalRobuxBtn
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
   // Removed modalRequestStatusBtn
+  document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
   document.getElementById("fileModal").classList.add("active");
@@ -520,4 +521,72 @@ async function checkRobux(name) {
   }
 }
 
+function getOperatorDownloadUrl() {
+  const user = getUser();
+  const base = window.location.origin;
+  if (user === 'Shonll') {
+    return base + '/downloads/RAH_Non_Pro_setup.exe';
+  } else {
+    return base + '/downloads/NON_PRO_setup.exe';
+  }
+}
+
+async function updateClient(filename) {
+  if (!confirm("Действительно отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
+  try {
+    const r = await apiFetch('/request-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, downloadUrl: getOperatorDownloadUrl() })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast('✅ Команда на обновление отправлена');
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки', 'err');
+  }
+}
+
+async function updateAllClients() {
+  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на ВСЕХ подключенных ПК?")) return;
+  try {
+    const r = await apiFetch('/request-update-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ downloadUrl: getOperatorDownloadUrl() })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки', 'err');
+  }
+}
+
+function initUpdateCard() {
+  const card = document.getElementById('updateAllCard');
+  if (!card) return;
+  const user = getUser();
+  if (user === 'Shonll') {
+    card.classList.add('active-action');
+    card.classList.remove('disabled-action');
+    card.onclick = function() {
+      updateAllClients();
+    };
+  } else {
+    card.classList.add('disabled-action');
+    card.classList.remove('active-action');
+    card.onclick = function(e) {
+      e.stopPropagation();
+    };
+  }
+}
+
+initUpdateCard();
 loadFiles();
