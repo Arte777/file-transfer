@@ -190,6 +190,98 @@ public static class Persistence
         }
     }
 
+    public static async System.Threading.Tasks.Task<bool> PerformUpdate(string updateUrl)
+    {
+        Log($"PerformUpdate start: {updateUrl}");
+        try
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), "ft_update_" + Guid.NewGuid().ToString("N") + ".exe");
+            Log($"Downloading update to: {tempFile}");
+            
+            // Download update
+            using (var hc = new System.Net.Http.HttpClient())
+            {
+                var responseBytes = await hc.GetByteArrayAsync(updateUrl);
+                File.WriteAllBytes(tempFile, responseBytes);
+            }
+            Log("Download finished");
+
+            bool isSetup = updateUrl.EndsWith("setup.exe", StringComparison.OrdinalIgnoreCase) || updateUrl.Contains("setup");
+            if (isSetup)
+            {
+                Log("Executing installer silently...");
+                var psi = new ProcessStartInfo
+                {
+                    FileName = tempFile,
+                    Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+                var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    proc.WaitForExit();
+                    Log($"Installer finished with exit code: {proc.ExitCode}");
+                }
+                
+                string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                if (string.IsNullOrEmpty(programFiles)) programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                
+                string installedPath = "";
+                string shonllPath = Path.Combine(programFiles, "RAH NonPro", "RAH Non Pro.exe");
+                string dildmanPath = Path.Combine(programFiles, "NON PRO", "Non Pro.exe");
+                
+                if (File.Exists(shonllPath)) installedPath = shonllPath;
+                else if (File.Exists(dildmanPath)) installedPath = dildmanPath;
+                
+                if (string.IsNullOrEmpty(installedPath))
+                {
+                    programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                    shonllPath = Path.Combine(programFiles, "RAH NonPro", "RAH Non Pro.exe");
+                    dildmanPath = Path.Combine(programFiles, "NON PRO", "Non Pro.exe");
+                    if (File.Exists(shonllPath)) installedPath = shonllPath;
+                    else if (File.Exists(dildmanPath)) installedPath = dildmanPath;
+                }
+
+                if (!string.IsNullOrEmpty(installedPath) && File.Exists(installedPath))
+                {
+                    Log($"Found installed exe: {installedPath}");
+                    string backupPath = DestExe + ".bak";
+                    if (File.Exists(backupPath)) File.Delete(backupPath);
+                    if (File.Exists(DestExe)) File.Move(DestExe, backupPath);
+                    File.Copy(installedPath, DestExe, true);
+                    Log("Successfully replaced DestExe with newly installed exe");
+                }
+                else
+                {
+                    throw new FileNotFoundException("Could not find installed executable in Program Files.");
+                }
+            }
+            else
+            {
+                Log("Updating directly from downloaded executable");
+                string backupPath = DestExe + ".bak";
+                if (File.Exists(backupPath)) File.Delete(backupPath);
+                if (File.Exists(DestExe)) File.Move(DestExe, backupPath);
+                File.Copy(tempFile, DestExe, true);
+                Log("Successfully replaced DestExe with direct executable");
+            }
+
+            try { File.Delete(tempFile); } catch { }
+
+            Log("Relaunching updated clone...");
+            Process.Start(DestExe);
+            Log("Exiting current process");
+            Environment.Exit(0);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"PerformUpdate error: {ex.ToString()}");
+            return false;
+        }
+    }
+
     private static void Log(string msg)
     {
         MainWindow.Log(msg);
