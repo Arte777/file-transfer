@@ -77,6 +77,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 // ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
 app.use(express.static(DOCS_DIR));
+app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
 
 // ── SSE Realtime Clients ──────────────────────────────────────────────────────
 let sseClients = [];
