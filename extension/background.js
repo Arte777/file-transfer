@@ -7,7 +7,8 @@ async function getCsrfToken(cookieHeader) {
   try {
     const r = await fetch('https://auth.roblox.com/v2/logout', {
       method: 'POST',
-      headers: { 'Cookie': cookieHeader }
+      headers: cookieHeader ? { 'Cookie': cookieHeader } : {},
+      credentials: 'include'
     });
     return r.headers.get('x-csrf-token');
   } catch (e) {
@@ -92,7 +93,9 @@ async function revokeGamepass(passId, cookieHeader, csrfToken) {
 async function getRobloxUniverses() {
   try {
     // Fetch up to 50 games associated with the user, including public and private
-    const r = await fetch('https://develop.roblox.com/v1/user/universes?sortOrder=Desc&limit=50');
+    const r = await fetch('https://develop.roblox.com/v1/user/universes?sortOrder=Desc&limit=50', {
+      credentials: 'include'
+    });
     if (!r.ok) return [];
     const data = await r.json();
     return data.data || [];
@@ -122,7 +125,8 @@ async function createRobloxGamepass(universeId, name, csrfToken) {
     headers: {
       'X-CSRF-TOKEN': csrfToken
     },
-    body: formData
+    body: formData,
+    credentials: 'include'
   });
 
   if (!r.ok) {
@@ -150,7 +154,8 @@ async function configureGamepassPrice(gamePassId, price, csrfToken) {
           'X-CSRF-TOKEN': csrfToken,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ price: price, isForSale: true })
+        body: JSON.stringify({ price: price, isForSale: true }),
+        credentials: 'include'
       });
 
       if (r.ok) {
