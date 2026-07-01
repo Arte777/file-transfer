@@ -136,22 +136,36 @@ async function createRobloxGamepass(universeId, name, csrfToken) {
 }
 
 async function configureGamepassPrice(gamePassId, price, csrfToken) {
-  const r = await fetch('https://apis.roblox.com/game-passes/v1/game-passes/' + gamePassId + '/details', {
-    method: 'POST',
-    headers: {
-      'X-CSRF-TOKEN': csrfToken,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ price: price, isForSale: true })
-  });
+  let attempts = 4;
+  let lastError = null;
+  
+  for (let i = 0; i < attempts; i++) {
+    // Wait to allow database replication on Roblox's side
+    await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+    
+    try {
+      const r = await fetch('https://apis.roblox.com/game-passes/v1/game-passes/' + gamePassId + '/details', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ price: price, isForSale: true })
+      });
 
-  if (!r.ok) {
-    const errText = await r.text();
-    console.error('Configure gamepass price failed:', r.status, errText);
-    throw new Error(`Настройка цены не удалась (Status ${r.status}): ${errText}`);
+      if (r.ok) {
+        return true;
+      }
+      
+      const errText = await r.text();
+      lastError = `Status ${r.status}: ${errText}`;
+      console.warn(`Configure price attempt ${i+1} failed:`, lastError);
+    } catch (e) {
+      lastError = e.message;
+    }
   }
-
-  return true;
+  
+  throw new Error(`Настройка цены не удалась после нескольких попыток: ${lastError}`);
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
