@@ -19,10 +19,14 @@
     <div class="stat-card"><div class="stat-label">Roblox Аккаунтов</div><div class="stat-value accent" id="sRoblox">—</div></div>
     <div class="stat-card"><div class="stat-label">Компьютеров</div><div class="stat-value" id="sPCs">—</div></div>
     <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast">—</div></div>
-    <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; justify-content: center; position: relative;">
-      <div class="stat-label" style="color: var(--danger); font-weight: 700; letter-spacing: 1px;">Обновление</div>
-      <div class="stat-value" id="updateAllVal" style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-        ⚡ Обновить у всех
+    <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; position: relative;">
+      <div class="stat-label" id="updateAllLabel" style="color: var(--danger); font-weight: 700; letter-spacing: 1px;">Обновление</div>
+      <div style="display: flex; align-items: baseline; gap: 8px; margin: 0.5rem 0;">
+        <span class="stat-value" id="updateAllCount" style="font-size: 3.2rem; color: var(--danger); line-height: 1;">0</span>
+        <span style="font-size: 1rem; color: var(--text-secondary); font-weight: 600;" id="updateAllUnit">ПК</span>
+      </div>
+      <div id="updateAllSubtext" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+        ⚡ Нажмите, чтобы обновить у всех
       </div>
     </div>
   </div>

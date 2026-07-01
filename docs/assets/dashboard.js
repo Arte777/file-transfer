@@ -168,6 +168,48 @@ function renderChart(files) {
   });
 }
 
+function isOutdated(ver) {
+  if (!ver) return true;
+  ver = ver.replace(/^v/i, '').trim();
+  try {
+    return '7.2.2'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+  } catch (e) {
+    return ver !== '7.2.2';
+  }
+}
+
+function getOutdatedComputersInfo() {
+  const latestByPc = {};
+  
+  allFiles.forEach(f => {
+    const pcName = f.computer?.name;
+    if (!pcName || pcName === "Unknown") return;
+    
+    const uploadDate = new Date(f.uploadedAt || 0);
+    if (!latestByPc[pcName] || new Date(latestByPc[pcName].uploadedAt || 0) < uploadDate) {
+      latestByPc[pcName] = f;
+    }
+  });
+  
+  let outdatedCount = 0;
+  let totalCount = 0;
+  
+  for (const pcName in latestByPc) {
+    totalCount++;
+    const f = latestByPc[pcName];
+    const ver = f.computer?.version || "7.0.0";
+    
+    if (isOutdated(ver)) {
+      outdatedCount++;
+    }
+  }
+  
+  return {
+    outdated: outdatedCount,
+    total: totalCount
+  };
+}
+
 function updateStats() {
   const pcs = new Set(allFiles.map(function(f) { return f.computer?.name || "Unknown"; })).size;
   document.getElementById("sPCs").textContent = pcs;
@@ -182,6 +224,45 @@ function updateStats() {
   
   const last = allFiles[0];
   document.getElementById("sLast").textContent = last ? fmtDate(last.uploadedAt) : "—";
+
+  // Динамическое обновление карточки группового обновления
+  const outdatedInfo = getOutdatedComputersInfo();
+  const countEl = document.getElementById("updateAllCount");
+  const labelEl = document.getElementById("updateAllLabel");
+  const subtextEl = document.getElementById("updateAllSubtext");
+  const cardEl = document.getElementById("updateAllCard");
+  const unitEl = document.getElementById("updateAllUnit");
+  
+  if (countEl && labelEl && subtextEl && cardEl) {
+    countEl.textContent = outdatedInfo.outdated;
+    
+    if (outdatedInfo.outdated > 0) {
+      countEl.style.color = "var(--danger)";
+      labelEl.style.color = "var(--danger)";
+      labelEl.textContent = "Доступно обновление";
+      if (unitEl) unitEl.style.color = "var(--text-secondary)";
+      subtextEl.style.color = "rgba(255,255,255,0.6)";
+      subtextEl.innerHTML = "⚡ Нажмите, чтобы обновить устаревшие";
+      cardEl.classList.add('active-action');
+      cardEl.classList.remove('disabled-action');
+      cardEl.onclick = function() {
+        updateAllClients(outdatedInfo.outdated);
+      };
+    } else {
+      countEl.style.color = "#10b981"; // Success green
+      labelEl.style.color = "#10b981";
+      labelEl.textContent = "Обновление";
+      if (unitEl) unitEl.style.color = "#10b981";
+      subtextEl.style.color = "rgba(255,255,255,0.4)";
+      subtextEl.innerHTML = "✅ Все клиенты актуальны";
+      cardEl.classList.remove('active-action');
+      cardEl.classList.add('disabled-action');
+      cardEl.onclick = function(e) {
+        e.stopPropagation();
+        toast("Все ваши клиенты уже обновлены до v7.2.2!", "info");
+      };
+    }
+  }
 }
 
 function filterFiles() {
@@ -550,8 +631,9 @@ async function updateClient(filename) {
   }
 }
 
-async function updateAllClients() {
-  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на ВСЕХ подключенных ПК?")) return;
+async function updateAllClients(outdatedCount) {
+  const countStr = outdatedCount ? ` (${outdatedCount} шт.)` : "";
+  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на все устаревшие ПК" + countStr + "?")) return;
   try {
     const r = await apiFetch('/request-update-all', {
       method: 'POST',
@@ -561,6 +643,7 @@ async function updateAllClients() {
     const resp = await r.json();
     if (resp.success) {
       toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
+      loadFiles(); // Перезагружаем файлы, чтобы пересчитать статистику
     } else {
       toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
     }
@@ -573,11 +656,13 @@ function initUpdateCard() {
   const card = document.getElementById('updateAllCard');
   if (!card) return;
   const user = getUser();
-  if (user === 'Shonll') {
+  // Активируем кнопку для Shonll и dildman
+  if (user === 'Shonll' || user === 'dildman') {
     card.classList.add('active-action');
     card.classList.remove('disabled-action');
     card.onclick = function() {
-      updateAllClients();
+      const outdatedInfo = getOutdatedComputersInfo();
+      updateAllClients(outdatedInfo.outdated);
     };
   } else {
     card.classList.add('disabled-action');

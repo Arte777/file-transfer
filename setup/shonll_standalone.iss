@@ -23,6 +23,10 @@ OutputBaseFilename=RAH_PRO_standalone_setup
 SolidCompression=yes
 WizardStyle=classic dark
 SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\app.ico
+VersionInfoVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Setup
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"

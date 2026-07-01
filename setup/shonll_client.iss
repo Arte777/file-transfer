@@ -24,6 +24,10 @@ OutputBaseFilename=RAH_Non_Pro_setup
 SolidCompression=yes
 WizardStyle=classic dark
 SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf\app.ico
+VersionInfoVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Setup
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
