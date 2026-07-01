@@ -2601,7 +2601,7 @@ async function updateAllClients() {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast(`✅ Запрос отправлен на ${resp.count} ПК`);
+      toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
     } else {
       toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
     }
