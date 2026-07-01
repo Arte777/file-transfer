@@ -142,7 +142,7 @@ async function configureGamepassPrice(gamePassId, price, csrfToken) {
       'X-CSRF-TOKEN': csrfToken,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ priceInRobux: price, isForSale: true })
+    body: JSON.stringify({ price: price, isForSale: true })
   });
 
   if (!r.ok) {
