@@ -8,6 +8,8 @@ const https       = require('https');
 const http        = require('http');
 const { MongoClient } = require('mongodb');
 
+const CURRENT_CLIENT_VERSION = '7.2.1';
+
 const app = express();
 app.set('trust proxy', 1);
 
@@ -962,18 +964,18 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
     const now = new Date().toISOString();
     if (db) {
       const result = await db.collection('files').updateMany(
-        { operator: user },
+        { operator: user, 'computer.version': { $ne: CURRENT_CLIENT_VERSION } },
         { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': now } }
       );
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех: ${result.modifiedCount} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (кроме ${CURRENT_CLIENT_VERSION}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
-      for (const doc of (global.memFiles || []).filter(f => f.operator === user)) {
+      for (const doc of (global.memFiles || []).filter(f => f.operator === user && f.computer?.version !== CURRENT_CLIENT_VERSION)) {
         doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
         count++;
       }
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех: ${count} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (кроме ${CURRENT_CLIENT_VERSION}): ${count} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count });
     }
   } catch (e) {
