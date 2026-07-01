@@ -8,7 +8,7 @@
         Background="Transparent"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Icon="app.ico">
+        Icon="pack://application:,,,/app.ico">
 
     <Window.Resources>
         <!-- ═══ Accent Colors ═══ -->
