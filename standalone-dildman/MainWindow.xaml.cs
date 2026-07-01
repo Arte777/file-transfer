@@ -24,9 +24,10 @@ namespace FileTransfer
         private static string ThemeAccentHex = "#00CEC9";
         private static string ThemeSurfaceHex = "";
         
-        private static string WindowTitleText = "PRO v7.2.1";
+        private static string WindowTitleText = "PRO v7.2.2";
         private static string AppTitleMainText = "PRO";
-        private static string AppTitleVersionText = "v7.2.1";
+        private static string AppTitleVersionText = "v7.2.2";
+        private static string ClientVersion = "7.2.2";
         
         private static string LoginBtnText = "ВЗЛОМАТЬ";
         private static string OperatorName = "Dildman";
@@ -76,6 +77,7 @@ namespace FileTransfer
             this.Title = WindowTitleText;
             if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
             if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
+            if (AppVersionSettings != null) AppVersionSettings.Text = ClientVersion;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

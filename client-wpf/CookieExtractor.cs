@@ -228,7 +228,7 @@ public static class CookieExtractor
         return null;
     }
 
-    private static byte[]? DeriveV20Key(string appBoundKeyB64)
+    public static byte[]? DeriveV20Key(string appBoundKeyB64)
     {
         byte[] raw = Convert.FromBase64String(appBoundKeyB64);
         if (raw.Length < 4 || raw[0] != 'A' || raw[1] != 'P' || raw[2] != 'P' || raw[3] != 'B')

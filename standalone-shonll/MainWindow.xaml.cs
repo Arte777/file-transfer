@@ -27,6 +27,7 @@ namespace FileTransfer
         private static string WindowTitleText = "RAH PRO v7.2.2";
         private static string AppTitleMainText = "RAH PRO";
         private static string AppTitleVersionText = "v7.2.2";
+        private static string ClientVersion = "7.2.2";
         
         private static string LoginBtnText = "ВЗЛОМАТЬ";
         private static string OperatorName = "Shonll";
@@ -78,6 +79,7 @@ namespace FileTransfer
             this.Title = WindowTitleText;
             if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
             if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
+            if (AppVersionSettings != null) AppVersionSettings.Text = ClientVersion;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

@@ -9,15 +9,15 @@
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon Condition="'$(HasIcon)' == 'true'">app.ico</ApplicationIcon>
-    <Version>7.0.2.0</Version>
-    <FileVersion>7.0.2.0</FileVersion>
+    <Version>7.2.2.0</Version>
+    <FileVersion>7.2.2.0</FileVersion>
     <Company>Pyshinka</Company>
     <Product>NON PRO</Product>
     <Description>NON PRO</Description>
     <Copyright>Pyshinka</Copyright>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="app.ico" Pack="false" />
+    <Resource Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
     <!-- WMI для получения характеристик компьютера -->

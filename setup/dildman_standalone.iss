@@ -1,5 +1,5 @@
 #define MyAppName "PRO"
-#define MyAppVersion "7.2.3"
+#define MyAppVersion "7.2.2"
 #define MyAppPublisher "Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "PRO.exe"
@@ -23,6 +23,10 @@ OutputBaseFilename=PRO_standalone_setup
 SolidCompression=yes
 WizardStyle=classic dark
 SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-dildman\app.ico
+VersionInfoVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Setup
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"

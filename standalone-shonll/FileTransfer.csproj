@@ -8,7 +8,8 @@
     <AssemblyName>RAH PRO</AssemblyName>
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>7.2.2.0</Version>
+    <FileVersion>7.2.2.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="app.ico" />

@@ -1,5 +1,5 @@
 #define MyAppName "NON PRO"
-#define MyAppVersion "7.2.3"
+#define MyAppVersion "7.2.2"
 #define MyAppPublisher "NON PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "Non Pro.exe"
@@ -24,6 +24,10 @@ OutputBaseFilename=NON_PRO_setup
 SolidCompression=yes
 WizardStyle=classic dark
 SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf-dildman\app.ico
+VersionInfoVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Setup
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"

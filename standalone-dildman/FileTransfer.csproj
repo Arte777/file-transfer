@@ -8,9 +8,10 @@
     <AssemblyName>PRO</AssemblyName>
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>7.2.2.0</Version>
+    <FileVersion>7.2.2.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="app.ico" Pack="false" />
+    <Resource Include="app.ico" />
   </ItemGroup>
 </Project>

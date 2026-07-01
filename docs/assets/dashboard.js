@@ -470,11 +470,11 @@ function openModalByIndex(idx) {
   var emailsSection = document.getElementById("emailsSection");
   var emailsList = document.getElementById("emailsList");
   document.getElementById("modalEmailsBtn").onclick = function() {
-    if (emailsSection.style.display === "") {
+    if (emailsSection.style.display === "block") {
       emailsSection.style.display = "none";
       return;
     }
-    emailsSection.style.display = "";
+    emailsSection.style.display = "block";
     emailsList.innerHTML = '<div style="text-align:center; padding:8px; color:var(--text-muted); font-size:0.75rem;">⏳ Загрузка...</div>';
     apiFetch('/api/emails/' + encodeURIComponent(f.name)).then(function(r) { return r.json(); }).then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
