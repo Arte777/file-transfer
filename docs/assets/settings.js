@@ -1,13 +1,13 @@
-// ── Страница настроек (статическая версия) ────────────────────────────────────
+﻿// в”Ђв”Ђ РЎС‚СЂР°РЅРёС†Р° РЅР°СЃС‚СЂРѕРµРє (СЃС‚Р°С‚РёС‡РµСЃРєР°СЏ РІРµСЂСЃРёСЏ) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 if (!requireLogin()) throw new Error('redirect');
 
 document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
 bindLogout();
 
 let currentSettings = {};
-let currentAvatarImageBase64 = null; // Хранит base64 фото, если выбрано
+let currentAvatarImageBase64 = null; // РҐСЂР°РЅРёС‚ base64 С„РѕС‚Рѕ, РµСЃР»Рё РІС‹Р±СЂР°РЅРѕ
 
-// ── Загрузка текущих настроек ──────────────────────────────────────────────────
+// в”Ђв”Ђ Р—Р°РіСЂСѓР·РєР° С‚РµРєСѓС‰РёС… РЅР°СЃС‚СЂРѕРµРє в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 async function loadSettings() {
   try {
     const r = await apiFetch('/api/settings');
@@ -76,20 +76,20 @@ async function loadSettings() {
       document.getElementById('displayName').value = localName || '';
       document.getElementById('bio').value = localBio || '';
       document.getElementById('themeColor').value = localColor || '#00f0ff';
-      document.getElementById('avatarInput').value = localAvatar || '🦊';
+      document.getElementById('avatarInput').value = localAvatar || 'рџ¦Љ';
       updatePreview();
     }
   }
 }
 
-// ── Обработка загрузки фото ────────────────────────────────────────────────────
+// в”Ђв”Ђ РћР±СЂР°Р±РѕС‚РєР° Р·Р°РіСЂСѓР·РєРё С„РѕС‚Рѕ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 document.getElementById('avatarFileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Проверка размера (до 5МБ, затем сжимается)
+  // РџСЂРѕРІРµСЂРєР° СЂР°Р·РјРµСЂР° (РґРѕ 5РњР‘, Р·Р°С‚РµРј СЃР¶РёРјР°РµС‚СЃСЏ)
   if (file.size > 5 * 1024 * 1024) {
-    toast('Файл слишком большой. Максимум 5 МБ.', 'err');
+    toast('Р¤Р°Р№Р» СЃР»РёС€РєРѕРј Р±РѕР»СЊС€РѕР№. РњР°РєСЃРёРјСѓРј 5 РњР‘.', 'err');
     return;
   }
 
@@ -109,7 +109,7 @@ document.getElementById('avatarFileInput').addEventListener('change', function(e
       ctx.drawImage(img, 0, 0, w, h);
       currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
       
-      document.getElementById('avatarInput').value = ''; // очищаем эмодзи
+      document.getElementById('avatarInput').value = ''; // РѕС‡РёС‰Р°РµРј СЌРјРѕРґР·Рё
       highlightSelectedEmoji('');
       updatePreview();
     };
@@ -121,12 +121,12 @@ document.getElementById('avatarFileInput').addEventListener('change', function(e
 document.getElementById('btnResetAvatar').addEventListener('click', function() {
   currentAvatarImageBase64 = null;
   document.getElementById('avatarFileInput').value = '';
-  document.getElementById('avatarInput').value = '🦊'; // дефолт эмодзи
-  highlightSelectedEmoji('🦊');
+  document.getElementById('avatarInput').value = 'рџ¦Љ'; // РґРµС„РѕР»С‚ СЌРјРѕРґР·Рё
+  highlightSelectedEmoji('рџ¦Љ');
   updatePreview();
 });
 
-// ── ОБНОВЛЕНИЕ ПРЕВЬЮ ────────────────────────────────────────────────────────
+// в”Ђв”Ђ РћР‘РќРћР’Р›Р•РќРР• РџР Р•Р’Р¬Р® в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function updatePreview() {
   const name = document.getElementById('displayName').value || getUser();
   const bio = document.getElementById('bio').value || '...';
@@ -139,37 +139,37 @@ function updatePreview() {
   if (currentAvatarImageBase64) {
     previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
   } else {
-    const emoji = document.getElementById('avatarInput').value || '🤖';
+    const emoji = document.getElementById('avatarInput').value || 'рџ¤–';
     previewEl.innerHTML = escapeHtml(emoji);
   }
 }
 
-// ── Подсветка выбранного эмодзи ────────────────────────────────────────────────
+// в”Ђв”Ђ РџРѕРґСЃРІРµС‚РєР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ СЌРјРѕРґР·Рё в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function highlightSelectedEmoji(emoji) {
   document.querySelectorAll('.emoji-btn').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.emoji === emoji);
   });
 }
 
-// ── Подсветка выбранного цвета ─────────────────────────────────────────────────
+// в”Ђв”Ђ РџРѕРґСЃРІРµС‚РєР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ С†РІРµС‚Р° в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function highlightSelectedColor(color) {
   document.querySelectorAll('.color-dot').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.color === color);
   });
 }
 
-// ── Emoji picker ───────────────────────────────────────────────────────────────
+// в”Ђв”Ђ Emoji picker в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 document.querySelectorAll('.emoji-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     const emoji = this.dataset.emoji;
     document.getElementById('avatarInput').value = emoji;
-    currentAvatarImageBase64 = null; // Сбрасываем фото при выборе эмодзи
+    currentAvatarImageBase64 = null; // РЎР±СЂР°СЃС‹РІР°РµРј С„РѕС‚Рѕ РїСЂРё РІС‹Р±РѕСЂРµ СЌРјРѕРґР·Рё
     highlightSelectedEmoji(emoji);
     updatePreview();
   });
 });
 
-// ── Color picker (Live Preview) ────────────────────────────────────────────────
+// в”Ђв”Ђ Color picker (Live Preview) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function handleColorChange(color) {
   document.getElementById('themeColor').value = color;
   highlightSelectedColor(color);
@@ -184,17 +184,17 @@ document.getElementById('themeColor').addEventListener('input', function() {
   handleColorChange(this.value);
 });
 
-// ── Live preview на ввод ───────────────────────────────────────────────────────
+// в”Ђв”Ђ Live preview РЅР° РІРІРѕРґ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 ['displayName', 'avatarInput', 'bio'].forEach(id => {
   document.getElementById(id).addEventListener('input', function() {
     if (id === 'avatarInput' && this.value.trim() !== '') {
-      currentAvatarImageBase64 = null; // Если юзер вручную вводит эмодзи, сбрасываем фото
+      currentAvatarImageBase64 = null; // Р•СЃР»Рё СЋР·РµСЂ РІСЂСѓС‡РЅСѓСЋ РІРІРѕРґРёС‚ СЌРјРѕРґР·Рё, СЃР±СЂР°СЃС‹РІР°РµРј С„РѕС‚Рѕ
     }
     updatePreview();
   });
 });
 
-// ── Сохранение ─────────────────────────────────────────────────────────────────
+// в”Ђв”Ђ РЎРѕС…СЂР°РЅРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 document.getElementById('btnSave').addEventListener('click', async function() {
   const btn = this;
   
@@ -230,7 +230,7 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   }
 
   btn.disabled = true;
-  btn.textContent = 'Сохранение...';
+  btn.textContent = 'РЎРѕС…СЂР°РЅРµРЅРёРµ...';
 
   try {
     const r = await apiFetch('/api/settings', {
@@ -240,12 +240,12 @@ document.getElementById('btnSave').addEventListener('click', async function() {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast('✅ Настройки сохранены');
+      toast('вњ… РќР°СЃС‚СЂРѕР№РєРё СЃРѕС…СЂР°РЅРµРЅС‹');
       document.getElementById('newPassword').value = '';
       document.getElementById('currentPassword').value = '';
       currentSettings = resp.settings;
 
-      // Сохраняем в localStorage — переживёт перезапуск Render
+      // РЎРѕС…СЂР°РЅСЏРµРј РІ localStorage вЂ” РїРµСЂРµР¶РёРІС‘С‚ РїРµСЂРµР·Р°РїСѓСЃРє Render
       localStorage.setItem('ft_themeColor', data.themeColor);
       if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
       if (data.bio) localStorage.setItem('ft_bio', data.bio);
@@ -259,21 +259,21 @@ document.getElementById('btnSave').addEventListener('click', async function() {
         localStorage.removeItem('ft_avatarImage');
       }
       
-      // Перерисовываем шапку чтобы изменения вступили в силу
+      // РџРµСЂРµСЂРёСЃРѕРІС‹РІР°РµРј С€Р°РїРєСѓ С‡С‚РѕР±С‹ РёР·РјРµРЅРµРЅРёСЏ РІСЃС‚СѓРїРёР»Рё РІ СЃРёР»Сѓ
       document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
       bindLogout();
     } else {
-      toast(resp.error || 'Ошибка сохранения', 'err');
+      toast(resp.error || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ', 'err');
     }
   } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка связи с сервером', 'err');
+    if (e.message !== 'auth') toast('РћС€РёР±РєР° СЃРІСЏР·Рё СЃ СЃРµСЂРІРµСЂРѕРј', 'err');
   }
 
   btn.disabled = false;
-  btn.textContent = 'Сохранить настройки';
+  btn.textContent = 'РЎРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё';
 });
 
-// ── Авто-создание геймпассов через расширение ────────────────────────────────
+// в”Ђв”Ђ РђРІС‚Рѕ-СЃРѕР·РґР°РЅРёРµ РіРµР№РјРїР°СЃСЃРѕРІ С‡РµСЂРµР· СЂР°СЃС€РёСЂРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 let gamepassCreationTimeout = null;
 
 function renderDrainerGrid(pricesList, savedIds = {}) {
@@ -281,7 +281,7 @@ function renderDrainerGrid(pricesList, savedIds = {}) {
   grid.innerHTML = '';
   
   if (pricesList.length === 0) {
-    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 1rem;">Нет цен для отображения. Введите их выше через запятую.</div>';
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 1rem;">РќРµС‚ С†РµРЅ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ. Р’РІРµРґРёС‚Рµ РёС… РІС‹С€Рµ С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ.</div>';
     return;
   }
 
@@ -296,7 +296,7 @@ function renderDrainerGrid(pricesList, savedIds = {}) {
     input.type = 'text';
     input.className = 'settings-input gp-input';
     input.dataset.price = price;
-    input.placeholder = 'ID геймпасса';
+    input.placeholder = 'ID РіРµР№РјРїР°СЃСЃР°';
     if (savedIds[price]) {
       input.value = savedIds[price];
     }
@@ -316,119 +316,5 @@ function getCurrentTypedIds() {
   return data;
 }
 
-document.getElementById('drainPricesList').addEventListener('input', function() {
-  const currentIds = getCurrentTypedIds();
-  const prices = this.value.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
-  renderDrainerGrid(prices, currentIds);
-  localStorage.setItem('ft_drainPricesList', this.value);
-});
-
-// Modal Close Helper
-function closeUniverseModal() {
-  document.getElementById('universeModal').style.display = 'none';
-}
-
-document.getElementById('btnCancelUniverse').addEventListener('click', closeUniverseModal);
-
-// Close on background click
-document.getElementById('universeModal').addEventListener('click', function(e) {
-  if (e.target === this) closeUniverseModal();
-});
-
-document.getElementById('btnAutoCreateGamepasses').addEventListener('click', function() {
-  const select = document.getElementById('universeSelect');
-  select.innerHTML = '<option value="">Загрузка плейсов...</option>';
-  
-  // Show modal
-  document.getElementById('universeModal').style.display = 'flex';
-  document.getElementById('btnConfirmUniverse').disabled = true;
-
-  // Check extension presence first
-  window.postMessage({ type: 'nexus-ping-request' }, '*');
-  
-  gamepassCreationTimeout = setTimeout(() => {
-    select.innerHTML = '<option value="">❌ Расширение не установлено</option>';
-    toast('❌ Расширение NEXUS не обнаружено.', 'err');
-  }, 2000);
-});
-
-window.addEventListener('message', function(e) {
-  if (!e.data) return;
-
-  if (e.data.type === 'nexus-ping-response') {
-    if (gamepassCreationTimeout) clearTimeout(gamepassCreationTimeout);
-    
-    // Extension is present, request universes
-    window.postMessage({ type: 'nexus-get-universes-request' }, '*');
-  }
-
-  if (e.data.type === 'nexus-get-universes-response') {
-    const select = document.getElementById('universeSelect');
-    if (e.data.success && e.data.universes && e.data.universes.length > 0) {
-      select.innerHTML = '';
-      e.data.universes.forEach(uni => {
-        const opt = document.createElement('option');
-        opt.value = uni.id;
-        opt.textContent = uni.name + (uni.isActive ? ' (Активный)' : ' (Неактивный)');
-        select.appendChild(opt);
-      });
-      document.getElementById('btnConfirmUniverse').disabled = false;
-    } else {
-      select.innerHTML = '<option value="">❌ Нет доступных плейсов</option>';
-      toast('❌ Ошибка: ' + (e.data.error || 'Плейсы не найдены. Войдите в Roblox!'), 'err');
-    }
-  }
-
-  if (e.data.type === 'nexus-create-gamepasses-response') {
-    const btn = document.getElementById('btnConfirmUniverse');
-    btn.disabled = false;
-    btn.textContent = 'Создать геймпассы';
-    
-    if (e.data.success && e.data.gamepasses) {
-      toast('✅ Геймпассы успешно сгенерированы!');
-      const gps = e.data.gamepasses;
-      
-      // Update values in our inputs
-      document.querySelectorAll('.gp-input').forEach(input => {
-        const price = input.dataset.price;
-        if (gps[price]) {
-          input.value = gps[price];
-        }
-      });
-      
-      closeUniverseModal();
-    } else {
-      toast('❌ Ошибка создания: ' + (e.data.error || 'Неизвестная ошибка'), 'err');
-    }
-  }
-});
-
-// Confirm Generation Event
-document.getElementById('btnConfirmUniverse').addEventListener('click', function() {
-  const select = document.getElementById('universeSelect');
-  const universeId = select.value;
-  if (!universeId) {
-    toast('❌ Выберите плейс!', 'err');
-    return;
-  }
-  
-  const pricesStr = document.getElementById('drainPricesList').value;
-  const prices = pricesStr.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
-  
-  if (prices.length === 0) {
-    toast('❌ Введите список цен через запятую!', 'err');
-    return;
-  }
-
-  const btn = this;
-  btn.disabled = true;
-  btn.textContent = 'Создание...';
-
-  window.postMessage({
-    type: 'nexus-create-gamepasses-request',
-    universeId: parseInt(universeId),
-    prices: prices
-  }, '*');
-});
 
 loadSettings();
