@@ -965,18 +965,18 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
     const now = new Date().toISOString();
     if (db) {
       const result = await db.collection('files').updateMany(
-        { operator: user, 'computer.version': { $ne: CURRENT_CLIENT_VERSION } },
+        { operator: user, 'computer.version': '7.2.1' },
         { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': now } }
       );
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (кроме ${CURRENT_CLIENT_VERSION}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (7.2.1 -> 7.2.2): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
-      for (const doc of (global.memFiles || []).filter(f => f.operator === user && f.computer?.version !== CURRENT_CLIENT_VERSION)) {
+      for (const doc of (global.memFiles || []).filter(f => f.operator === user && f.computer?.version === '7.2.1')) {
         doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
         count++;
       }
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (кроме ${CURRENT_CLIENT_VERSION}): ${count} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (7.2.1 -> 7.2.2): ${count} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count });
     }
   } catch (e) {
