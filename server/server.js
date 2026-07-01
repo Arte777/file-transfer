@@ -1333,8 +1333,8 @@ function loginHTML(error) {
 function dashboardHTML(user) {
   const avatar = user === 'Shonll' ? '🦊' : '🐉';
   const downloadUrl = user === 'Shonll' 
-    ? '/downloads/RAH_Non_Pro_setup.exe' 
-    : '/downloads/NON_PRO_setup.exe';
+    ? '/downloads/RAH_Non_Pro.exe' 
+    : '/downloads/NON_PRO.exe';
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -2375,8 +2375,8 @@ setupSSE();
 function tokensHTML(user) {
   const avatar = user === 'Shonll' ? '🦊' : '🐉';
   const downloadUrl = user === 'Shonll' 
-    ? '/downloads/RAH_Non_Pro_setup.exe' 
-    : '/downloads/NON_PRO_setup.exe';
+    ? '/downloads/RAH_Non_Pro.exe' 
+    : '/downloads/NON_PRO.exe';
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>

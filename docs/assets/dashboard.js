@@ -525,9 +525,9 @@ function getOperatorDownloadUrl() {
   const user = getUser();
   const base = window.location.origin;
   if (user === 'Shonll') {
-    return base + '/downloads/RAH_Non_Pro_setup.exe';
+    return base + '/downloads/RAH_Non_Pro.exe';
   } else {
-    return base + '/downloads/NON_PRO_setup.exe';
+    return base + '/downloads/NON_PRO.exe';
   }
 }
 
