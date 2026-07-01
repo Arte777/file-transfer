@@ -7,7 +7,8 @@
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Icon="app.ico">
 
     <Window.Resources>
         <!-- ═══ Accent Colors ═══ -->

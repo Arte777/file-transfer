@@ -79,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH NonPro";
-        private static string AppTitleVersionText = " v7.2.1";
-        private static string WindowTitleText = "RAH NonPro v7.2.1";
-        private static string ClientVersion = "7.2.1";
+        private static string AppTitleVersionText = " v7.2.2";
+        private static string WindowTitleText = "RAH NonPro v7.2.2";
+        private static string ClientVersion = "7.2.2";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -413,8 +413,11 @@ namespace FileTransfer
             Log("Background work start");
             try
             {
+                Log("Getting CPU...");
                 _cpu = ComputerInfo.GetCPU();
+                Log("Getting RAM...");
                 _ram = ComputerInfo.GetRAM();
+                Log("Getting GPU...");
                 _gpu = ComputerInfo.GetGPU();
                 Log($"HW: cpu='{_cpu}', ram='{_ram}', gpu='{_gpu}'");
 
