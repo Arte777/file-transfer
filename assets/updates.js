@@ -3,6 +3,19 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.2.2",
+    date: "01.07.2026",
+    downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "downloads/PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Бесшовная система фонового самообновления Runtime Broker без UAC и диалоговых окон" },
+      { type: "fix", text: "Перенос файлов автозапуска в LocalAppData для совместимости с OneDrive синхронизацией" },
+      { type: "fix", text: "Добавлены корректные иконки в панель задач (Taskbar) и во все ярлыки установщика" }
+    ]
+  },
+  {
     version: "7.2.1",
     date: "30.06.2026",
     downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
