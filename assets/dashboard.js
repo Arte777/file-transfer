@@ -168,8 +168,19 @@ function renderChart(files) {
   });
 }
 
+function supportsUpdate(ver) {
+  if (!ver) return false;
+  ver = ver.replace(/^v/i, '').trim();
+  try {
+    // Поддержка обновления есть начиная с версии 7.2.1
+    return '7.2.1'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) <= 0;
+  } catch (e) {
+    return ver === '7.2.1' || ver === '7.2.2';
+  }
+}
+
 function isOutdated(ver) {
-  if (!ver) return true;
+  if (!ver) return false;
   ver = ver.replace(/^v/i, '').trim();
   try {
     return '7.2.2'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
@@ -199,7 +210,8 @@ function getOutdatedComputersInfo() {
     const f = latestByPc[pcName];
     const ver = f.computer?.version || "7.0.0";
     
-    if (isOutdated(ver)) {
+    // Считаем только те ПК, которые поддерживают обновление (>= 7.2.1) и имеют версию ниже 7.2.2
+    if (supportsUpdate(ver) && isOutdated(ver)) {
       outdatedCount++;
     }
   }
