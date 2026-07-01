@@ -1454,6 +1454,27 @@ function dashboardHTML(user) {
       .stat-card:nth-child(1) { grid-column: span 1; }
     }
 
+    .action-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .action-card.active-action:hover {
+      border-color: #ff1744 !important;
+      box-shadow: 0 0 25px rgba(255, 23, 68, 0.35) !important;
+      transform: translateY(-4px) scale(1.02);
+      background: rgba(255, 23, 68, 0.05);
+    }
+    .action-card.active-action .stat-value {
+      color: #ff1744;
+    }
+    .action-card.disabled-action {
+      opacity: 0.35;
+      cursor: not-allowed !important;
+    }
+    .action-card.disabled-action * {
+      cursor: not-allowed !important;
+    }
+
     .controls-panel {
       display: flex; gap: 1rem; align-items: center; justify-content: space-between;
       margin: 0 1.5rem 1.5rem; flex-wrap: wrap;
@@ -1748,6 +1769,14 @@ function dashboardHTML(user) {
     <div class="stat-label">Последняя отправка</div>
     <div class="stat-value" id="sLast" style="font-size: 0.88rem;">—</div>
   </div>
+  <div class="stat-card action-card ${user === 'Shonll' ? 'active-action' : 'disabled-action'}" 
+       onclick="${user === 'Shonll' ? 'updateAllClients()' : 'event.stopPropagation();'}" 
+       style="justify-content: center; position: relative;">
+    <div class="stat-label" style="color: var(--danger); font-weight: 700; letter-spacing: 1px;">Обновление</div>
+    <div class="stat-value" style="font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+      ⚡ Обновить у всех
+    </div>
+  </div>
 </div>
 
 <!-- Controls -->
@@ -1758,10 +1787,7 @@ function dashboardHTML(user) {
       <option value="">Все отправители</option>
     </select>
   </div>
-  <div style="display: flex; gap: 8px;">
-    <button class="btn-refresh" onclick="loadFiles()">↻ Обновить</button>
-    <button class="btn-refresh" id="btnUpdateAllFiles" onclick="updateAllClients()" style="border-color: var(--danger); color: var(--danger); background: rgba(255, 23, 68, 0.05);">⚡ Обновить у всех</button>
-  </div>
+  <button class="btn-refresh" onclick="loadFiles()">↻ Обновить</button>
 </div>
 
 <!-- Grid -->
