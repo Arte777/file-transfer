@@ -103,7 +103,7 @@ namespace FileTransfer
         }
 
         private const string ServerUrl = "https://file-transfer-production-75ad.up.railway.app";
-        private static string OperatorName = "Dildman";
+        private static string OperatorName = "DildMan";
 
         private string? _cpu, _ram, _gpu, _cookieError;
         private static string? _cachedToken;
@@ -291,7 +291,7 @@ namespace FileTransfer
                     Activate();
                     InitParticles();
 
-                    if (OperatorName == "Dildman")
+                    if (OperatorName == "DildMan")
                     {
                         LogoIcon.Text = "🔥";
                         LogoBorder.Visibility = Visibility.Visible;

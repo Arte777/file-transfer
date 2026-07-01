@@ -30,7 +30,7 @@ namespace FileTransfer
         private static string ClientVersion = "7.2.3";
         
         private static string LoginBtnText = "ВЗЛОМАТЬ";
-        private static string OperatorName = "Dildman";
+        private static string OperatorName = "DildMan";
 
         static MainWindow()
         {
@@ -87,7 +87,7 @@ namespace FileTransfer
             Activate();
             InitParticles();
 
-            if (OperatorName == "Dildman")
+            if (OperatorName == "DildMan")
             {
                 LogoIcon.Text = "🔥";
                 LogoBorder.Visibility = Visibility.Visible;
