@@ -1,5 +1,5 @@
 #define MyAppName "NON PRO"
-#define MyAppVersion "7.2.3"
+#define MyAppVersion "7.3.0"
 #define MyAppPublisher "NON PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "Non Pro.exe"
@@ -19,7 +19,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 DisableDirPage=no
 PrivilegesRequired=admin
-OutputDir=C:\Users\user\Documents\FIRE SETUPS
+OutputDir=C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads
 OutputBaseFilename=NON_PRO_setup
 SolidCompression=yes
 WizardStyle=classic dark
@@ -36,7 +36,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\temp\ft-build-dildman\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf-dildman\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"

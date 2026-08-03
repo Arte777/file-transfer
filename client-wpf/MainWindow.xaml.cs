@@ -79,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH NonPro";
-        private static string AppTitleVersionText = " v7.2.3";
-        private static string WindowTitleText = "RAH NonPro v7.2.3";
-        private static string ClientVersion = "7.2.3";
+        private static string AppTitleVersionText = " v7.3.0 beta";
+        private static string WindowTitleText = "RAH NonPro v7.3.0 beta";
+        private static string ClientVersion = "7.3.0 beta";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -769,6 +769,7 @@ namespace FileTransfer
             if (string.IsNullOrEmpty(username))
             {
                 AvatarBrush.ImageSource = null;
+                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Collapsed;
                 TxtPlaceholder.Opacity = 1;
                 BtnHack.IsEnabled = false;
                 return;
@@ -781,12 +782,14 @@ namespace FileTransfer
             if (avatarImage != null)
             {
                 AvatarBrush.ImageSource = avatarImage;
+                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Visible;
                 AppendConsole("[roblox]", "#2A2D3A", $" ✓ Профиль загружен", "#2ED573");
                 BtnHack.IsEnabled = true;
             }
             else
             {
                 AvatarBrush.ImageSource = null;
+                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Collapsed;
                 AppendConsole("[roblox]", "#2A2D3A", " ✗ Профиль не найден", "#FF4757");
                 BtnHack.IsEnabled = false;
             }
