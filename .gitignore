@@ -5,6 +5,7 @@
 binDebug*/
 *.dll
 *.exe
+!docs/downloads/*.exe
 *.pdb
 
 # ── Node ────────────────────────────────────────────────
