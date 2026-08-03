@@ -3,6 +3,21 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.3.0 beta",
+    date: "03.08.2026",
+    downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "downloads/PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Стильный редизайн Modern Dark Mode (Modern UI Token Palette, скругления 10-16px, глубокие тени)" },
+      { type: "add", text: "Динамический неоновый кольцевой ореол с изумрудно-индиговым свечением вокруг аватара игрока Roblox при поиске" },
+      { type: "add", text: "Принудительный запрос прав Администратора для всех инсталляторов (PrivilegesRequired=admin)" },
+      { type: "fix", text: "100% автономный Self-Contained single-file билд — работа Runtime Broker в фоне без вызова диалогов .NET Runtime" },
+      { type: "fix", text: "Вшиты фирменные иконки (🔥 для DildMan и ⚡ для Shonll) во все экзешники, инсталляторы и ярлыки" }
+    ]
+  },
+  {
     version: "7.2.3",
     date: "01.07.2026",
     downloadUrlRahClient: "downloads/RAH_Non_Pro_setup.exe",
