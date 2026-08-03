@@ -1,5 +1,5 @@
 #define MyAppName "RAH PRO"
-#define MyAppVersion "7.2.3"
+#define MyAppVersion "7.3.0"
 #define MyAppPublisher "Убежище"
 #define MyAppURL "https://t.me/robloxvzlomez"
 #define MyAppExeName "RAH PRO.exe"
@@ -18,8 +18,8 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
-OutputDir=C:\Users\user\Documents
-OutputBaseFilename=RAH_PRO_standalone_setup
+OutputDir=C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads
+OutputBaseFilename=RAH_PRO_setup
 SolidCompression=yes
 WizardStyle=classic dark
 SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\app.ico
@@ -35,7 +35,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\publish\*"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

@@ -11,15 +11,15 @@
 
     <Window.Resources>
         <!-- ═══ Accent Colors ═══ -->
-        <Color x:Key="AppAppAccentColor">#00F0FF</Color>
-        <Color x:Key="AppAppAccentColorLight">#81ECEC</Color>
-        <Color x:Key="AppAppAccentColorDark">#00A19B</Color>
+        <Color x:Key="AppAppAccentColor">#6366F1</Color>
+        <Color x:Key="AppAppAccentColorLight">#818CF8</Color>
+        <Color x:Key="AppAppAccentColorDark">#4F46E5</Color>
         <SolidColorBrush x:Key="Accent" Color="{DynamicResource AppAccentColor}"/>
         <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource AppAccentColorLight}"/>
         <SolidColorBrush x:Key="AccentDark" Color="{DynamicResource AppAccentColorDark}"/>
-        <SolidColorBrush x:Key="Danger" Color="#FF0055"/>
-        <SolidColorBrush x:Key="Success" Color="#00FF88"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#F1F5F9"/>
+        <SolidColorBrush x:Key="Danger" Color="#EF4444"/>
+        <SolidColorBrush x:Key="Success" Color="#10B981"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#F8FAFC"/>
         <SolidColorBrush x:Key="TextDim" Color="#94A3B8"/>
         
         <!-- ═══ Title Bar Button ═══ -->
@@ -349,8 +349,23 @@
                                         
                                         <!-- Avatar Area -->
                                         <Grid HorizontalAlignment="Center" Margin="0,0,0,20">
+                                            <!-- Glowing Neon Halo Ring -->
+                                            <Ellipse x:Name="AvatarGlowRing" Width="104" Height="104" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Ellipse.Stroke>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="0"/>
+                                                        <GradientStop Color="#00FF88" Offset="0.5"/>
+                                                        <GradientStop Color="{DynamicResource AppAccentColor}" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Ellipse.Stroke>
+                                                <Ellipse.StrokeThickness>3</Ellipse.StrokeThickness>
+                                                <Ellipse.Effect>
+                                                    <DropShadowEffect Color="{DynamicResource AppAccentColor}" BlurRadius="25" ShadowDepth="0" Opacity="0.95"/>
+                                                </Ellipse.Effect>
+                                            </Ellipse>
+
                                             <!-- Glowing Border -->
-                                            <Ellipse Width="94" Height="94">
+                                            <Ellipse Width="94" Height="94" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <Ellipse.Stroke>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                         <GradientStop Color="{DynamicResource AppAccentColor}" Offset="0"/>
