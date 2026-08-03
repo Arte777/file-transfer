@@ -881,6 +881,48 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
   res.json(results);
 });
 
+// GET /api/roblox-profile-proxy?username=xxx — прокси для поиска профилей и аватарок Roblox
+app.get('/api/roblox-profile-proxy', async (req, res) => {
+  try {
+    const username = (req.query.username || '').toString().trim();
+    if (!username) return res.status(400).json({ error: 'No username' });
+
+    const payload = JSON.stringify({ usernames: [username], excludeBannedUsers: false });
+    const userRes = await new Promise((resolve, reject) => {
+      const u = new URL('https://users.roblox.com/v1/usernames/users');
+      const r = https.request({
+        hostname: u.hostname, path: u.pathname, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      }, (resp) => {
+        let d = ''; resp.on('data', c => d += c); resp.on('end', () => resolve(d));
+      });
+      r.on('error', reject); r.write(payload); r.end();
+    });
+
+    const doc = JSON.parse(userRes);
+    if (!doc.data || doc.data.length === 0) return res.status(404).json({ error: 'User not found' });
+    const userId = doc.data[0].id;
+
+    const thumbUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`;
+    const thumbResStr = await new Promise((resolve, reject) => {
+      https.get(thumbUrl, (resp) => {
+        let d = ''; resp.on('data', c => d += c); resp.on('end', () => resolve(d));
+      }).on('error', reject);
+    });
+
+    const thumbDoc = JSON.parse(thumbResStr);
+    const imageUrl = thumbDoc?.data?.[0]?.imageUrl || '';
+    if (!imageUrl) return res.status(404).json({ error: 'No image' });
+
+    https.get(imageUrl, (imgResp) => {
+      res.setHeader('Content-Type', 'image/png');
+      imgResp.pipe(res);
+    }).on('error', () => res.status(500).json({ error: 'Image download failed' }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /robux-check-file — проверка токена конкретного файла
 app.post('/robux-check-file', requireAuth, async (req, res) => {
   try {

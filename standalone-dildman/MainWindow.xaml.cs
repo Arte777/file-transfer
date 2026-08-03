@@ -863,8 +863,28 @@ namespace FileTransfer
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Roblox Avatar Error: {ex.Message}");
-                return null;
+                System.Diagnostics.Debug.WriteLine($"Roblox Avatar Direct Error: {ex.Message}. Trying Server Fallback Proxy...");
+                try
+                {
+                    var fallbackUrl = $"{ServerUrl}/api/roblox-profile-proxy?username={Uri.EscapeDataString(username)}";
+                    var imageBytes = await _http.GetByteArrayAsync(fallbackUrl);
+                    return await Dispatcher.InvokeAsync(() =>
+                    {
+                        var bitmap = new BitmapImage();
+                        using var ms = new MemoryStream(imageBytes);
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.StreamSource = ms;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+                        return bitmap;
+                    });
+                }
+                catch (Exception fallbackEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Roblox Avatar Fallback Error: {fallbackEx.Message}");
+                    return null;
+                }
             }
         }
 
