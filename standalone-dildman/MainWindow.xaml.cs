@@ -78,9 +78,9 @@ namespace FileTransfer
 
         private static string LayoutJson = "{}";
 
-        private static string AppTitleMainText = "NON PRO";
+        private static string AppTitleMainText = "FIRE PRO";
         private static string AppTitleVersionText = " v7.3.0 beta";
-        private static string WindowTitleText = "NON PRO v7.3.0 beta";
+        private static string WindowTitleText = "FIRE PRO v7.3.0 beta";
         private static string ClientVersion = "7.3.0 beta";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
