@@ -9,6 +9,8 @@ const UPDATES = [
     downloadUrlRahStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_PRO_setup.exe",
     downloadUrlFireClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe",
     downloadUrlFireStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/PRO_setup.exe",
+    downloadUrlSvyazClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe",
+    downloadUrlSvyazStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_PRO_setup.exe",
     changes: [
       { type: "add", text: "Стильный редизайн Modern Dark Mode (Modern UI Token Palette, скругления 10-16px, глубокие тени)" },
       { type: "add", text: "Динамический неоновый кольцевой ореол с изумрудно-индиговым свечением вокруг аватара игрока Roblox при поиске" },
@@ -104,6 +106,12 @@ function renderUpdates() {
   document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
   document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
   document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
+  if (document.getElementById('btnDownloadSvyazClient')) {
+    document.getElementById('btnDownloadSvyazClient').href = current.downloadUrlSvyazClient;
+  }
+  if (document.getElementById('btnDownloadSvyazStandalone')) {
+    document.getElementById('btnDownloadSvyazStandalone').href = current.downloadUrlSvyazStandalone;
+  }
   
   // Отрисовываем таймлайн ченджлогов
   const listEl = document.getElementById('changelogList');
