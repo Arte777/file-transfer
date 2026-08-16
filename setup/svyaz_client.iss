@@ -23,7 +23,7 @@ OutputDir=C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads
 OutputBaseFilename=SVYAZ_NON_PRO_setup
 SolidCompression=yes
 WizardStyle=classic dark
-SetupIconFile=C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf-svyaz\app.ico
+SetupIconFile=D:\images.ico
 VersionInfoVersion={#MyAppVersion}
 VersionInfoTextVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
@@ -37,7 +37,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf-svyaz\bin\Release\net8.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\Users\user\.gemini\antigravity\scratch\file-transfer\client-wpf-svyaz\app.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\images.ico"; DestDir: "{app}"; DestName: "app.ico"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"
