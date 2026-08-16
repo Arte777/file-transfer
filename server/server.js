@@ -167,13 +167,15 @@ const upload = multer({
 // ── Учётные данные (используются и сессией, и token-auth для статического сайта) ──
 const CREDENTIALS = {
   'Shonll':  'shonll228',
-  'DildMan': 'dild228'
+  'DildMan': 'dild228',
+  'saha_kakaha122': '123123'
 };
 
 // ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
 const DEFAULT_SETTINGS = {
   'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#00f0ff', bio: 'Root Admin' },
-  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' }
+  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' },
+  'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ', themeColor: '#a855f7', bio: 'Operator' }
 };
 
 // In-memory fallback when MongoDB is not available

