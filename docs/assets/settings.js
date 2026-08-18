@@ -291,8 +291,8 @@ document.getElementById('btnTestToggleUpdateBadge')?.addEventListener('click', (
 });
 
 document.getElementById('btnTestClearBadges')?.addEventListener('click', () => {
-  localStorage.setItem('ft_last_read_notif_time', String(Date.now()));
-  localStorage.setItem('ft_last_read_chat_time', String(Date.now()));
+  localStorage.setItem(getUserNotifTimeKey(), String(Date.now()));
+  localStorage.setItem(getUserChatTimeKey(), String(Date.now()));
   localStorage.setItem('ft_has_seen_updates', 'true');
   
   const notifBadge = document.getElementById('sidebarNotifBadge');

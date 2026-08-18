@@ -11,7 +11,7 @@ let searchQuery = '';
 // ── Загрузка истории ──────────────────────────────────────────────────────────
 async function loadNotificationHistory() {
   try {
-    const raw = localStorage.getItem('ft_notifications_history');
+    const raw = localStorage.getItem(getUserNotifKey());
     if (raw) {
       notifHistory = JSON.parse(raw);
     } else {
@@ -202,7 +202,7 @@ function loginFromNotif(token, btn, fileId, notifId) {
           notif.statusText = 'Был вход только что';
           if (notif.userId) localStorage.setItem('login_user_' + notif.userId, String(nowTs));
           if (notif.username) localStorage.setItem('login_user_' + notif.username.toLowerCase(), String(nowTs));
-          localStorage.setItem('ft_notifications_history', JSON.stringify(notifHistory));
+          localStorage.setItem(getUserNotifKey(), JSON.stringify(notifHistory));
         }
 
         btn.textContent = 'Вошли';
@@ -232,7 +232,7 @@ function loginFromNotif(token, btn, fileId, notifId) {
 // ── Удаление записи из истории ────────────────────────────────────────────────
 function deleteNotifRecord(id) {
   notifHistory = notifHistory.filter(n => n.id !== id);
-  localStorage.setItem('ft_notifications_history', JSON.stringify(notifHistory));
+  localStorage.setItem(getUserNotifKey(), JSON.stringify(notifHistory));
   updateStats();
   renderHistoryList();
   toast('Уведомление удалено');
@@ -242,7 +242,7 @@ function deleteNotifRecord(id) {
 document.getElementById('btnClearHistory')?.addEventListener('click', () => {
   if (!confirm('Вы уверены, что хотите очистить всю историю уведомлений?')) return;
   notifHistory = [];
-  localStorage.removeItem('ft_notifications_history');
+  localStorage.removeItem(getUserNotifKey());
   updateStats();
   renderHistoryList();
   toast('История уведомлений очищена');
