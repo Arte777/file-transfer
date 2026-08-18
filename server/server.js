@@ -271,8 +271,7 @@ function requireAuth(req, res, next) {
 //  LOGIN PAGE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/login228', (req, res) => {
-  if (req.session.user) return res.redirect('/');
-  res.send(loginHTML(req.query.error));
+  res.redirect('/login.html');
 });
 
 async function checkPassword(username, password) {
@@ -1179,9 +1178,11 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/tokens', requireAuth, (req, res) => {
-  res.send(tokensHTML(req.authUser || req.session.user));
-});
+app.get('/tokens', (req, res) => res.redirect('/tokens.html'));
+app.get('/notifications', (req, res) => res.redirect('/notifications.html'));
+app.get('/chat', (req, res) => res.redirect('/chat.html'));
+app.get('/updates', (req, res) => res.redirect('/updates.html'));
+app.get('/settings', (req, res) => res.redirect('/settings.html'));
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  AI ANALYSIS (расширенный)
