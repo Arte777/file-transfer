@@ -125,39 +125,27 @@ body {
   margin: 0 auto;
 }
 
-/* Brand Logo (Large, Clean Minimalist) */
+/* Brand Logo */
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
   margin-bottom: 2.5rem;
-  padding: 0 0.4rem;
+  padding: 0 0.6rem;
   text-decoration: none;
 }
 
-.logo-icon, .login-logo-icon {
-  width: 42px;
-  height: 42px;
-  background: #18181b;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text);
-  flex-shrink: 0;
-}
-
-.logo-icon svg, .login-logo-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.logo-text, .login-logo-text {
-  font-size: 1.35rem;
+.logo-text {
+  font-size: 1.5rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
-  color: var(--text);
+  letter-spacing: 1.2px;
+  color: #fff;
+}
+
+.login-logo-text {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #fff;
 }
 
 /* Navigation (Large Spacious Buttons) */
