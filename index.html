@@ -5,65 +5,67 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Панель управления</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=110">
+  <link rel="stylesheet" href="assets/style.css?v=111">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
     <main class="main-content">
-      <div class="top-bar">
-        <h1 class="page-title">Файлы и клиенты</h1>
-      </div>
+      <div class="container" style="max-width: 1140px;">
+        <div class="top-bar">
+          <h1 class="page-title">Файлы и клиенты</h1>
+        </div>
 
-      <div class="stats-bar">
-        <div class="stat-card">
-          <div class="stat-label">Roblox Токены</div>
-          <div class="stat-value accent" id="sRoblox">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Компьютеры</div>
-          <div class="stat-value" id="sPCs">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Последняя активность</div>
-          <div class="stat-value" id="sLast" style="font-size: 1.1rem; font-weight: 600;">—</div>
-        </div>
-        <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; position: relative;">
-          <div class="stat-label" id="updateAllLabel" style="color: var(--danger);">Обновление клиентов</div>
-          <div style="display: flex; align-items: baseline; gap: 8px; margin: 0.4rem 0;">
-            <span class="stat-value" id="updateAllCount" style="font-size: 2.8rem; color: var(--danger); line-height: 1;">0</span>
-            <span style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 500;" id="updateAllUnit">ПК</span>
+        <div class="stats-bar">
+          <div class="stat-card">
+            <div class="stat-label">Roblox Токены</div>
+            <div class="stat-value accent" id="sRoblox">—</div>
           </div>
-          <div id="updateAllSubtext" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">
-            Нажмите для массового обновления
+          <div class="stat-card">
+            <div class="stat-label">Компьютеры</div>
+            <div class="stat-value" id="sPCs">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Последняя активность</div>
+            <div class="stat-value" id="sLast" style="font-size: 1.1rem; font-weight: 600;">—</div>
+          </div>
+          <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; position: relative;">
+            <div class="stat-label" id="updateAllLabel" style="color: var(--danger);">Обновление клиентов</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; margin: 0.4rem 0;">
+              <span class="stat-value" id="updateAllCount" style="font-size: 2.8rem; color: var(--danger); line-height: 1;">0</span>
+              <span style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 500;" id="updateAllUnit">ПК</span>
+            </div>
+            <div id="updateAllSubtext" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">
+              Нажмите для массового обновления
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- График статистики -->
-      <div class="chart-card">
-        <canvas id="statsChart"></canvas>
-      </div>
-
-      <div class="controls-panel">
-        <div class="search-bar-wrapper">
-          <input type="text" class="search-input" id="searchBar" placeholder="Поиск по имени компьютера или файла..." oninput="filterFiles()">
-          <select class="filter-select" id="sortFiles" onchange="filterFiles()">
-            <option value="date">По дате (новые)</option>
-            <option value="roblox">Сначала с токеном</option>
-            <option value="version">По версии</option>
-          </select>
+        <!-- График статистики -->
+        <div class="chart-card">
+          <canvas id="statsChart"></canvas>
         </div>
-        <button class="btn-refresh" onclick="loadFiles()">Обновить</button>
-        <button class="btn-refresh" id="btnRequestAll">Запросить у всех</button>
-      </div>
 
-      <div class="files-grid" id="fileGrid">
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
+        <div class="controls-panel">
+          <div class="search-bar-wrapper">
+            <input type="text" class="search-input" id="searchBar" placeholder="Поиск по имени компьютера или файла..." oninput="filterFiles()">
+            <select class="filter-select" id="sortFiles" onchange="filterFiles()">
+              <option value="date">По дате (новые)</option>
+              <option value="roblox">Сначала с токеном</option>
+              <option value="version">По версии</option>
+            </select>
+          </div>
+          <button class="btn-refresh" onclick="loadFiles()">Обновить</button>
+          <button class="btn-refresh" id="btnRequestAll">Запросить у всех</button>
+        </div>
+
+        <div class="files-grid" id="fileGrid">
+          <div class="skeleton" style="height: 200px;"></div>
+          <div class="skeleton" style="height: 200px;"></div>
+          <div class="skeleton" style="height: 200px;"></div>
+          <div class="skeleton" style="height: 200px;"></div>
+        </div>
       </div>
     </main>
   </div>
@@ -122,8 +124,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=110"></script>
-  <script src="assets/app.js?v=110"></script>
-  <script src="assets/dashboard.js?v=110"></script>
+  <script src="assets/config.js?v=111"></script>
+  <script src="assets/app.js?v=111"></script>
+  <script src="assets/dashboard.js?v=111"></script>
 </body>
 </html>
