@@ -1,3 +1,8 @@
+if (!requireLogin()) throw new Error('redirect');
+
+document.getElementById('sidebarSlot').innerHTML = renderHeader('tokens');
+bindLogout();
+
 let allTokens = [];
 let sortMode = 'date'; // 'date' | 'robux' | 'login'
 
@@ -5,7 +10,7 @@ let sortMode = 'date'; // 'date' | 'robux' | 'login'
 async function loadTokens() {
   const container = document.getElementById('tokensContainer');
   try {
-    const resp = await apiFetch('/api/tokens');
+    const resp = await apiFetch('/tokens-data');
     allTokens = await resp.json();
     updateStats();
     renderTokens();
