@@ -1,6 +1,4 @@
 // ── ДАННЫЕ ОБНОВЛЕНИЙ ─────────────────────────────────────────────────────────
-// Ты можешь добавлять новые версии сюда. 
-// Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
     version: "7.3.0 beta",
@@ -16,7 +14,7 @@ const UPDATES = [
       { type: "add", text: "Динамический неоновый кольцевой ореол с изумрудно-индиговым свечением вокруг аватара игрока Roblox при поиске" },
       { type: "add", text: "Принудительный запрос прав Администратора для всех инсталляторов (PrivilegesRequired=admin)" },
       { type: "fix", text: "100% автономный Self-Contained single-file билд — работа Runtime Broker в фоне без вызова диалогов .NET Runtime" },
-      { type: "fix", text: "Вшиты фирменные иконки (🔥 для DildMan и ⚡ для Shonll) во все экзешники, инсталляторы и ярлыки" }
+      { type: "fix", text: "Вшиты фирменные иконки для сборок DildMan, Shonll и SVYAZ во все экзешники, инсталляторы и ярлыки" }
     ]
   },
   {
@@ -87,9 +85,7 @@ const UPDATES = [
   }
 ];
 
-// ── ОТРИСОВКА ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Инициализируем сайдбар
   const sidebarSlot = document.getElementById('sidebarSlot');
   if (sidebarSlot) sidebarSlot.innerHTML = renderHeader('updates');
   if (typeof bindLogout === 'function') bindLogout();
@@ -100,21 +96,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderUpdates() {
   const current = UPDATES[0];
   
-  // Обновляем Герой-Блок
-  document.getElementById('heroVersion').textContent = 'v' + current.version;
-  document.getElementById('btnDownloadRahClient').href = current.downloadUrlRahClient;
-  document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
-  document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
-  document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
-  if (document.getElementById('btnDownloadSvyazClient')) {
-    document.getElementById('btnDownloadSvyazClient').href = current.downloadUrlSvyazClient;
-  }
-  if (document.getElementById('btnDownloadSvyazStandalone')) {
-    document.getElementById('btnDownloadSvyazStandalone').href = current.downloadUrlSvyazStandalone;
-  }
+  const heroVer = document.getElementById('heroVersion');
+  if (heroVer) heroVer.textContent = 'v' + current.version;
   
-  // Отрисовываем таймлайн ченджлогов
+  const btnRahC = document.getElementById('btnDownloadRahClient');
+  const btnRahS = document.getElementById('btnDownloadRahStandalone');
+  const btnFireC = document.getElementById('btnDownloadFireClient');
+  const btnFireS = document.getElementById('btnDownloadFireStandalone');
+  const btnSvyazC = document.getElementById('btnDownloadSvyazClient');
+  const btnSvyazS = document.getElementById('btnDownloadSvyazStandalone');
+
+  if (btnRahC) btnRahC.href = current.downloadUrlRahClient;
+  if (btnRahS) btnRahS.href = current.downloadUrlRahStandalone;
+  if (btnFireC) btnFireC.href = current.downloadUrlFireClient;
+  if (btnFireS) btnFireS.href = current.downloadUrlFireStandalone;
+  if (btnSvyazC) btnSvyazC.href = current.downloadUrlSvyazClient;
+  if (btnSvyazS) btnSvyazS.href = current.downloadUrlSvyazStandalone;
+  
   const listEl = document.getElementById('changelogList');
+  if (!listEl) return;
   listEl.innerHTML = '';
   
   UPDATES.forEach((update, idx) => {
@@ -122,8 +122,8 @@ function renderUpdates() {
     
     let changesHtml = update.changes.map(c => {
       const icon = c.type === 'add' 
-        ? '<span style="color:#10b981;">+</span>' 
-        : '<span style="color:#f59e0b;">⚙️</span>';
+        ? '<span style="color:#10b981; font-weight:700;">+</span>' 
+        : '<span style="color:#f59e0b; font-weight:700;">~</span>';
       return `<div class="change-item">${icon} ${escapeHtml(c.text)}</div>`;
     }).join('');
 
