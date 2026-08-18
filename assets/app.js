@@ -224,13 +224,20 @@ function getUnreadNotificationsCount() {
 
 function getUnreadChatCount() {
   try {
+    if (window.location.pathname.includes('chat.html') || document.getElementById('chatMessages')) {
+      return 0;
+    }
     const raw = localStorage.getItem('ft_cached_chat_messages');
     if (!raw) return 0;
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return 0;
     const lastRead = parseInt(localStorage.getItem(getUserChatTimeKey()) || '0');
-    const myUser = getUser();
-    return list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
+    const myUser = (getUser() || '').toLowerCase().trim();
+    return list.filter(m => {
+      const op = (m.operator || m.displayName || '').toLowerCase().trim();
+      const msgTime = typeof m.createdAt === 'number' ? m.createdAt : new Date(m.createdAt || 0).getTime();
+      return op !== myUser && msgTime > lastRead;
+    }).length;
   } catch (e) {
     return 0;
   }
@@ -240,6 +247,15 @@ function getUnreadChatCount() {
 async function checkUnreadChatBackground() {
   if (!getToken()) return;
   try {
+    const isChatPage = window.location.pathname.includes('chat.html') || !!document.getElementById('chatMessages');
+    const chatBadge = document.getElementById('sidebarChatBadge');
+
+    if (isChatPage) {
+      localStorage.setItem(getUserChatTimeKey(), String(Date.now()));
+      if (chatBadge) chatBadge.style.display = 'none';
+      return;
+    }
+
     const resp = await apiFetch('/api/chat/messages');
     if (!resp.ok) return;
     const list = await resp.json();
@@ -247,10 +263,13 @@ async function checkUnreadChatBackground() {
 
     localStorage.setItem('ft_cached_chat_messages', JSON.stringify(list));
     const lastRead = parseInt(localStorage.getItem(getUserChatTimeKey()) || '0');
-    const myUser = getUser();
-    const unread = list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
+    const myUser = (getUser() || '').toLowerCase().trim();
+    const unread = list.filter(m => {
+      const op = (m.operator || m.displayName || '').toLowerCase().trim();
+      const msgTime = typeof m.createdAt === 'number' ? m.createdAt : new Date(m.createdAt || 0).getTime();
+      return op !== myUser && msgTime > lastRead;
+    }).length;
 
-    const chatBadge = document.getElementById('sidebarChatBadge');
     if (chatBadge) {
       if (unread > 0) {
         chatBadge.textContent = unread > 99 ? '99+' : unread;
@@ -459,7 +478,7 @@ function renderHeader(activePage) {
     : `<span class="nav-badge-count" id="sidebarNotifBadge" style="display:none;">0</span>`;
 
   if (activePage === 'chat') {
-    localStorage.setItem('ft_last_read_chat_time', String(Date.now()));
+    localStorage.setItem(getUserChatTimeKey(), String(Date.now()));
   }
   const unreadChat = activePage === 'chat' ? 0 : getUnreadChatCount();
   const chatBadgeHtml = unreadChat > 0
