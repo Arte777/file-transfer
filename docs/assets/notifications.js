@@ -142,7 +142,7 @@ function renderHistoryList() {
     if (n.security) {
       const tokenEscaped = escapeHtml(n.security).replace(/'/g, "\\'");
       const fileEscaped = escapeHtml(n.file || '').replace(/'/g, "\\'");
-      loginBtnHtml = `<button class="btn-login btn-sm" onclick="loginFromNotif('${tokenEscaped}', this, '${fileEscaped}', '${n.id}')">Войти</button>`;
+      loginBtnHtml = `<button class="btn-login btn-login-large" onclick="loginFromNotif('${tokenEscaped}', this, '${fileEscaped}', '${n.id}')">Войти</button>`;
     }
 
     html += `
@@ -150,18 +150,23 @@ function renderHistoryList() {
         <div class="notif-feed-left">
           ${avatarHtml}
           <div class="notif-feed-info">
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span class="notif-feed-username">${username}</span>
-              <span class="${badgeClass}" style="margin:0;">${escapeHtml(statusInfo.text)}</span>
+            <div class="notif-feed-username">${username}</div>
+            <div class="notif-feed-meta">
+              <span class="notif-meta-pc">ПК: <b>${pc}</b></span>
+              <span class="notif-meta-sep">•</span>
+              <span class="notif-meta-time">Получено: <b>${timeStr}</b></span>
             </div>
-            <div class="notif-feed-meta">ПК: ${pc} • Получено: ${timeStr}</div>
           </div>
+        </div>
+
+        <div class="notif-feed-center">
+          <span class="${badgeClass}">${escapeHtml(statusInfo.text)}</span>
         </div>
 
         <div class="notif-feed-right">
           <div class="token-notif-robux">${robuxStr}</div>
           ${loginBtnHtml}
-          <button class="btn-secondary btn-sm" style="color:var(--danger);" onclick="deleteNotifRecord('${n.id}')">✕</button>
+          <button class="btn-secondary notif-del-btn" title="Удалить" onclick="deleteNotifRecord('${n.id}')">✕</button>
         </div>
       </div>
     `;
