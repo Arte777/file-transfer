@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Чат операторов</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=123">
+  <link rel="stylesheet" href="assets/style.css?v=125">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -15,12 +15,11 @@
         <div class="top-bar">
           <div style="display: flex; align-items: center; gap: 12px;">
             <h1 class="page-title" style="margin: 0;">Чат операторов</h1>
-            <span class="badge badge-valid" style="font-size: 0.72rem; padding: 3px 8px;">Онлайн</span>
           </div>
           <button class="btn-secondary btn-sm" onclick="loadChatMessages()">Обновить</button>
         </div>
 
-        <div class="chat-card">
+        <div class="chat-card" id="chatDropZone">
           <div class="chat-messages" id="chatMessages">
             <div class="skeleton-row" style="height: 60px;">
               <div class="skeleton-block" style="flex:1;"></div>
@@ -36,15 +35,29 @@
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-weight: 700;">Прикреплен аккаунт:</span>
                 <span id="attachedTokenText">—</span>
+                <span id="attachedTokenAccessBadge" class="token-access-pill">Только баланс</span>
               </div>
               <button onclick="detachToken()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:700;">✕ Убрать</button>
             </div>
 
+            <!-- Attached Image Preview -->
+            <div id="attachedImagePreview" class="chat-attached-image-preview" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <img id="attachedImageThumb" src="" alt="preview" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);">
+                <span id="attachedImageName" style="font-size: 0.85rem; color: #fff; font-weight: 600;">Изображение прикреплено</span>
+              </div>
+              <button onclick="detachImage()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:700;">✕ Убрать</button>
+            </div>
+
             <div class="chat-input-row">
-              <button id="btnOpenTokenPicker" class="btn-share-token" type="button">
-                Показать токен
+              <input type="file" id="chatFileInput" accept="image/*" style="display: none;">
+              <button id="btnAttachImage" class="btn-share-token" type="button" title="Прикрепить изображение">
+                Картинка
               </button>
-              <input type="text" id="chatInput" class="chat-input-field" placeholder="Напишите сообщение..." maxlength="1000" autocomplete="off">
+              <button id="btnOpenTokenPicker" class="btn-share-token" type="button" title="Поделиться токеном">
+                Токен
+              </button>
+              <input type="text" id="chatInput" class="chat-input-field" placeholder="Напишите сообщение (или вставьте картинку Ctrl+V)..." maxlength="1000" autocomplete="off">
               <button id="btnSendChat" class="btn-submit" style="width:auto; padding: 0.85rem 1.6rem;">
                 Отправить
               </button>
@@ -58,13 +71,32 @@
 
   <!-- Token Picker Modal -->
   <div id="tokenPickerModal" class="modal-overlay" onclick="closeTokenPicker()">
-    <div class="modal-container" style="max-width: 500px;" onclick="event.stopPropagation()">
+    <div class="modal-container" style="max-width: 540px;" onclick="event.stopPropagation()">
       <button class="modal-close" onclick="closeTokenPicker()">✕</button>
       <div style="padding: 1.5rem;">
-        <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Поделиться токеном в чате</h3>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Выбрать токен для чата</h3>
         <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
-          Карточка покажет баланс Robux и никнейм. Сам токен и вход другим пользователям недоступны.
+          Выберите аккаунт и настройте уровень доступа при отправке.
         </p>
+
+        <!-- Access Permission Checkbox -->
+        <label class="token-access-checkbox-label">
+          <input type="checkbox" id="chkGrantFullAccess">
+          <span style="font-weight: 600; color: #fff;">Разрешить вход другим операторам</span>
+          <span style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">
+            В карточке в чате появится рабочая кнопка «Войти» для других участников
+          </span>
+        </label>
+
+        <!-- Search & Sort in Picker -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:1rem;">
+          <input type="text" class="search-input" id="tokenPickerSearch" placeholder="Поиск по никнейму или ПК...">
+          <div class="sort-buttons" style="margin-bottom: 0.5rem;">
+            <button class="sort-btn active" id="pickerSortDate">По дате</button>
+            <button class="sort-btn" id="pickerSortRobux">По Robux</button>
+            <button class="sort-btn" id="pickerSortLogin">По входу</button>
+          </div>
+        </div>
 
         <div id="tokenPickerList" class="token-picker-list">
           <div style="text-align: center; color: var(--text-muted); padding: 1rem;">Загрузка токенов...</div>
@@ -73,10 +105,18 @@
     </div>
   </div>
 
+  <!-- Fullscreen Image Viewer Modal -->
+  <div id="imageViewerModal" class="modal-overlay" onclick="closeImageViewer()">
+    <div style="position:relative; max-width:90vw; max-height:90vh;" onclick="event.stopPropagation()">
+      <button class="modal-close" style="top:-35px; right:0; color:#fff;" onclick="closeImageViewer()">✕</button>
+      <img id="imageViewerImg" src="" alt="Full view" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.8);">
+    </div>
+  </div>
+
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=123"></script>
-  <script src="assets/app.js?v=123"></script>
-  <script src="assets/chat.js?v=123"></script>
+  <script src="assets/config.js?v=125"></script>
+  <script src="assets/app.js?v=125"></script>
+  <script src="assets/chat.js?v=125"></script>
 </body>
 </html>
