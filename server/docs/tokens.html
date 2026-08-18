@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — База токенов</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=134">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="container" style="max-width: 1140px;">
+        <div class="top-bar">
+          <h1 class="page-title">База токенов</h1>
+        </div>
+
+        <div class="stats-bar" style="margin-bottom:1.5rem;">
+          <div class="stat-card">
+            <div class="stat-label">Всего токенов</div>
+            <div class="stat-value accent" id="sTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Рабочих</div>
+            <div class="stat-value success" id="sValid">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Общий Robux</div>
+            <div class="stat-value gold" id="sTotalRobux">—</div>
+          </div>
+        </div>
+
+        <div class="controls-panel" style="margin-bottom: 1.25rem;">
+          <div class="actions-bar">
+            <div class="sort-buttons">
+              <button class="sort-btn active" id="btnSortDate">По дате</button>
+              <button class="sort-btn" id="btnSortRobux">По балансу</button>
+              <button class="sort-btn" id="btnSortLogin">Не заходил</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn-secondary" id="btnRequestAll" title="Запросить обновление всех токенов">Запросить всех</button>
+            <button class="check-all-btn" id="btnCheckAll">Проверить все</button>
+          </div>
+        </div>
+
+        <div id="tokensContainer">
+          <!-- SKELETON LOADER -->
+          <div class="skeleton-row">
+            <div class="skeleton-block" style="flex:1;"></div>
+            <div class="skeleton-block" style="flex:2;"></div>
+            <div class="skeleton-block" style="flex:1;"></div>
+            <div class="skeleton-block" style="flex:3;"></div>
+            <div class="skeleton-block" style="flex:2;"></div>
+          </div>
+          <div class="skeleton-row">
+            <div class="skeleton-block" style="flex:1;"></div>
+            <div class="skeleton-block" style="flex:2;"></div>
+            <div class="skeleton-block" style="flex:1;"></div>
+            <div class="skeleton-block" style="flex:3;"></div>
+            <div class="skeleton-block" style="flex:2;"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=134"></script>
+  <script src="assets/app.js?v=134"></script>
+  <script src="assets/tokens.js?v=134"></script>
+</body>
+</html>

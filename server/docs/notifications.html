@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — История уведомлений</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=134">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="container" style="max-width: 1080px;">
+        <div class="top-bar">
+          <h1 class="page-title">История уведомлений</h1>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-secondary btn-sm" id="btnClearHistory" style="color:var(--danger);">Очистить историю</button>
+          </div>
+        </div>
+
+        <div class="stats-bar" style="margin-bottom: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="stat-card">
+            <div class="stat-label">Новые аккаунты</div>
+            <div class="stat-value success" id="sNotifNew">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Повторные</div>
+            <div class="stat-value" id="sNotifVisited" style="color: #f59e0b;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Активные</div>
+            <div class="stat-value accent" id="sNotifActive">0</div>
+          </div>
+        </div>
+
+        <div class="controls-panel" style="margin-bottom: 1.25rem;">
+          <div class="actions-bar">
+            <div class="sort-buttons">
+              <button class="sort-btn active" id="filterAll">Все</button>
+              <button class="sort-btn" id="filterNew">Только новые</button>
+              <button class="sort-btn" id="filterVisited">Повторные входы</button>
+            </div>
+          </div>
+          <div class="search-bar-wrapper" style="flex:1; max-width:420px;">
+            <input type="text" class="search-input" id="notifSearchInput" placeholder="Поиск по никнейму или ПК...">
+          </div>
+        </div>
+
+        <div id="notificationsFeed" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- SKELETON -->
+          <div class="skeleton-row" style="height: 72px;">
+            <div class="skeleton-block" style="flex:1;"></div>
+          </div>
+          <div class="skeleton-row" style="height: 72px;">
+            <div class="skeleton-block" style="flex:1;"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=134"></script>
+  <script src="assets/app.js?v=134"></script>
+  <script src="assets/notifications.js?v=134"></script>
+</body>
+</html>

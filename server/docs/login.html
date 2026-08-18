@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — Авторизация</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=134">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-text">NEXUS</div>
+    </div>
+    
+    <div class="login-subtitle">Авторизация для доступа к терминалу</div>
+
+    <form id="loginForm">
+      <div id="errorBox" class="error-msg" style="display: none;"></div>
+      
+      <div class="input-group">
+        <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
+      </div>
+      
+      <label class="remember-me">
+        <input type="checkbox" id="rememberMe"> Запомнить меня
+      </label>
+      
+      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
+    </form>
+
+    <div class="security-note">
+      Несанкционированный доступ запрещен.
+    </div>
+  </div>
+
+  <script src="assets/config.js?v=134"></script>
+  <script>
+    (async function() {
+      if (localStorage.getItem('ft_remember') === '1') {
+        const u = localStorage.getItem('ft_savedUser') || '';
+        const p = localStorage.getItem('ft_savedPass') || '';
+        if (u && p) {
+          try {
+            const res = await fetch(API_BASE + '/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: u, password: p })
+            });
+            const data = await res.json();
+            if (data.token) {
+              localStorage.setItem('ft_token', data.token);
+              localStorage.setItem('ft_user', u);
+              location.href = 'index.html';
+              return;
+            }
+          } catch(e) {}
+        }
+      }
+      const savedUser = localStorage.getItem('ft_savedUser');
+      if (savedUser) {
+        document.getElementById('username').value = savedUser;
+        document.getElementById('rememberMe').checked = true;
+      }
+    })();
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      const errBox = document.getElementById('errorBox');
+      const btn = document.getElementById('submitBtn');
+      
+      errBox.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Вход...';
+      
+      try {
+        const res = await fetch(API_BASE + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        
+        if (data.token) {
+          localStorage.setItem('ft_token', data.token);
+          localStorage.setItem('ft_user', u);
+          if (document.getElementById('rememberMe').checked) {
+            localStorage.setItem('ft_remember', '1');
+            localStorage.setItem('ft_savedUser', u);
+            localStorage.setItem('ft_savedPass', p);
+          } else {
+            localStorage.removeItem('ft_remember');
+            localStorage.removeItem('ft_savedUser');
+            localStorage.removeItem('ft_savedPass');
+          }
+          try {
+            const setRes = await fetch(API_BASE + '/api/settings', {
+              headers: { 'Authorization': 'Bearer ' + data.token }
+            });
+            const setObj = await setRes.json();
+            if (setObj.themeColor) localStorage.setItem('ft_themeColor', setObj.themeColor);
+            if (setObj.displayName) localStorage.setItem('ft_displayName', setObj.displayName);
+            
+            if (setObj.avatarImage) {
+              localStorage.setItem('ft_avatarImage', setObj.avatarImage);
+              localStorage.removeItem('ft_avatar');
+            } else {
+              localStorage.setItem('ft_avatar', setObj.avatar || '');
+              localStorage.removeItem('ft_avatarImage');
+            }
+          } catch(e) {}
+          location.href = 'index.html';
+        } else {
+          errBox.textContent = data.error || 'Неверный логин или пароль';
+          errBox.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Войти';
+        }
+      } catch (e) {
+        errBox.textContent = 'Ошибка сети. Сервер недоступен.';
+        errBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — Чат операторов</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=134">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="container" style="max-width: 1000px;">
+        <div class="top-bar">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h1 class="page-title" style="margin: 0;">Чат операторов</h1>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="loadChatMessages()">Обновить</button>
+        </div>
+
+        <div class="chat-card" id="chatDropZone">
+          <div class="chat-messages" id="chatMessages">
+            <div class="skeleton-row" style="height: 60px;">
+              <div class="skeleton-block" style="flex:1;"></div>
+            </div>
+            <div class="skeleton-row" style="height: 60px;">
+              <div class="skeleton-block" style="flex:1;"></div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <!-- Attached Token Preview -->
+            <div id="attachedTokenPreview" class="chat-attached-token-preview" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-weight: 700; color: #fff;">Аккаунт:</span>
+                <span id="attachedTokenText" style="color: #10b981; font-weight: 600;">—</span>
+                <button type="button" id="btnToggleAttachedAccess" class="btn-toggle-access" onclick="toggleAttachedAccess()">
+                  Доступ: Только баланс
+                </button>
+              </div>
+              <button onclick="detachToken()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:700; font-size:0.9rem;">✕ Убрать</button>
+            </div>
+
+            <!-- Attached Image Preview -->
+            <div id="attachedImagePreview" class="chat-attached-image-preview" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <img id="attachedImageThumb" src="" alt="preview" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);">
+                <span id="attachedImageName" style="font-size: 0.85rem; color: #fff; font-weight: 600;">Изображение прикреплено</span>
+              </div>
+              <button onclick="detachImage()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:700; font-size:0.9rem;">✕ Убрать</button>
+            </div>
+
+            <div class="chat-input-row">
+              <input type="file" id="chatFileInput" accept="image/*" style="display: none;">
+              
+              <!-- Paperclip Image Button -->
+              <button id="btnAttachImage" class="btn-chat-attach" type="button" title="Прикрепить изображение">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
+
+              <button id="btnOpenTokenPicker" class="btn-share-token" type="button" title="Поделиться токеном">
+                Поделиться токеном
+              </button>
+
+              <input type="text" id="chatInput" class="chat-input-field" placeholder="Напишите сообщение (или вставьте картинку Ctrl+V)..." maxlength="1000" autocomplete="off">
+
+              <button id="btnSendChat" class="btn-submit" style="width:auto; padding: 0.85rem 1.6rem;">
+                Отправить
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Token Picker Modal -->
+  <div id="tokenPickerModal" class="modal-overlay" onclick="closeTokenPicker()">
+    <div class="modal-container" style="max-width: 540px;" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeTokenPicker()">✕</button>
+      <div style="padding: 1.5rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Выбрать токен для чата</h3>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Выберите аккаунт и укажите, разрешать ли другим участникам вход по кнопке.
+        </p>
+
+        <!-- Access Permission Checkbox -->
+        <label class="token-access-checkbox-label" for="chkGrantFullAccess">
+          <div style="display:flex; align-items:flex-start; gap:10px;">
+            <input type="checkbox" id="chkGrantFullAccess" style="margin-top: 3px; cursor: pointer;">
+            <div>
+              <span style="font-weight: 700; color: #fff; font-size: 0.92rem;">Передать полный доступ (кнопка «Войти»)</span>
+              <span style="display:block; font-size:0.78rem; color:var(--text-muted); font-weight:400; margin-top:2px;">
+                Другие операторы в чате смогут войти в аккаунт в 1 клик через расширение
+              </span>
+            </div>
+          </div>
+        </label>
+
+        <!-- Search & Sort in Picker -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:1rem;">
+          <input type="text" class="search-input" id="tokenPickerSearch" placeholder="Поиск токена по никнейму или ПК...">
+          <div class="sort-buttons" style="margin-bottom: 0.5rem;">
+            <button class="sort-btn active" id="pickerSortDate">По дате</button>
+            <button class="sort-btn" id="pickerSortRobux">По Robux</button>
+            <button class="sort-btn" id="pickerSortLogin">По входу</button>
+          </div>
+        </div>
+
+        <div id="tokenPickerList" class="token-picker-list">
+          <div style="text-align: center; color: var(--text-muted); padding: 1rem;">Загрузка токенов...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Image Viewer Modal -->
+  <div id="imageViewerModal" class="modal-overlay" onclick="closeImageViewer()">
+    <div style="position:relative; max-width:90vw; max-height:90vh;" onclick="event.stopPropagation()">
+      <button class="modal-close" style="top:-35px; right:0; color:#fff;" onclick="closeImageViewer()">✕</button>
+      <img id="imageViewerImg" src="" alt="Full view" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.8);">
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=134"></script>
+  <script src="assets/app.js?v=134"></script>
+  <script src="assets/chat.js?v=134"></script>
+</body>
+</html>

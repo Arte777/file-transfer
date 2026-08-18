@@ -75,7 +75,18 @@ app.use(session(sessionOpts));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // ── Статический сайт (docs/) — раздаём с того же сервера ──────────────────────
-const DOCS_DIR = path.join(__dirname, '..', 'docs');
+const candidateDirs = [
+  path.join(__dirname, 'docs'),
+  path.join(__dirname, '..', 'docs'),
+  path.join(process.cwd(), 'docs'),
+  path.join(process.cwd(), 'server', 'docs'),
+  path.join(process.cwd(), '..', 'docs')
+];
+const DOCS_DIR = candidateDirs.find(d => {
+  try { return fs.existsSync(path.join(d, 'index.html')); } catch { return false; }
+}) || path.join(__dirname, 'docs');
+
+console.log(`📁 [Static] Раздача файлов из: ${DOCS_DIR}`);
 app.use(express.static(DOCS_DIR));
 app.use('/downloads', express.static(path.join(DOCS_DIR, 'downloads')));
 

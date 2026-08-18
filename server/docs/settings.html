@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — Настройки</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=134">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="container" style="max-width: 900px;">
+        <div class="top-bar">
+          <h1 class="page-title">Настройки оператора</h1>
+        </div>
+
+        <div class="settings-grid">
+          
+          <!-- LEFT COLUMN: Profile & Personalization -->
+          <div class="settings-col">
+            <h2 class="settings-section-title">Профиль и персонализация</h2>
+            
+            <div class="settings-card avatar-card">
+              <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()">
+                O
+              </div>
+              <div class="avatar-controls">
+                <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+                <button class="btn-secondary btn-sm" id="btnResetAvatar">Сбросить фото</button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <label class="settings-label">Отображаемое имя</label>
+              <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Имя оператора">
+              
+              <label class="settings-label" style="margin-top:1rem;">Статус / Описание</label>
+              <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Operator">
+              
+              <div style="display:none;">
+                <span id="previewName"></span>
+                <span id="previewBio"></span>
+                <img id="uploadPreviewImg" src="">
+                <span id="uploadPreviewPlaceholder"></span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <label class="settings-label">Цветовая схема</label>
+              <div class="color-picker-premium" id="colorPicker">
+                <button class="color-dot" data-color="#38bdf8" style="background:#38bdf8;"></button>
+                <button class="color-dot" data-color="#10b981" style="background:#10b981;"></button>
+                <button class="color-dot" data-color="#6366f1" style="background:#6366f1;"></button>
+                <button class="color-dot" data-color="#a855f7" style="background:#a855f7;"></button>
+                <button class="color-dot" data-color="#f59e0b" style="background:#f59e0b;"></button>
+                <button class="color-dot" data-color="#ef4444" style="background:#ef4444;"></button>
+                <div class="custom-color-wrapper" title="Пользовательский цвет">
+                  <input type="color" class="settings-color-input" id="themeColor" value="#38bdf8">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: Security & Modules -->
+          <div class="settings-col">
+            <h2 class="settings-section-title">Безопасность и модули</h2>
+
+            <!-- Notifications Card -->
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Оповещения о токенах</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                  Звуковое оповещение и статус (новый аккаунт или дата предыдущего входа).
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestNewNotification" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Тест: Новый аккаунт
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestOldNotification" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Тест: Был вход (34 дн.)
+                  </button>
+                </div>
+                <button type="button" class="btn-secondary btn-sm" id="btnBrowserPermission" style="width:100%; padding: 0.75rem 1rem;">
+                  Включить системные уведомления
+                </button>
+              </div>
+            </div>
+
+            <!-- Badges & Indicators Test Card -->
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Индикаторы и бейджи меню</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                  Проверка красных счётчиков (Уведомления, Чат) и бейджа «NEW» (Обновления).
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestAddNotifBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    +1 Уведомление
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestAddChatBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    +1 Чат (Красный)
+                  </button>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestToggleUpdateBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Показать «NEW»
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestClearBadges" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Сбросить бейджи
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Extension Card -->
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Расширение NEXUS</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">Необходимо для входа в аккаунты в один клик.</div>
+              </div>
+              <a href="downloads/NEXUS_extension.zip" class="btn-refresh" style="display:flex; width:100%; text-decoration:none;" download>
+                Скачать расширение (.zip)
+              </a>
+            </div>
+
+            <div class="settings-card">
+              <label class="settings-label">Смена пароля</label>
+              <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.75rem;">
+              <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
+              <div class="settings-hint">Оставьте пустым, если не требуется смена</div>
+            </div>
+
+            <button class="btn-submit premium-btn-save" id="btnSave">
+              Сохранить настройки
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=134"></script>
+  <script src="assets/app.js?v=134"></script>
+  <script src="assets/settings.js?v=134"></script>
+</body>
+</html>
