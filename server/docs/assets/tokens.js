@@ -46,7 +46,7 @@ function renderTokens() {
   if (sortMode === 'robux') {
     list.sort((a, b) => {
       const ar = (a.valid && a.robux) ? a.robux : -1;
-      const br = (b.valid && a.robux) ? b.robux : -1;
+      const br = (b.valid && b.robux) ? b.robux : -1;
       return br - ar;
     });
   } else if (sortMode === 'login') {
