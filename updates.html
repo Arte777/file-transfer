@@ -3,93 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Релизы и Обновления</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=108">
+  <title>NEXUS — Релизы и обновления</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=110">
 </head>
 <body>
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
     <main class="main-content">
       <div class="top-bar">
-        <h1 class="page-title">Сборки и Обновления</h1>
+        <h1 class="page-title">Сборки и обновления</h1>
       </div>
       
-      <div class="container" style="max-width: 860px;">
+      <div class="container" style="max-width: 800px;">
         
-        <!-- Герой блок скачивания актуальной версии -->
+        <!-- Актуальный релиз -->
         <div class="update-hero-card" id="heroDownloadCard">
-          <div class="update-hero-content">
-            <div class="stat-label" style="justify-content: center;">Текущий стабильный релиз</div>
-            <div class="update-hero-version" id="heroVersion">Загрузка...</div>
-            <p class="update-hero-desc">Выберите и скачайте необходимую сборку для вашего оператора. Все установщики самораспаковывающиеся и автономные.</p>
+          <div class="stat-label" style="justify-content: center; margin-bottom: 0.25rem;">Актуальная версия</div>
+          <div class="update-hero-version" id="heroVersion">Загрузка...</div>
+          <p class="update-hero-desc">Выберите и скачайте необходимую сборку для вашего оператора.</p>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; width: 100%;">
+            <!-- RAH -->
+            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-weight: 600; color: #a29bfe; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка RAH (Shonll)</div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="#" id="btnDownloadRahClient" class="download-hero-btn" style="background: #6c5ce7;" target="_blank" download>
+                  Клиент (Loader)
+                </a>
+                <a href="#" id="btnDownloadRahStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #a29bfe;" target="_blank" download>
+                  Standalone
+                </a>
+              </div>
+            </div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; width: 100%; margin-top: 1rem;">
-              <!-- RAH (Purple) -->
-              <div style="background: rgba(108, 92, 231, 0.05); border: 1px solid rgba(108, 92, 231, 0.2); border-radius: 12px; padding: 1.2rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-                <div>
-                  <div style="font-weight: 800; color: #a29bfe; font-size: 0.95rem; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Сборка RAH (Shonll)</div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                  <a href="#" id="btnDownloadRahClient" class="download-hero-btn" style="background: #6c5ce7; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);" target="_blank" download>
-                    <span>⚡ Клиент (Loader)</span>
-                  </a>
-                  <a href="#" id="btnDownloadRahStandalone" class="download-hero-btn" style="background: rgba(162, 155, 254, 0.15); border: 1px solid rgba(162, 155, 254, 0.3); color: #a29bfe;" target="_blank" download>
-                    <span>📦 Standalone</span>
-                  </a>
-                </div>
+            <!-- FIRE -->
+            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-weight: 600; color: #00cec9; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка FIRE (Dildman)</div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="#" id="btnDownloadFireClient" class="download-hero-btn" style="background: #00cec9; color: #000;" target="_blank" download>
+                  Клиент (Loader)
+                </a>
+                <a href="#" id="btnDownloadFireStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #00cec9;" target="_blank" download>
+                  Standalone
+                </a>
               </div>
-              
-              <!-- FIRE (Teal) -->
-              <div style="background: rgba(0, 206, 201, 0.05); border: 1px solid rgba(0, 206, 201, 0.2); border-radius: 12px; padding: 1.2rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-                <div>
-                  <div style="font-weight: 800; color: #00cec9; font-size: 0.95rem; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Сборка FIRE (Dildman)</div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                  <a href="#" id="btnDownloadFireClient" class="download-hero-btn" style="background: #00cec9; color: #000; box-shadow: 0 4px 15px rgba(0, 206, 201, 0.3);" target="_blank" download>
-                    <span>🔥 Клиент (Loader)</span>
-                  </a>
-                  <a href="#" id="btnDownloadFireStandalone" class="download-hero-btn" style="background: rgba(0, 206, 201, 0.15); border: 1px solid rgba(0, 206, 201, 0.3); color: #00cec9;" target="_blank" download>
-                    <span>📦 Standalone</span>
-                  </a>
-                </div>
-              </div>
+            </div>
 
-              <!-- SVYAZ (Purple/Violet) -->
-              <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 12px; padding: 1.2rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-                <div>
-                  <div style="font-weight: 800; color: #c084fc; font-size: 0.95rem; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Сборка SVYAZ</div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                  <a href="#" id="btnDownloadSvyazClient" class="download-hero-btn" style="background: #a855f7; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);" target="_blank" download>
-                    <span>🔗 Клиент (Loader)</span>
-                  </a>
-                  <a href="#" id="btnDownloadSvyazStandalone" class="download-hero-btn" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc;" target="_blank" download>
-                    <span>📦 Standalone</span>
-                  </a>
-                </div>
+            <!-- SVYAZ -->
+            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-weight: 600; color: #c084fc; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка SVYAZ</div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="#" id="btnDownloadSvyazClient" class="download-hero-btn" style="background: #a855f7;" target="_blank" download>
+                  Клиент (Loader)
+                </a>
+                <a href="#" id="btnDownloadSvyazStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #c084fc;" target="_blank" download>
+                  Standalone
+                </a>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- История обновлений (Таймлайн) -->
-        <h2 class="settings-section-title" style="margin-bottom: 1.5rem;">Журнал версий</h2>
+        <!-- Журнал версий -->
+        <h2 class="settings-section-title" style="margin-bottom: 1.25rem;">История изменений</h2>
         <div class="changelog-container" id="changelogList">
-          <!-- SKELETON LOADER -->
-          <div class="skeleton-row" style="height: 100px; margin-bottom: 15px;">
+          <div class="skeleton-row" style="height: 80px;">
             <div class="skeleton-block" style="flex:1;"></div>
           </div>
         </div>
 
       </div>
     </main>
-  </div> <!-- end of sidebar-layout -->
+  </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=108"></script>
-  <script src="assets/app.js?v=108"></script>
-  <script src="assets/updates.js?v=108"></script>
+  <script src="assets/config.js?v=110"></script>
+  <script src="assets/app.js?v=110"></script>
+  <script src="assets/updates.js?v=110"></script>
 </body>
 </html>

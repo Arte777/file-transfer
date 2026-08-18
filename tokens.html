@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — База токенов</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=108">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=110">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -16,7 +16,7 @@
       </div>
 
       <div class="container">
-        <div class="stats-bar" style="padding:0; margin-bottom:1.5rem;">
+        <div class="stats-bar" style="margin-bottom:1.5rem;">
           <div class="stat-card">
             <div class="stat-label">Всего токенов</div>
             <div class="stat-value accent" id="sTotal">—</div>
@@ -31,17 +31,17 @@
           </div>
         </div>
 
-        <div class="controls-panel" style="margin-bottom: 1.5rem;">
+        <div class="controls-panel" style="margin-bottom: 1.25rem;">
           <div class="actions-bar">
             <div class="sort-buttons">
               <button class="sort-btn active" id="btnSortDate">По дате</button>
-              <button class="sort-btn" id="btnSortRobux">По Robux</button>
+              <button class="sort-btn" id="btnSortRobux">По балансу</button>
               <button class="sort-btn" id="btnSortLogin">Не заходил</button>
             </div>
           </div>
-          <div style="display:flex; gap:0.6rem;">
-            <button class="btn-secondary" id="btnRequestAll" title="Запросить обновление всех токенов">📡 Запросить всех</button>
-            <button class="check-all-btn" id="btnCheckAll">⟳ Проверить все</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn-secondary" id="btnRequestAll" title="Запросить обновление всех токенов">Запросить всех</button>
+            <button class="check-all-btn" id="btnCheckAll">Проверить все</button>
           </div>
         </div>
 
@@ -64,12 +64,12 @@
         </div>
       </div>
     </main>
-  </div> <!-- end of sidebar-layout -->
+  </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=108"></script>
-  <script src="assets/app.js?v=108"></script>
-  <script src="assets/tokens.js?v=108"></script>
+  <script src="assets/config.js?v=110"></script>
+  <script src="assets/app.js?v=110"></script>
+  <script src="assets/tokens.js?v=110"></script>
 </body>
 </html>

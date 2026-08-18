@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Вход в терминал</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=108">
+  <title>NEXUS — Авторизация</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=110">
 </head>
 <body class="login-body">
 
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon">⚡</div>
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      </div>
       <div class="login-logo-text">NEXUS</div>
     </div>
     
-    <div class="login-subtitle">Авторизация для управления узлами</div>
+    <div class="login-subtitle">Авторизация для доступа к терминалу</div>
 
     <form id="loginForm">
       <div id="errorBox" class="error-msg" style="display: none;"></div>
@@ -24,22 +26,22 @@
         <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
       </div>
       <div class="input-group">
-        <input type="password" id="password" placeholder="Пароль доступа" required autocomplete="current-password">
+        <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
       </div>
       
       <label class="remember-me">
-        <input type="checkbox" id="rememberMe"> Запомнить сессию
+        <input type="checkbox" id="rememberMe"> Запомнить меня
       </label>
       
-      <button type="submit" class="btn-submit" id="submitBtn">Войти в терминал</button>
+      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
     </form>
 
     <div class="security-note">
-      🔒 Защищённый канал передачи данных. Несанкционированный доступ запрещён.
+      Несанкционированный доступ запрещен.
     </div>
   </div>
 
-  <script src="assets/config.js?v=108"></script>
+  <script src="assets/config.js?v=110"></script>
   <script>
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {
@@ -78,7 +80,7 @@
       
       errBox.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = 'Проверка...';
+      btn.textContent = 'Вход...';
       
       try {
         const res = await fetch(API_BASE + '/api/login', {
@@ -121,13 +123,13 @@
           errBox.textContent = data.error || 'Неверный логин или пароль';
           errBox.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = 'Войти в терминал';
+          btn.textContent = 'Войти';
         }
       } catch (e) {
         errBox.textContent = 'Ошибка сети. Сервер недоступен.';
         errBox.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Войти в терминал';
+        btn.textContent = 'Войти';
       }
     });
   </script>

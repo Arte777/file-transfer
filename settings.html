@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Настройки</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=108">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=110">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -15,41 +15,30 @@
         <h1 class="page-title">Настройки оператора</h1>
       </div>
 
-      <div class="container" style="max-width:1050px;">
+      <div class="container" style="max-width:960px;">
         <div class="settings-grid">
           
           <!-- LEFT COLUMN: Profile & Personalization -->
           <div class="settings-col">
-            <h2 class="settings-section-title">Профиль и Персонализация</h2>
+            <h2 class="settings-section-title">Профиль и персонализация</h2>
             
             <div class="settings-card avatar-card">
               <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()">
-                🦊
+                O
               </div>
               <div class="avatar-controls">
                 <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
                 <button class="btn-secondary btn-sm" id="btnResetAvatar">Сбросить фото</button>
               </div>
-              
-              <div class="emoji-picker-compact" id="emojiPicker">
-                <button class="emoji-btn" data-emoji="🦊">🦊</button>
-                <button class="emoji-btn" data-emoji="🐉">🐉</button>
-                <button class="emoji-btn" data-emoji="🐺">🐺</button>
-                <button class="emoji-btn" data-emoji="💀">💀</button>
-                <button class="emoji-btn" data-emoji="⚡">⚡</button>
-                <button class="emoji-btn" data-emoji="💎">💎</button>
-                <input type="text" class="settings-input emoji-custom-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи">
-              </div>
             </div>
 
             <div class="settings-card">
               <label class="settings-label">Отображаемое имя</label>
-              <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
+              <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Имя оператора">
               
-              <label class="settings-label" style="margin-top:1.2rem;">Статус / О себе</label>
-              <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
+              <label class="settings-label" style="margin-top:1rem;">Статус / Описание</label>
+              <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Root Operator">
               
-              <!-- Hidden preview elements to keep JS happy -->
               <div style="display:none;">
                 <span id="previewName"></span>
                 <span id="previewBio"></span>
@@ -59,16 +48,16 @@
             </div>
 
             <div class="settings-card">
-              <label class="settings-label">Цвет акцента интерфейса</label>
+              <label class="settings-label">Цветовая схема</label>
               <div class="color-picker-premium" id="colorPicker">
-                <button class="color-dot" data-color="#00f0ff" style="background:#00f0ff;"></button>
-                <button class="color-dot" data-color="#00ff88" style="background:#00ff88;"></button>
-                <button class="color-dot" data-color="#ff007f" style="background:#ff007f;"></button>
-                <button class="color-dot" data-color="#ff9f1c" style="background:#ff9f1c;"></button>
-                <button class="color-dot" data-color="#ffd60a" style="background:#ffd60a;"></button>
-                <button class="color-dot" data-color="#bd00ff" style="background:#bd00ff;"></button>
-                <div class="custom-color-wrapper" title="Выбрать свой цвет">
-                  <input type="color" class="settings-color-input" id="themeColor" value="#00f0ff">
+                <button class="color-dot" data-color="#38bdf8" style="background:#38bdf8;"></button>
+                <button class="color-dot" data-color="#10b981" style="background:#10b981;"></button>
+                <button class="color-dot" data-color="#6366f1" style="background:#6366f1;"></button>
+                <button class="color-dot" data-color="#a855f7" style="background:#a855f7;"></button>
+                <button class="color-dot" data-color="#f59e0b" style="background:#f59e0b;"></button>
+                <button class="color-dot" data-color="#ef4444" style="background:#ef4444;"></button>
+                <div class="custom-color-wrapper" title="Пользовательский цвет">
+                  <input type="color" class="settings-color-input" id="themeColor" value="#38bdf8">
                 </div>
               </div>
             </div>
@@ -76,43 +65,40 @@
 
           <!-- RIGHT COLUMN: Security & Modules -->
           <div class="settings-col">
-            <h2 class="settings-section-title">Безопасность и Модули</h2>
+            <h2 class="settings-section-title">Безопасность и модули</h2>
 
             <!-- Extension Card -->
-            <div class="settings-card extension-card">
-              <div style="display:flex; align-items:center; gap:14px; margin-bottom: 1rem;">
-                <div style="font-size:1.8rem; background:rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.2); border-radius:10px; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">🔌</div>
-                <div>
-                  <h3 style="margin:0; font-size:1.05rem; color:var(--text);">Расширение NEXUS</h3>
-                  <p style="margin:2px 0 0 0; font-size:0.82rem; color:var(--text-secondary);">Необходимо для мгновенного входа в аккаунты.</p>
-                </div>
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Расширение NEXUS</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">Необходимо для входа в аккаунты в один клик.</div>
               </div>
-              <a href="downloads/NEXUS_extension.zip" class="btn-refresh" style="display:flex; width: 100%; text-decoration:none; color:var(--accent); border-color:var(--border-accent); background: var(--accent-soft);" download>
-                📥 Скачать расширение NEXUS (.zip)
+              <a href="downloads/NEXUS_extension.zip" class="btn-refresh" style="display:flex; width:100%; text-decoration:none;" download>
+                Скачать расширение (.zip)
               </a>
             </div>
 
             <div class="settings-card">
               <label class="settings-label">Смена пароля</label>
-              <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.8rem;">
+              <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:0.75rem;">
               <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
-              <div class="settings-hint">Оставьте пустым, если не хотите менять пароль</div>
+              <div class="settings-hint">Оставьте пустым, если не требуется смена</div>
             </div>
 
             <button class="btn-submit premium-btn-save" id="btnSave">
-              <span class="save-icon">💾</span> Сохранить изменения
+              Сохранить настройки
             </button>
           </div>
 
         </div>
       </div>
     </main>
-  </div> <!-- end of sidebar-layout -->
+  </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=108"></script>
-  <script src="assets/app.js?v=108"></script>
-  <script src="assets/settings.js?v=108"></script>
+  <script src="assets/config.js?v=110"></script>
+  <script src="assets/app.js?v=110"></script>
+  <script src="assets/settings.js?v=110"></script>
 </body>
 </html>
