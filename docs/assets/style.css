@@ -96,13 +96,13 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 240px;
+  width: 280px;
   height: 100%;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 1rem;
+  padding: 2rem 1.4rem;
   z-index: 40;
   flex-shrink: 0;
 }
@@ -125,58 +125,59 @@ body {
   margin: 0 auto;
 }
 
-/* Brand Logo (Clean Minimalist, NO HUB tag, NO emojis) */
+/* Brand Logo (Large, Clean Minimalist) */
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 2rem;
-  padding: 0 0.5rem;
+  gap: 12px;
+  margin-bottom: 2.5rem;
+  padding: 0 0.4rem;
   text-decoration: none;
 }
 
 .logo-icon, .login-logo-icon {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   background: #18181b;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text);
+  flex-shrink: 0;
 }
 
 .logo-icon svg, .login-logo-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
 }
 
 .logo-text, .login-logo-text {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
   color: var(--text);
 }
 
-/* Navigation */
+/* Navigation (Large Spacious Buttons) */
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
 }
 
 .nav-link {
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--radius-sm);
+  font-size: 1.12rem;
+  font-weight: 600;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-md);
   transition: var(--transition);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   border: 1px solid transparent;
 }
 
@@ -184,17 +185,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .nav-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
 }
 
 .nav-link:hover {
   color: var(--text);
   background: #18181b;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .nav-link:hover .nav-icon {
@@ -214,15 +216,15 @@ body {
 
 .mobile-profile-link { display: none; }
 
-/* User Badge (Clean, Avatar Circle / Initials) */
+/* User Badge (Large, Prominent) */
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0.75rem;
+  gap: 14px;
+  padding: 1.1rem 1.2rem;
   background: #121215;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   margin-top: auto;
   transition: var(--transition);
 }
@@ -233,17 +235,17 @@ body {
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #1c1c21;
   border: 1px solid var(--border);
   border-radius: 50%;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -262,8 +264,8 @@ body {
 }
 
 .user-name {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -274,13 +276,13 @@ body {
   background: transparent;
   color: var(--text-muted);
   border: none;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 500;
   text-align: left;
   padding: 0;
   cursor: pointer;
   transition: var(--transition);
-  margin-top: 1px;
+  margin-top: 3px;
 }
 
 .btn-logout:hover {
