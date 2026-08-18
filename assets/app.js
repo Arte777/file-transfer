@@ -192,11 +192,30 @@ function saveNotificationToHistory(info) {
   } catch (e) {}
 }
 
+function getUnreadNotificationsCount() {
+  try {
+    const history = JSON.parse(localStorage.getItem('ft_notifications_history') || '[]');
+    const lastRead = parseInt(localStorage.getItem('ft_last_read_notif_time') || '0');
+    return history.filter(n => (n.receivedAt || 0) > lastRead).length;
+  } catch (e) {
+    return 0;
+  }
+}
+
 // ── Визуальное уведомление о токене ───────────────────────────────────────────
 function showTokenNotification(info) {
   if (!info) return;
   playNotificationSound();
   saveNotificationToHistory(info);
+
+  const notifBadge = document.getElementById('sidebarNotifBadge');
+  if (notifBadge) {
+    const unread = getUnreadNotificationsCount();
+    if (unread > 0) {
+      notifBadge.textContent = unread > 99 ? '99+' : unread;
+      notifBadge.style.display = 'inline-flex';
+    }
+  }
 
   let container = document.getElementById('tokenNotificationContainer');
   if (!container) {
@@ -360,11 +379,20 @@ function renderHeader(activePage) {
   const avatarHtml = operatorAvatarHTML(user);
   const name = operatorDisplayName(user);
 
-  function navLink(page, href, iconSvg, label, extraClass = '') {
+  if (activePage === 'notifications') {
+    localStorage.setItem('ft_last_read_notif_time', String(Date.now()));
+  }
+  const unread = activePage === 'notifications' ? 0 : getUnreadNotificationsCount();
+  const notifBadgeHtml = unread > 0 
+    ? `<span class="nav-badge-count" id="sidebarNotifBadge">${unread > 99 ? '99+' : unread}</span>` 
+    : `<span class="nav-badge-count" id="sidebarNotifBadge" style="display:none;">0</span>`;
+
+  function navLink(page, href, iconSvg, label, extraClass = '', badgeHtml = '') {
     const cls = activePage === page ? 'nav-link active ' + extraClass : 'nav-link ' + extraClass;
     return `<a href="${href}" class="${cls.trim()}">
       <div class="nav-icon">${iconSvg}</div>
       <span class="nav-label">${label}</span>
+      ${badgeHtml}
     </a>`;
   }
 
@@ -382,7 +410,7 @@ function renderHeader(activePage) {
     <div class="nav-links">
       ${navLink('files', 'index.html', iconDashboard, 'Файлы')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
-      ${navLink('notifications', 'notifications.html', iconBell, 'Уведомления')}
+      ${navLink('notifications', 'notifications.html', iconBell, 'Уведомления', '', notifBadgeHtml)}
       ${navLink('chat', 'chat.html', iconChat, 'Чат')}
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления')}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}

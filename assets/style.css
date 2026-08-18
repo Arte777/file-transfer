@@ -207,6 +207,18 @@ body {
   color: var(--accent);
 }
 
+.nav-badge-count {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  line-height: 1.2;
+  box-shadow: 0 0 10px var(--accent-soft);
+}
+
 .mobile-profile-link { display: none; }
 
 /* User Badge (Large, Prominent) */
@@ -1794,8 +1806,8 @@ body {
   background: #121215;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 1rem 1.25rem;
-  gap: 16px;
+  padding: 1.25rem 1.4rem;
+  gap: 18px;
   transition: var(--transition);
 }
 
@@ -1807,14 +1819,14 @@ body {
 .notif-feed-left {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex: 1;
+  gap: 16px;
+  flex: 1.2;
   min-width: 0;
 }
 
 .notif-feed-avatar {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #18181b;
   border: 1px solid var(--border);
@@ -1823,6 +1835,7 @@ body {
   justify-content: center;
   overflow: hidden;
   font-weight: 700;
+  font-size: 1.1rem;
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -1836,30 +1849,109 @@ body {
 .notif-feed-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
 
 .notif-feed-username {
-  font-size: 1.02rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.2px;
 }
 
 .notif-feed-meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #a1a1aa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.notif-meta-pc, .notif-meta-time {
+  color: #a1a1aa;
+}
+
+.notif-meta-pc b, .notif-meta-time b {
+  color: #f4f4f5;
+  font-weight: 600;
+}
+
+.notif-meta-sep {
+  color: #52525b;
+}
+
+.notif-feed-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1.1;
+  min-width: 180px;
+}
+
+.notif-feed-center .token-notif-badge-new {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: #10b981 !important;
+  letter-spacing: 0.3px !important;
+}
+
+.notif-feed-center .token-notif-badge-old {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  background: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #f59e0b !important;
+  letter-spacing: 0.3px !important;
+}
+
 .notif-feed-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
+}
+
+.btn-login-large {
+  padding: 0.75rem 1.6rem !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  border-radius: var(--radius-md) !important;
+  min-width: 100px !important;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.notif-del-btn {
+  padding: 0.75rem 0.9rem !important;
+  font-size: 1rem !important;
+  color: var(--danger) !important;
+}
+
+@media (max-width: 768px) {
+  .notif-feed-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .notif-feed-center {
+    justify-content: flex-start;
+  }
+  .notif-feed-right {
+    justify-content: space-between;
+  }
 }
