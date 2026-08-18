@@ -173,7 +173,12 @@ document.getElementById('btnCheckAll')?.addEventListener('click', async function
             data.results.forEach(res => {
               const idx = allTokens.findIndex(t => t.file === res.file);
               if (idx >= 0) {
-                allTokens[idx] = { ...allTokens[idx], ...res };
+                if (res.valid) {
+                  allTokens[idx] = { ...allTokens[idx], ...res };
+                } else {
+                  // Удаляем невалидный токен из списка
+                  allTokens.splice(idx, 1);
+                }
               }
             });
             updateStats();
@@ -186,13 +191,40 @@ document.getElementById('btnCheckAll')?.addEventListener('click', async function
     }
 
     const validCount = allTokens.filter(t => t.valid).length;
-    toast(`Проверено: ${validCount}/${total} рабочих`);
+    toast(`Проверка завершена. Рабочих: ${validCount}, невалидные удалены`);
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка проверки токенов', 'err');
   } finally {
     isCheckingAll = false;
     btn.disabled = false;
     btn.textContent = 'Проверить все';
+  }
+});
+
+// ── Удалить невалид ───────────────────────────────────────────────────────────
+document.getElementById('btnDeleteInvalid')?.addEventListener('click', async function() {
+  const invalidTokens = allTokens.filter(t => t.valid === false);
+  if (invalidTokens.length === 0) {
+    toast('Невалидных токенов не найдено');
+    return;
+  }
+  if (!confirm(`Удалить ${invalidTokens.length} невалидных токенов?`)) return;
+
+  const filenames = invalidTokens.map(t => t.file).filter(Boolean);
+  try {
+    const r = await apiFetch('/api/tokens-delete-invalid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames })
+    });
+    if (r.ok) {
+      allTokens = allTokens.filter(t => t.valid !== false);
+      updateStats();
+      renderTokens();
+      toast(`Удалено ${filenames.length} невалидных токенов`);
+    }
+  } catch (e) {
+    toast('Ошибка удаления', 'err');
   }
 });
 

