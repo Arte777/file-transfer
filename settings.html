@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Настройки</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=115">
+  <link rel="stylesheet" href="assets/style.css?v=116">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -67,6 +67,24 @@
           <div class="settings-col">
             <h2 class="settings-section-title">Безопасность и модули</h2>
 
+            <!-- Notifications Card -->
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Оповещения о токенах</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                  Звуковое и всплывающее уведомление с балансом Robux при получении рабочего токена.
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn-secondary btn-sm" id="btnTestNotification" style="flex:1; padding: 0.75rem 1rem;">
+                  Тест уведомления
+                </button>
+                <button type="button" class="btn-secondary btn-sm" id="btnBrowserPermission" style="flex:1; padding: 0.75rem 1rem;">
+                  Включить системные
+                </button>
+              </div>
+            </div>
+
             <!-- Extension Card -->
             <div class="settings-card">
               <div style="margin-bottom: 0.8rem;">
@@ -97,8 +115,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=115"></script>
-  <script src="assets/app.js?v=115"></script>
-  <script src="assets/settings.js?v=115"></script>
+  <script src="assets/config.js?v=116"></script>
+  <script src="assets/app.js?v=116"></script>
+  <script src="assets/settings.js?v=116"></script>
 </body>
 </html>
