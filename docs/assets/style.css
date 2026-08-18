@@ -1841,6 +1841,51 @@ body {
   transition: var(--transition);
 }
 
+.btn-chat-attach {
+  background: #18181b;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.btn-chat-attach:hover {
+  background: #27272a;
+  color: #fff;
+  border-color: var(--border-hover);
+}
+
+.btn-toggle-access {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-toggle-access:hover {
+  background: #27272a;
+  color: #fff;
+}
+
+.btn-toggle-access.is-full {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  font-weight: 700;
+}
+
 .chat-input-field:focus {
   border-color: var(--border-hover);
 }

