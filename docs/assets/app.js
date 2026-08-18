@@ -202,6 +202,51 @@ function getUnreadNotificationsCount() {
   }
 }
 
+function getUnreadChatCount() {
+  try {
+    const raw = localStorage.getItem('ft_cached_chat_messages');
+    if (!raw) return 0;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return 0;
+    const lastRead = parseInt(localStorage.getItem('ft_last_read_chat_time') || '0');
+    const myUser = getUser();
+    return list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// ── Фоновый слушатель новых сообщений чата ────────────────────────────────────
+async function checkUnreadChatBackground() {
+  if (!getToken()) return;
+  try {
+    const resp = await apiFetch('/api/chat/messages');
+    if (!resp.ok) return;
+    const list = await resp.json();
+    if (!Array.isArray(list)) return;
+
+    localStorage.setItem('ft_cached_chat_messages', JSON.stringify(list));
+    const lastRead = parseInt(localStorage.getItem('ft_last_read_chat_time') || '0');
+    const myUser = getUser();
+    const unread = list.filter(m => (m.operator !== myUser) && (new Date(m.createdAt || 0).getTime() > lastRead)).length;
+
+    const chatBadge = document.getElementById('sidebarChatBadge');
+    if (chatBadge) {
+      if (unread > 0) {
+        chatBadge.textContent = unread > 99 ? '99+' : unread;
+        chatBadge.style.display = 'inline-flex';
+      } else {
+        chatBadge.style.display = 'none';
+      }
+    }
+  } catch (e) {}
+}
+
+if (getToken()) {
+  setInterval(checkUnreadChatBackground, 12000);
+  setTimeout(checkUnreadChatBackground, 3000);
+}
+
 // ── Визуальное уведомление о токене ───────────────────────────────────────────
 function showTokenNotification(info) {
   if (!info) return;
@@ -387,6 +432,14 @@ function renderHeader(activePage) {
     ? `<span class="nav-badge-count" id="sidebarNotifBadge">${unread > 99 ? '99+' : unread}</span>` 
     : `<span class="nav-badge-count" id="sidebarNotifBadge" style="display:none;">0</span>`;
 
+  if (activePage === 'chat') {
+    localStorage.setItem('ft_last_read_chat_time', String(Date.now()));
+  }
+  const unreadChat = activePage === 'chat' ? 0 : getUnreadChatCount();
+  const chatBadgeHtml = unreadChat > 0
+    ? `<span class="nav-badge-count" id="sidebarChatBadge">${unreadChat > 99 ? '99+' : unreadChat}</span>`
+    : `<span class="nav-badge-count" id="sidebarChatBadge" style="display:none;">0</span>`;
+
   if (activePage === 'updates') {
     localStorage.setItem('ft_has_seen_updates', 'true');
   }
@@ -419,7 +472,7 @@ function renderHeader(activePage) {
       ${navLink('files', 'index.html', iconDashboard, 'Файлы')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
       ${navLink('notifications', 'notifications.html', iconBell, 'Уведомления', '', notifBadgeHtml)}
-      ${navLink('chat', 'chat.html', iconChat, 'Чат')}
+      ${navLink('chat', 'chat.html', iconChat, 'Чат', '', chatBadgeHtml)}
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', updatesBadgeHtml)}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
       

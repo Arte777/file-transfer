@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Настройки</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=122">
+  <link rel="stylesheet" href="assets/style.css?v=123">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -95,21 +95,26 @@
               <div style="margin-bottom: 0.8rem;">
                 <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Индикаторы и бейджи меню</div>
                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
-                  Проверка красного счётчика на «Уведомления» и бейджа «NEW» на «Обновления».
+                  Проверка красных счётчиков (Уведомления, Чат) и бейджа «NEW» (Обновления).
                 </div>
               </div>
               <div style="display:flex; flex-direction:column; gap:8px;">
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button type="button" class="btn-secondary btn-sm" id="btnTestAddNotifBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
-                    +1 Непрочитанное (Красный)
+                    +1 Уведомление
                   </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestAddChatBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    +1 Чат (Красный)
+                  </button>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button type="button" class="btn-secondary btn-sm" id="btnTestToggleUpdateBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
                     Показать «NEW»
                   </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestClearBadges" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Сбросить бейджи
+                  </button>
                 </div>
-                <button type="button" class="btn-secondary btn-sm" id="btnTestClearBadges" style="width:100%; padding: 0.75rem 1rem;">
-                  Сбросить все бейджи
-                </button>
               </div>
             </div>
 
@@ -143,8 +148,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=122"></script>
-  <script src="assets/app.js?v=122"></script>
-  <script src="assets/settings.js?v=122"></script>
+  <script src="assets/config.js?v=123"></script>
+  <script src="assets/app.js?v=123"></script>
+  <script src="assets/settings.js?v=123"></script>
 </body>
 </html>

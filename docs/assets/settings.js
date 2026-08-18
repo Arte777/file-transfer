@@ -260,6 +260,26 @@ document.getElementById('btnTestAddNotifBadge')?.addEventListener('click', () =>
   toast('Красный счётчик уведомлений обновлен');
 });
 
+document.getElementById('btnTestAddChatBadge')?.addEventListener('click', () => {
+  const cached = JSON.parse(localStorage.getItem('ft_cached_chat_messages') || '[]');
+  cached.push({
+    id: 'sim_' + Date.now(),
+    operator: 'Operator_Alex',
+    displayName: 'Operator_Alex',
+    text: 'Привет! Проверьте чат, поделился новым токеном',
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem('ft_cached_chat_messages', JSON.stringify(cached));
+
+  const chatBadge = document.getElementById('sidebarChatBadge');
+  if (chatBadge) {
+    const unread = getUnreadChatCount() || 1;
+    chatBadge.textContent = unread > 99 ? '99+' : unread;
+    chatBadge.style.display = 'inline-flex';
+  }
+  toast('Красный счётчик чата обновлен (+1)');
+});
+
 document.getElementById('btnTestToggleUpdateBadge')?.addEventListener('click', () => {
   localStorage.removeItem('ft_has_seen_updates');
   const badge = document.getElementById('sidebarUpdatesBadge');
@@ -272,10 +292,14 @@ document.getElementById('btnTestToggleUpdateBadge')?.addEventListener('click', (
 
 document.getElementById('btnTestClearBadges')?.addEventListener('click', () => {
   localStorage.setItem('ft_last_read_notif_time', String(Date.now()));
+  localStorage.setItem('ft_last_read_chat_time', String(Date.now()));
   localStorage.setItem('ft_has_seen_updates', 'true');
   
   const notifBadge = document.getElementById('sidebarNotifBadge');
   if (notifBadge) notifBadge.style.display = 'none';
+
+  const chatBadge = document.getElementById('sidebarChatBadge');
+  if (chatBadge) chatBadge.style.display = 'none';
 
   const updatesBadge = document.getElementById('sidebarUpdatesBadge');
   if (updatesBadge) updatesBadge.style.display = 'none';

@@ -18,6 +18,10 @@ async function loadChatMessages(autoScroll = false) {
     const list = await resp.json();
     if (Array.isArray(list)) {
       chatMessages = list;
+      localStorage.setItem('ft_cached_chat_messages', JSON.stringify(list));
+      localStorage.setItem('ft_last_read_chat_time', String(Date.now()));
+      const badge = document.getElementById('sidebarChatBadge');
+      if (badge) badge.style.display = 'none';
       renderChatMessages(autoScroll);
     }
   } catch (e) {
