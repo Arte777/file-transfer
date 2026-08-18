@@ -138,26 +138,62 @@ async function checkSingle(filename) {
   }
 }
 
-// ── Проверить все токены ─────────────────────────────────────────────────────────────
+// ── Проверить все токены (без лимитов с живым прогрессом) ─────────────────────────────
+let isCheckingAll = false;
+
 document.getElementById('btnCheckAll')?.addEventListener('click', async function() {
   const btn = this;
-  btn.disabled = true;
-  btn.textContent = 'Проверка...';
-  try {
-    const r = await apiFetch('/robux-bulk', { method: 'POST' });
-    const results = await r.json();
-    if (Array.isArray(results)) {
-      allTokens = results;
-      updateStats();
-      renderTokens();
-      const valid = results.filter(r => r.valid).length;
-      toast('Проверено: ' + valid + '/' + results.length + ' рабочих');
-    }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка проверки', 'err');
+  if (isCheckingAll) return;
+  if (!allTokens || allTokens.length === 0) {
+    toast('Список токенов пуст', 'err');
+    return;
   }
-  btn.disabled = false;
-  btn.textContent = 'Проверить все';
+
+  isCheckingAll = true;
+  btn.disabled = true;
+  
+  const total = allTokens.length;
+  const CHUNK_SIZE = 15;
+
+  try {
+    for (let i = 0; i < total; i += CHUNK_SIZE) {
+      const chunk = allTokens.slice(i, i + CHUNK_SIZE);
+      btn.textContent = `[${Math.min(i + CHUNK_SIZE, total)}/${total}] Проверка...`;
+
+      try {
+        const r = await apiFetch('/api/tokens-check-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tokens: chunk.map(t => ({ file: t.file, security: t.security })) })
+        });
+
+        if (r.ok) {
+          const data = await r.json();
+          if (data && Array.isArray(data.results)) {
+            data.results.forEach(res => {
+              const idx = allTokens.findIndex(t => t.file === res.file);
+              if (idx >= 0) {
+                allTokens[idx] = { ...allTokens[idx], ...res };
+              }
+            });
+            updateStats();
+            renderTokens();
+          }
+        }
+      } catch (errChunk) {
+        console.warn('Chunk check error:', errChunk);
+      }
+    }
+
+    const validCount = allTokens.filter(t => t.valid).length;
+    toast(`Проверено: ${validCount}/${total} рабочих`);
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка проверки токенов', 'err');
+  } finally {
+    isCheckingAll = false;
+    btn.disabled = false;
+    btn.textContent = 'Проверить все';
+  }
 });
 
 // ── Запросить все токены ─────────────────────────────────────────────────────────────

