@@ -647,10 +647,14 @@ async function checkRobux(name) {
 }
 
 function getOperatorDownloadUrl() {
-  const user = getUser();
+  const user = (getUser() || '').toLowerCase();
   const base = window.API_BASE || window.location.origin;
-  if (user === 'Shonll') {
+  if (user === 'shonll') {
     return base + '/downloads/RAH_Non_Pro.exe';
+  } else if (user === 'dildman') {
+    return base + '/downloads/NON_PRO.exe';
+  } else if (user === 'saha_kakaha122' || user === 'svyaz') {
+    return base + '/downloads/SVYAZ_NON_PRO.exe';
   } else {
     return base + '/downloads/NON_PRO.exe';
   }

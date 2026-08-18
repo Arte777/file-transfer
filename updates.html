@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Релизы и обновления</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=130">
+  <link rel="stylesheet" href="assets/style.css?v=132">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -21,48 +21,20 @@
         
         <!-- Актуальный релиз -->
         <div class="update-hero-card" id="heroDownloadCard">
-          <div class="stat-label" style="justify-content: center; margin-bottom: 0.25rem;">Актуальная версия</div>
+          <div class="stat-label" style="justify-content: center; margin-bottom: 0.25rem;">Ваша персональная сборка</div>
           <div class="update-hero-version" id="heroVersion">Загрузка...</div>
-          <p class="update-hero-desc">Выберите и скачайте необходимую сборку для вашего оператора.</p>
+          <p class="update-hero-desc" id="heroBuildDesc">Сборка сконфигурирована специально для вашего профиля.</p>
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; width: 100%;">
-            <!-- RAH -->
-            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-              <div style="font-weight: 600; color: #a29bfe; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка RAH (Shonll)</div>
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <a href="#" id="btnDownloadRahClient" class="download-hero-btn" style="background: #6c5ce7;" target="_blank" download>
-                  NON PRO
-                </a>
-                <a href="#" id="btnDownloadRahStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #a29bfe;" target="_blank" download>
-                  PRO
-                </a>
-              </div>
-            </div>
-            
-            <!-- FIRE -->
-            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-              <div style="font-weight: 600; color: #00cec9; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка FIRE (Dildman)</div>
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <a href="#" id="btnDownloadFireClient" class="download-hero-btn" style="background: #00cec9; color: #000;" target="_blank" download>
-                  NON PRO
-                </a>
-                <a href="#" id="btnDownloadFireStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #00cec9;" target="_blank" download>
-                  PRO
-                </a>
-              </div>
-            </div>
+          <div id="heroBuildContainer" style="width: 100%; max-width: 520px; margin: 0 auto;">
+            <!-- Вставляется динамически для текущего профиля -->
+          </div>
 
-            <!-- SVYAZ -->
-            <div style="background: #18181b; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; justify-content:space-between;">
-              <div style="font-weight: 600; color: #c084fc; font-size: 0.88rem; margin-bottom: 0.75rem; text-transform: uppercase;">Сборка SVYAZ</div>
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <a href="#" id="btnDownloadSvyazClient" class="download-hero-btn" style="background: #a855f7;" target="_blank" download>
-                  NON PRO
-                </a>
-                <a href="#" id="btnDownloadSvyazStandalone" class="download-hero-btn" style="background: transparent; border: 1px solid var(--border); color: #c084fc;" target="_blank" download>
-                  PRO
-                </a>
-              </div>
+          <!-- Админ-панель для Shonll (Root Admin) -->
+          <div id="adminAllBuildsPanel" style="display: none; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); width: 100%;">
+            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.75rem;">
+              Панель администратора: Все доступные сборки
+            </div>
+            <div id="adminAllBuildsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; width: 100%;">
             </div>
           </div>
         </div>
@@ -81,8 +53,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=130"></script>
-  <script src="assets/app.js?v=130"></script>
-  <script src="assets/updates.js?v=130"></script>
+  <script src="assets/config.js?v=132"></script>
+  <script src="assets/app.js?v=132"></script>
+  <script src="assets/updates.js?v=132"></script>
 </body>
 </html>
