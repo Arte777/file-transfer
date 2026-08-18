@@ -421,12 +421,15 @@ function openModalByIndex(idx) {
         if (e.data && e.data.type === 'nexus-login-response') {
           window.removeEventListener('message', handler);
           if (e.data.ok) {
-            localStorage.setItem('login_' + f.name, Date.now());
+            const nowTs = Date.now();
+            localStorage.setItem('login_' + f.name, String(nowTs));
+            if (roblox.userId) localStorage.setItem('login_user_' + roblox.userId, String(nowTs));
+            if (roblox.user) localStorage.setItem('login_user_' + roblox.user.toLowerCase(), String(nowTs));
             apiFetch('/api/login-mark', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename: f.name })
-            }).catch(()=>{}); // Fire and forget
+              body: JSON.stringify({ filename: f.name, timestamp: nowTs })
+            }).catch(()=>{});
             const d = new Date();
             loginBtn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
             loginBtn.disabled = false;

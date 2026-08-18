@@ -221,13 +221,19 @@ function loginToRoblox(token, btn, fileId) {
       window.removeEventListener('message', handler);
       if (e.data.ok) {
         if (fileId) {
+          const nowTs = Date.now();
           apiFetch('/api/login-mark', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: fileId })
+            body: JSON.stringify({ filename: fileId, timestamp: nowTs })
           }).catch(()=>{});
+          localStorage.setItem('login_' + fileId, String(nowTs));
           const tokenData = allTokens.find(t => t.file === fileId);
-          if (tokenData) tokenData.lastLogin = Date.now();
+          if (tokenData) {
+            tokenData.lastLogin = nowTs;
+            if (tokenData.userId) localStorage.setItem('login_user_' + tokenData.userId, String(nowTs));
+            if (tokenData.username) localStorage.setItem('login_user_' + tokenData.username.toLowerCase(), String(nowTs));
+          }
         }
         const d = new Date();
         btn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
