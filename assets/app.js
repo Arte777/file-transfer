@@ -387,6 +387,14 @@ function renderHeader(activePage) {
     ? `<span class="nav-badge-count" id="sidebarNotifBadge">${unread > 99 ? '99+' : unread}</span>` 
     : `<span class="nav-badge-count" id="sidebarNotifBadge" style="display:none;">0</span>`;
 
+  if (activePage === 'updates') {
+    localStorage.setItem('ft_has_seen_updates', 'true');
+  }
+  const hasUnseenUpdates = localStorage.getItem('ft_has_seen_updates') !== 'true';
+  const updatesBadgeHtml = hasUnseenUpdates
+    ? `<span class="nav-badge-new" id="sidebarUpdatesBadge">NEW</span>`
+    : `<span class="nav-badge-new" id="sidebarUpdatesBadge" style="display:none;">NEW</span>`;
+
   function navLink(page, href, iconSvg, label, extraClass = '', badgeHtml = '') {
     const cls = activePage === page ? 'nav-link active ' + extraClass : 'nav-link ' + extraClass;
     return `<a href="${href}" class="${cls.trim()}">
@@ -412,7 +420,7 @@ function renderHeader(activePage) {
       ${navLink('tokens', 'tokens.html', iconTokens, 'Токены')}
       ${navLink('notifications', 'notifications.html', iconBell, 'Уведомления', '', notifBadgeHtml)}
       ${navLink('chat', 'chat.html', iconChat, 'Чат')}
-      ${navLink('updates', 'updates.html', iconUpdates, 'Обновления')}
+      ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', updatesBadgeHtml)}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
       
       <!-- Mobile only Profile Link -->

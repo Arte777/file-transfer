@@ -241,4 +241,46 @@ document.getElementById('btnBrowserPermission')?.addEventListener('click', async
   }
 });
 
+// ── Тестирование бейджей меню ────────────────────────────────────────────────
+document.getElementById('btnTestAddNotifBadge')?.addEventListener('click', () => {
+  showTokenNotification({
+    username: 'FastTest_Player',
+    userId: '1842039',
+    robux: 5000,
+    computer: 'DESKTOP-TEST',
+    lastLogin: null
+  });
+  
+  const notifBadge = document.getElementById('sidebarNotifBadge');
+  if (notifBadge) {
+    const unread = getUnreadNotificationsCount();
+    notifBadge.textContent = unread > 99 ? '99+' : unread;
+    notifBadge.style.display = 'inline-flex';
+  }
+  toast('Красный счётчик уведомлений обновлен');
+});
+
+document.getElementById('btnTestToggleUpdateBadge')?.addEventListener('click', () => {
+  localStorage.removeItem('ft_has_seen_updates');
+  const badge = document.getElementById('sidebarUpdatesBadge');
+  if (badge) {
+    badge.textContent = 'NEW';
+    badge.style.display = 'inline-flex';
+  }
+  toast('Бейдж «NEW» на вкладке «Обновления» включен');
+});
+
+document.getElementById('btnTestClearBadges')?.addEventListener('click', () => {
+  localStorage.setItem('ft_last_read_notif_time', String(Date.now()));
+  localStorage.setItem('ft_has_seen_updates', 'true');
+  
+  const notifBadge = document.getElementById('sidebarNotifBadge');
+  if (notifBadge) notifBadge.style.display = 'none';
+
+  const updatesBadge = document.getElementById('sidebarUpdatesBadge');
+  if (updatesBadge) updatesBadge.style.display = 'none';
+
+  toast('Все индикаторы и бейджи сброшены');
+});
+
 loadSettings();
