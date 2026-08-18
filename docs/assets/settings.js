@@ -204,4 +204,28 @@ document.getElementById('btnSave')?.addEventListener('click', async function() {
   btn.textContent = 'Сохранить настройки';
 });
 
+// ── Тест уведомлений ─────────────────────────────────────────────────────────
+document.getElementById('btnTestNotification')?.addEventListener('click', () => {
+  showTokenNotification({
+    username: 'RobloxMaster_777',
+    userId: '1842039',
+    robux: 15400,
+    computer: 'DESKTOP-USER'
+  });
+  toast('Тестовое уведомление отправлено');
+});
+
+document.getElementById('btnBrowserPermission')?.addEventListener('click', async () => {
+  if (!("Notification" in window)) {
+    toast('Браузер не поддерживает уведомления', 'err');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    toast('Системные уведомления включены');
+  } else {
+    toast('Разрешение отклонено в настройках браузера', 'err');
+  }
+});
+
 loadSettings();

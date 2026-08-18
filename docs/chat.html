@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEXUS — Чат операторов</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=116">
+</head>
+<body>
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    <main class="main-content">
+      <div class="container" style="max-width: 1000px;">
+        <div class="top-bar">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h1 class="page-title" style="margin: 0;">Чат операторов</h1>
+            <span class="badge badge-valid" style="font-size: 0.72rem; padding: 3px 8px;">Онлайн</span>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="loadChatMessages()">Обновить</button>
+        </div>
+
+        <div class="chat-card">
+          <div class="chat-messages" id="chatMessages">
+            <div class="skeleton-row" style="height: 60px;">
+              <div class="skeleton-block" style="flex:1;"></div>
+            </div>
+            <div class="skeleton-row" style="height: 60px;">
+              <div class="skeleton-block" style="flex:1;"></div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <!-- Attached Token Preview -->
+            <div id="attachedTokenPreview" class="chat-attached-token-preview" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 700;">Прикреплен аккаунт:</span>
+                <span id="attachedTokenText">—</span>
+              </div>
+              <button onclick="detachToken()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:700;">✕ Убрать</button>
+            </div>
+
+            <div class="chat-input-row">
+              <button id="btnOpenTokenPicker" class="btn-share-token" type="button">
+                Показать токен
+              </button>
+              <input type="text" id="chatInput" class="chat-input-field" placeholder="Напишите сообщение..." maxlength="1000" autocomplete="off">
+              <button id="btnSendChat" class="btn-submit" style="width:auto; padding: 0.85rem 1.6rem;">
+                Отправить
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Token Picker Modal -->
+  <div id="tokenPickerModal" class="modal-overlay" onclick="closeTokenPicker()">
+    <div class="modal-container" style="max-width: 500px;" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeTokenPicker()">✕</button>
+      <div style="padding: 1.5rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Поделиться токеном в чате</h3>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Карточка покажет баланс Robux и никнейм. Сам токен и вход другим пользователям недоступны.
+        </p>
+
+        <div id="tokenPickerList" class="token-picker-list">
+          <div style="text-align: center; color: var(--text-muted); padding: 1rem;">Загрузка токенов...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=116"></script>
+  <script src="assets/app.js?v=116"></script>
+  <script src="assets/chat.js?v=116"></script>
+</body>
+</html>
