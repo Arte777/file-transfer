@@ -77,20 +77,17 @@ async function syncWithTokens(showToast = true) {
 
 // ── Обновление статистики ─────────────────────────────────────────────────────
 function updateStats() {
-  const total = notifHistory.length;
   const newCount = notifHistory.filter(n => n.isNew).length;
-  const visitedCount = total - newCount;
-  const totalRobux = notifHistory.reduce((sum, n) => sum + (Number(n.robux) || 0), 0);
+  const visitedCount = notifHistory.filter(n => !n.isNew).length;
+  const activeCount = notifHistory.length;
 
-  const elTotal = document.getElementById('sNotifTotal');
   const elNew = document.getElementById('sNotifNew');
   const elVisited = document.getElementById('sNotifVisited');
-  const elRobux = document.getElementById('sNotifRobux');
+  const elActive = document.getElementById('sNotifActive');
 
-  if (elTotal) elTotal.textContent = total;
   if (elNew) elNew.textContent = newCount;
   if (elVisited) elVisited.textContent = visitedCount;
-  if (elRobux) elRobux.textContent = totalRobux.toLocaleString() + ' R$';
+  if (elActive) elActive.textContent = activeCount;
 }
 
 // ── Отрисовка списка ──────────────────────────────────────────────────────────
