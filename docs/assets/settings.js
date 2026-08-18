@@ -1,4 +1,4 @@
-﻿// в”Ђв”Ђ РЎС‚СЂР°РЅРёС†Р° РЅР°СЃС‚СЂРѕРµРє (СЃС‚Р°С‚РёС‡РµСЃРєР°СЏ РІРµСЂСЃРёСЏ) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// в”Ђв”Ђ РЎС‚СЂР°РЅРёС†Р° РЅР°СЃС‚СЂРѕРµРє (СЃС‚Р°С‚РёС‡РµСЃРєР°СЏ РІРµСЂСЃРёСЏ) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 if (!requireLogin()) throw new Error('redirect');
 
 document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
@@ -20,33 +20,11 @@ async function loadSettings() {
     const localName = localStorage.getItem('ft_displayName');
     const localColor = localStorage.getItem('ft_themeColor');
     const localBio = localStorage.getItem('ft_bio');
-    const localDrainGamepasses = localStorage.getItem('ft_drainGamepasses');
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
     document.getElementById('themeColor').value = localColor || s.themeColor || '#00f0ff';
     
-    const prices = [
-      500, 495, 490, 485, 480, 475, 470, 465, 460, 455, 450, 445, 440, 435, 430, 425, 420, 415, 410, 405, 400,
-      395, 390, 385, 380, 375, 370, 365, 360, 355, 350, 345, 340, 335, 330, 325, 320, 315, 310, 305, 300,
-      295, 290, 285, 280, 275, 270, 265, 260, 255, 250, 245, 240, 235, 230, 225, 220, 215, 210, 205, 200,
-      195, 190, 185, 180, 175, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100,
-      95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5
-    ];
-
-    let gps = {};
-    try {
-      gps = JSON.parse(localDrainGamepasses || s.drainGamepasses || '{}');
-    } catch(e) {
-      // Compatibility fallback
-      const str = localDrainGamepasses || s.drainGamepasses || '';
-      const arr = str.split(',').map(x => x.trim()).filter(Boolean);
-      for (let i = 0; i < Math.min(arr.length, prices.length); i++) {
-        gps[prices[i]] = arr[i];
-      }
-    }
-
-    renderDrainerGrid(prices, gps);
 
     const serverAvatarImage = s.avatarImage || null;
 
@@ -184,17 +162,17 @@ document.getElementById('themeColor').addEventListener('input', function() {
   handleColorChange(this.value);
 });
 
-// в”Ђв”Ђ Live preview РЅР° РІРІРѕРґ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// ── Live preview на ввод ─────────────────────────────────────────────────────────────────────────
 ['displayName', 'avatarInput', 'bio'].forEach(id => {
   document.getElementById(id).addEventListener('input', function() {
     if (id === 'avatarInput' && this.value.trim() !== '') {
-      currentAvatarImageBase64 = null; // Р•СЃР»Рё СЋР·РµСЂ РІСЂСѓС‡РЅСѓСЋ РІРІРѕРґРёС‚ СЌРјРѕРґР·Рё, СЃР±СЂР°СЃС‹РІР°РµРј С„РѕС‚Рѕ
+      currentAvatarImageBase64 = null; // Если юзер вручную вводит эмодзи, сбрасываем фото
     }
     updatePreview();
   });
 });
 
-// в”Ђв”Ђ РЎРѕС…СЂР°РЅРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// ── Сохранение ─────────────────────────────────────────────────────────────────────────────────────
 document.getElementById('btnSave').addEventListener('click', async function() {
   const btn = this;
   
@@ -204,18 +182,10 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   const currPwd = document.getElementById('currentPassword').value;
   const newPwd = document.getElementById('newPassword').value;
   
-  const gpData = {};
-  document.querySelectorAll('.gp-input').forEach(input => {
-    const val = input.value.trim();
-    if (val) gpData[input.dataset.price] = val;
-  });
-  const drainGamepasses = JSON.stringify(gpData);
-  
   const data = {
     displayName: name,
     themeColor: themeColor,
-    bio: bio,
-    drainGamepasses: drainGamepasses
+    bio: bio
   };
 
   if (currentAvatarImageBase64) {
@@ -230,7 +200,7 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   }
 
   btn.disabled = true;
-  btn.textContent = 'РЎРѕС…СЂР°РЅРµРЅРёРµ...';
+  btn.textContent = 'Сохранение...';
 
   try {
     const r = await apiFetch('/api/settings', {
@@ -240,16 +210,15 @@ document.getElementById('btnSave').addEventListener('click', async function() {
     });
     const resp = await r.json();
     if (resp.success) {
-      toast('вњ… РќР°СЃС‚СЂРѕР№РєРё СЃРѕС…СЂР°РЅРµРЅС‹');
+      toast('✅ Настройки сохранены');
       document.getElementById('newPassword').value = '';
       document.getElementById('currentPassword').value = '';
       currentSettings = resp.settings;
 
-      // РЎРѕС…СЂР°РЅСЏРµРј РІ localStorage вЂ” РїРµСЂРµР¶РёРІС‘С‚ РїРµСЂРµР·Р°РїСѓСЃРє Render
+      // Сохраняем в localStorage — переживёт перезапуск Render
       localStorage.setItem('ft_themeColor', data.themeColor);
       if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
       if (data.bio) localStorage.setItem('ft_bio', data.bio);
-      if (data.drainGamepasses) localStorage.setItem('ft_drainGamepasses', data.drainGamepasses);
 
       if (data.avatarImage) {
         localStorage.setItem('ft_avatarImage', data.avatarImage);
@@ -272,49 +241,5 @@ document.getElementById('btnSave').addEventListener('click', async function() {
   btn.disabled = false;
   btn.textContent = 'РЎРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё';
 });
-
-// в”Ђв”Ђ РђРІС‚Рѕ-СЃРѕР·РґР°РЅРёРµ РіРµР№РјРїР°СЃСЃРѕРІ С‡РµСЂРµР· СЂР°СЃС€РёСЂРµРЅРёРµ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-let gamepassCreationTimeout = null;
-
-function renderDrainerGrid(pricesList, savedIds = {}) {
-  const grid = document.getElementById('drainerGrid');
-  grid.innerHTML = '';
-  
-  if (pricesList.length === 0) {
-    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 1rem;">РќРµС‚ С†РµРЅ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ. Р’РІРµРґРёС‚Рµ РёС… РІС‹С€Рµ С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ.</div>';
-    return;
-  }
-
-  pricesList.forEach(price => {
-    const item = document.createElement('div');
-    item.className = 'drainer-item';
-    
-    const label = document.createElement('label');
-    label.textContent = price.toLocaleString('ru-RU') + ' R$';
-    
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'settings-input gp-input';
-    input.dataset.price = price;
-    input.placeholder = 'ID РіРµР№РјРїР°СЃСЃР°';
-    if (savedIds[price]) {
-      input.value = savedIds[price];
-    }
-    
-    item.appendChild(label);
-    item.appendChild(input);
-    grid.appendChild(item);
-  });
-}
-
-function getCurrentTypedIds() {
-  const data = {};
-  document.querySelectorAll('.gp-input').forEach(input => {
-    const val = input.value.trim();
-    if (val) data[input.dataset.price] = val;
-  });
-  return data;
-}
-
 
 loadSettings();
