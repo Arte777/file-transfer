@@ -135,9 +135,6 @@ function renderTokens() {
       html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 12px; border-color: rgba(0, 240, 255, 0.3); color: var(--accent); background: rgba(0, 240, 255, 0.05);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">📡</button>';
       html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
       html += '</div>';
-      if (valid && t.robux !== undefined && t.robux > 0) {
-        html += '<button class="btn-secondary" style="margin-top:0.5rem; width:100%; color: #10b981; border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);" onclick="drainRobux(\'' + tokenFull.replace(/'/g, "\\'") + '\', this)">💸 Слить Robux</button>';
-      }
     } else {
       // no login button if no security token
     }
@@ -176,37 +173,6 @@ async function checkSingle(filename) {
   }
 }
 
-// ── Слить Robux ───────────────────────────────────────────────────────────────
-function drainRobux(token, btn) {
-  const drainGamepasses = localStorage.getItem('ft_drainGamepasses') || '';
-  if (!drainGamepasses) {
-    toast('Ошибка: Не настроены ID геймпассов! Перейдите в Настройки.', 'err');
-    return;
-  }
-  
-  if (confirm('Вы уверены, что хотите перевести все доступные робуксы с этого аккаунта на ваши геймпассы?')) {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ В процессе...';
-    btn.disabled = true;
-    
-    let passesList = [];
-    try {
-      const parsed = JSON.parse(drainGamepasses);
-      passesList = Object.values(parsed).filter(Boolean);
-    } catch(e) {
-      passesList = drainGamepasses.split(',').map(s => s.trim()).filter(Boolean);
-    }
-    
-    window.postMessage({ action: 'drain_robux_event', token: token, gamepasses: passesList }, '*');
-    toast('Задача на перевод робуксов отправлена в расширение NEXUS!');
-    
-    // Сброс кнопки через 5 сек (т.к. асинхронно в фоне)
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-    }, 5000);
-  }
-}
 
 // ── Проверить все токены ─────────────────────────────────────────────────────────────
 document.getElementById('btnCheckAll').addEventListener('click', async function() {

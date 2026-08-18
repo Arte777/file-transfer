@@ -503,9 +503,7 @@ function openModalByIndex(idx) {
     window.location.href = "tokens.html?file=" + encodeURIComponent(f.name);
   };
 
-  // Removed modalRobuxBtn
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
-  // Removed modalRequestStatusBtn
   document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
