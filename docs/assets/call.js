@@ -98,17 +98,20 @@ async function joinCall() {
   try {
     toast('Подключение к голосовому каналу...');
     
-    // Получаем аудиопоток с шумоподавлением
-    const audioConstraints = {
-      echoCancellation: true,
-      noiseSuppression: isNoiseSuppressionOn,
-      autoGainControl: true
-    };
-
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: audioConstraints,
-      video: false
-    });
+    // Получаем аудиопоток с шумоподавлением (с безопасным фолбэком)
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: isNoiseSuppressionOn,
+          autoGainControl: true
+        },
+        video: false
+      });
+    } catch(errMic) {
+      console.warn('Fallback to basic audio constraints:', errMic);
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
 
     localAudioTrack = localStream.getAudioTracks()[0];
     if (localAudioTrack) {
@@ -116,26 +119,15 @@ async function joinCall() {
     }
 
     // Инициализируем анализатор речи
-    setupAudioActivityAnalyzer(localStream);
-
-    // Уведомляем сервер о подключении
-    const joinRes = await apiFetch('/api/call/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        audioMuted: isMicMuted,
-        videoEnabled: isCamEnabled,
-        isScreenSharing: isScreenSharing
-      })
-    });
-
-    if (!joinRes.ok) throw new Error('Не удалось войти в голосовой канал');
-    const joinData = await joinRes.json();
+    try {
+      setupAudioActivityAnalyzer(localStream);
+    } catch(errAudio) {
+      console.warn('Audio analyzer init error:', errAudio);
+    }
 
     inCall = true;
-    currentRoomParticipants = joinData.participants || [];
 
-    // Обновляем UI
+    // Обновляем UI сразу при получении доступа к микрофону
     const callStage = document.getElementById('callStage');
     if (callStage) callStage.style.display = 'block';
     
@@ -151,15 +143,36 @@ async function joinCall() {
     renderCallStage();
     toast('Вы подключились к каналу связи');
 
-    // Инициируем P2P соединения со всеми уже присутствующими операторами
-    currentRoomParticipants.forEach(p => {
-      if (p.operator !== user) {
-        initiatePeerConnection(p.operator, true);
+    // Уведомляем сервер о подключении и связываемся с пирами
+    try {
+      const joinRes = await apiFetch('/api/call/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audioMuted: isMicMuted,
+          videoEnabled: isCamEnabled,
+          isScreenSharing: isScreenSharing
+        })
+      });
+
+      if (joinRes.ok) {
+        const joinData = await joinRes.json();
+        currentRoomParticipants = joinData.participants || [];
+        renderCallStage();
+
+        // Инициируем P2P соединения со всеми уже присутствующими операторами
+        currentRoomParticipants.forEach(p => {
+          if (p.operator !== user) {
+            initiatePeerConnection(p.operator, true);
+          }
+        });
       }
-    });
+    } catch(errJoin) {
+      console.warn('Call join signaling error:', errJoin);
+    }
 
   } catch (e) {
-    console.error('Ошибка входа в звонок:', e);
+    console.error('Ошибка доступа к микрофону:', e);
     toast(e.message || 'Ошибка доступа к микрофону', 'err');
     leaveCall();
   }
