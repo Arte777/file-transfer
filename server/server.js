@@ -1318,6 +1318,87 @@ app.get('/settings', (req, res) => res.redirect('/settings.html'));
     }
   });
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  API — WebRTC Call Signaling & Room State
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const activeCallParticipants = new Map();
+
+  app.get('/api/call/room', requireAuth, (req, res) => {
+    const participants = Array.from(activeCallParticipants.values());
+    res.json({ participants });
+  });
+
+  app.post('/api/call/join', requireAuth, async (req, res) => {
+    try {
+      const user = req.authUser || req.session.user;
+      const settings = await getOperatorSettings(user);
+
+      const participant = {
+        operator: user,
+        displayName: settings.displayName || user,
+        avatarImage: settings.avatarImage || null,
+        themeColor: settings.themeColor || '#38bdf8',
+        audioMuted: !!req.body.audioMuted,
+        videoEnabled: !!req.body.videoEnabled,
+        isScreenSharing: !!req.body.isScreenSharing,
+        joinedAt: Date.now(),
+        lastSeen: Date.now()
+      };
+
+      activeCallParticipants.set(user, participant);
+
+      const participants = Array.from(activeCallParticipants.values());
+      broadcastToAll({ event: 'call_room_updated', participants, action: 'join', operator: user });
+
+      res.json({ success: true, participant, participants });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/call/leave', requireAuth, (req, res) => {
+    const user = req.authUser || req.session.user;
+    if (activeCallParticipants.has(user)) {
+      activeCallParticipants.delete(user);
+      const participants = Array.from(activeCallParticipants.values());
+      broadcastToAll({ event: 'call_room_updated', participants, action: 'leave', operator: user });
+    }
+    res.json({ success: true });
+  });
+
+  app.post('/api/call/state', requireAuth, (req, res) => {
+    const user = req.authUser || req.session.user;
+    if (activeCallParticipants.has(user)) {
+      const p = activeCallParticipants.get(user);
+      if (typeof req.body.audioMuted === 'boolean') p.audioMuted = req.body.audioMuted;
+      if (typeof req.body.videoEnabled === 'boolean') p.videoEnabled = req.body.videoEnabled;
+      if (typeof req.body.isScreenSharing === 'boolean') p.isScreenSharing = req.body.isScreenSharing;
+      p.lastSeen = Date.now();
+
+      const participants = Array.from(activeCallParticipants.values());
+      broadcastToAll({ event: 'call_room_updated', participants, action: 'state_change', operator: user });
+    }
+    res.json({ success: true });
+  });
+
+  app.post('/api/call/signal', requireAuth, (req, res) => {
+    const fromUser = req.authUser || req.session.user;
+    const { to, signal, type } = req.body;
+    if (!to || !signal) {
+      return res.status(400).json({ error: 'Missing destination or signal data' });
+    }
+
+    broadcastToOperator(to, {
+      event: 'call_signal',
+      from: fromUser,
+      to: to,
+      signal: signal,
+      type: type || 'signal'
+    });
+
+    res.json({ success: true });
+  });
+
   app.post('/analyze', requireAuth, async (req, res) => {
   const { filename } = req.body;
   const db = await getDb();

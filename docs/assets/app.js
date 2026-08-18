@@ -445,6 +445,14 @@ function initRealtimeEvents() {
           });
         } else if (data.event === 'chat_message') {
           checkUnreadChatBackground();
+        } else if (data.event === 'call_signal') {
+          if (typeof window.handleIncomingCallSignal === 'function') {
+            window.handleIncomingCallSignal(data);
+          }
+        } else if (data.event === 'call_room_updated') {
+          if (typeof window.handleCallRoomUpdate === 'function') {
+            window.handleCallRoomUpdate(data);
+          }
         }
       } catch (err) {}
     };
