@@ -334,7 +334,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
 
 app.post('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword, drainGamepasses } = req.body || {};
+  const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
     const pwdValid = await checkPassword(user, currentPassword);
@@ -353,7 +353,6 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (newPassword) patch.password = newPassword;
-  if (typeof drainGamepasses === 'string') patch.drainGamepasses = drainGamepasses.substring(0, 1000);
 
   try {
     await setOperatorSettings(user, patch);
