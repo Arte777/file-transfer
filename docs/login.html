@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Вход</title>
+  <title>NEXUS — Вход в терминал</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=106">
+  <link rel="stylesheet" href="assets/style.css?v=108">
 </head>
 <body class="login-body">
 
   <div class="login-card">
     <div class="login-logo">
+      <div class="login-logo-icon">⚡</div>
       <div class="login-logo-text">NEXUS</div>
     </div>
     
-    <h1>Вход в систему</h1>
     <div class="login-subtitle">Авторизация для управления узлами</div>
 
     <form id="loginForm">
@@ -24,22 +24,22 @@
         <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
       </div>
       <div class="input-group">
-        <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
+        <input type="password" id="password" placeholder="Пароль доступа" required autocomplete="current-password">
       </div>
       
       <label class="remember-me">
-        <input type="checkbox" id="rememberMe"> Запомнить меня
+        <input type="checkbox" id="rememberMe"> Запомнить сессию
       </label>
       
-      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
+      <button type="submit" class="btn-submit" id="submitBtn">Войти в терминал</button>
     </form>
 
     <div class="security-note">
-      Все действия логируются. Несанкционированный доступ запрещен.
+      🔒 Защищённый канал передачи данных. Несанкционированный доступ запрещён.
     </div>
   </div>
 
-  <script src="assets/config.js?v=106"></script>
+  <script src="assets/config.js?v=108"></script>
   <script>
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {
@@ -78,7 +78,7 @@
       
       errBox.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = 'Вход...';
+      btn.textContent = 'Проверка...';
       
       try {
         const res = await fetch(API_BASE + '/api/login', {
@@ -121,16 +121,13 @@
           errBox.textContent = data.error || 'Неверный логин или пароль';
           errBox.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = 'Войти';
-          errBox.style.animation = 'none';
-          errBox.offsetHeight;
-          errBox.style.animation = 'shake 0.4s ease';
+          btn.textContent = 'Войти в терминал';
         }
       } catch (e) {
         errBox.textContent = 'Ошибка сети. Сервер недоступен.';
         errBox.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Войти';
+        btn.textContent = 'Войти в терминал';
       }
     });
   </script>
