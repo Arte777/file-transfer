@@ -129,16 +129,21 @@ body {
 .logo {
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
   margin-bottom: 2.5rem;
-  padding: 0 0.6rem;
+  padding: 0.5rem 0;
   text-decoration: none;
 }
 
 .logo-text {
   font-size: 1.5rem;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 2px;
   color: #fff;
+  text-align: center;
+  width: 100%;
 }
 
 .login-logo-text {
