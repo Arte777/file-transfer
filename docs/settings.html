@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEXUS — Настройки</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=121">
+  <link rel="stylesheet" href="assets/style.css?v=122">
 </head>
 <body>
   <div class="sidebar-layout">
@@ -90,6 +90,29 @@
               </div>
             </div>
 
+            <!-- Badges & Indicators Test Card -->
+            <div class="settings-card">
+              <div style="margin-bottom: 0.8rem;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">Индикаторы и бейджи меню</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                  Проверка красного счётчика на «Уведомления» и бейджа «NEW» на «Обновления».
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestAddNotifBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    +1 Непрочитанное (Красный)
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btnTestToggleUpdateBadge" style="flex:1; padding: 0.75rem 0.5rem; font-size:0.82rem;">
+                    Показать «NEW»
+                  </button>
+                </div>
+                <button type="button" class="btn-secondary btn-sm" id="btnTestClearBadges" style="width:100%; padding: 0.75rem 1rem;">
+                  Сбросить все бейджи
+                </button>
+              </div>
+            </div>
+
             <!-- Extension Card -->
             <div class="settings-card">
               <div style="margin-bottom: 0.8rem;">
@@ -120,8 +143,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=121"></script>
-  <script src="assets/app.js?v=121"></script>
-  <script src="assets/settings.js?v=121"></script>
+  <script src="assets/config.js?v=122"></script>
+  <script src="assets/app.js?v=122"></script>
+  <script src="assets/settings.js?v=122"></script>
 </body>
 </html>
