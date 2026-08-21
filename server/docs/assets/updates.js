@@ -161,3 +161,10 @@ function renderUpdates() {
     listEl.appendChild(card);
   });
 }
+
+try {
+  if (typeof UPDATES !== 'undefined' && UPDATES.length > 0) {
+    localStorage.setItem('ft_seen_update_version', UPDATES[0].version);
+  }
+} catch (e) {}
+
