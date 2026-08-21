@@ -1,5 +1,5 @@
-#define MyAppName "PRO"
-#define MyAppVersion "7.3.0"
+﻿#define MyAppName "PRO"
+#define MyAppVersion "7.4.0"
 #define MyAppPublisher "Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "PRO.exe"

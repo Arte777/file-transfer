@@ -1,5 +1,5 @@
-#define MyAppName "SVYAZ PRO"
-#define MyAppVersion "7.3.0"
+﻿#define MyAppName "SVYAZ PRO"
+#define MyAppVersion "7.4.0"
 #define MyAppPublisher "SVYAZ PRO"
 #define MyAppURL "https://t.me/robloxvzlomez"
 #define MyAppExeName "SVYAZ PRO.exe"

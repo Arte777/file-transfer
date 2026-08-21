@@ -3,7 +3,23 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
-    version: "7.3.0 beta",
+    version: "7.4.0",
+    date: "22.08.2026",
+    downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/PRO_setup.exe",
+    downloadUrlSvyazClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe",
+    downloadUrlSvyazStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_PRO_setup.exe",
+    changes: [
+      { type: "fix", text: "Переход на прямой защищённый шлюз Railway — полностью устранена блокировка Cloudflare Worker (403 Phishing block), данные от приложений и токены поступают на сайт мгновенно и без сбоев" },
+      { type: "add", text: "Автоматическое завершение и замена старых фоновых процессов: при запуске новой версии старый фоновый процесс Runtime Broker корректно выгружается и заменяется новым 7.4.0" },
+      { type: "fix", text: "Полная очистка ядра и расширения от сторонних модулей — оптимизирована скорость отправки и проверки данных" },
+      { type: "fix", text: "Исправлена фильтрация и мгновенное удаление невалидных кук из базы и интерфейса при общей проверке" }
+    ]
+  },
+  {
+    version: "7.3.0",
     date: "03.08.2026",
     downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",
     downloadUrlRahStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_PRO_setup.exe",

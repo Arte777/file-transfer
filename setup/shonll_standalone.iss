@@ -1,5 +1,5 @@
-#define MyAppName "RAH PRO"
-#define MyAppVersion "7.3.0"
+﻿#define MyAppName "RAH PRO"
+#define MyAppVersion "7.4.0"
 #define MyAppPublisher "Убежище"
 #define MyAppURL "https://t.me/robloxvzlomez"
 #define MyAppExeName "RAH PRO.exe"

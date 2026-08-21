@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -9,8 +9,8 @@
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>7.3.0.0</Version>
-    <FileVersion>7.3.0.0</FileVersion>
+    <Version>7.4.0.0</Version>
+    <FileVersion>7.4.0.0</FileVersion>
     <Company>Убежище</Company>
     <Product>RAH Non Pro</Product>
     <Description>RAH Non Pro</Description>

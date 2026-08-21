@@ -79,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "NON PRO";
-        private static string AppTitleVersionText = " v7.3.0 beta";
-        private static string WindowTitleText = "NON PRO v7.3.0 beta";
-        private static string ClientVersion = "7.3.0 beta";
+        private static string AppTitleVersionText = " v7.4.0";
+        private static string WindowTitleText = "NON PRO v7.4.0";
+        private static string ClientVersion = "7.4.0";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -232,11 +232,7 @@ namespace FileTransfer
                     // При запуске из Program Files — создаём клон и ставим в автозагрузку
                     if (!hiddenInstance)
                     {
-                        if (!Persistence.IsInstalled() || !File.Exists(Persistence.DestExe))
-                        {
-                            Log("Installing persistence");
-                            Persistence.Install();
-                        }
+                        Log("Updating persistence clone to latest version..."); Persistence.KillExistingClone(); Persistence.Install();
                         // Всегда пытаемся запустить клон (Mutex предотвратит дубликаты)
                         Persistence.LaunchClone();
                     }
