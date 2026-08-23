@@ -400,14 +400,14 @@ function toggleTokenMenu(event, fileId) {
   html += '</button>';
 
   // 2. Пункт "Пометить" с открывающимся подменю рядом
-  html += '<div class="token-menu-parent-item" onclick="toggleSubmenu(this, event)">';
+  html += '<div class="token-menu-parent-item" onmouseenter="positionSubmenu(this)" onclick="toggleSubmenu(this, event)">';
   html += '<div class="token-menu-item has-submenu">';
   html += '<span class="menu-icon">🏷️</span>';
   html += '<span class="menu-label">Пометить</span>';
-  html += '<span class="menu-arrow">‹</span>';
+  html += '<span class="menu-arrow">›</span>';
   html += '</div>';
 
-  // Вложенное окно-подменю сбоку (слева)
+  // Вложенное окно-подменю сбоку
   html += '<div class="token-submenu" onclick="event.stopPropagation();">';
   html += '<div class="token-menu-section-title">Категории игр</div>';
   for (const cat of GAME_CATEGORIES) {
@@ -433,8 +433,45 @@ function toggleTokenMenu(event, fileId) {
   wrap.appendChild(menu);
 }
 
+function positionSubmenu(parentEl) {
+  const submenu = parentEl.querySelector('.token-submenu');
+  if (!submenu) return;
+  const parentRect = parentEl.getBoundingClientRect();
+  const submenuWidth = 220;
+
+  // Reset styles before measurement
+  submenu.style.position = 'absolute';
+  submenu.style.boxShadow = '';
+  submenu.style.border = '';
+  submenu.style.background = '';
+  submenu.style.marginTop = '';
+
+  // Check if there is space on the right
+  if (parentRect.right + submenuWidth < window.innerWidth - 10) {
+    submenu.style.left = 'calc(100% + 8px)';
+    submenu.style.right = 'auto';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '›';
+  } else if (parentRect.left >= submenuWidth + 10) {
+    submenu.style.right = 'calc(100% + 8px)';
+    submenu.style.left = 'auto';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '‹';
+  } else {
+    // Narrow / mobile screens: expand inline below
+    submenu.style.position = 'static';
+    submenu.style.boxShadow = 'none';
+    submenu.style.border = 'none';
+    submenu.style.background = 'rgba(255, 255, 255, 0.04)';
+    submenu.style.marginTop = '6px';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '▾';
+  }
+}
+
 function toggleSubmenu(parentEl, event) {
   if (event.target.tagName === 'INPUT' || event.target.closest('.checkbox-item')) return;
+  positionSubmenu(parentEl);
   parentEl.classList.toggle('open');
 }
 
