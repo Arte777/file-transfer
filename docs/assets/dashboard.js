@@ -169,23 +169,17 @@ function renderChart(files) {
 }
 
 function supportsUpdate(ver) {
-  if (!ver) return false;
-  ver = ver.replace(/^v/i, '').trim();
-  try {
-    // Поддержка обновления есть начиная с версии 7.2.2
-    return '7.2.2'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) <= 0;
-  } catch (e) {
-    return ver === '7.2.2';
-  }
+  return true; // Все версии 7.0.0+ поддерживают фоновое обновление
 }
 
 function isOutdated(ver) {
-  if (!ver) return false;
+  if (!ver) return true;
   ver = ver.replace(/^v/i, '').trim();
+  const CURRENT = '7.4.0';
   try {
-    return '7.2.3'.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+    return CURRENT.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
   } catch (e) {
-    return ver !== '7.2.3';
+    return ver !== CURRENT;
   }
 }
 
@@ -210,8 +204,8 @@ function getOutdatedComputersInfo() {
     const f = latestByPc[pcName];
     const ver = f.computer?.version || "7.0.0";
     
-    // Считаем только те ПК, которые поддерживают обновление (>= 7.2.1) и имеют версию ниже 7.2.2
-    if (supportsUpdate(ver) && isOutdated(ver)) {
+    // Любой ПК с версией < 7.4.0 считается устаревшим и доступным для обновления
+    if (isOutdated(ver)) {
       outdatedCount++;
     }
   }
