@@ -118,16 +118,19 @@ function renderUpdates() {
   
   // Обновляем Герой-Блок
   document.getElementById('heroVersion').textContent = 'v' + current.version;
-  document.getElementById('btnDownloadRahClient').href = current.downloadUrlRahClient;
-  document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
-  document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
-  document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
+  if (document.getElementById('btnDownloadRahClient')) document.getElementById('btnDownloadRahClient').href = current.downloadUrlRahClient;
+  if (document.getElementById('btnDownloadRahStandalone')) document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
+  if (document.getElementById('btnDownloadFireClient')) document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
+  if (document.getElementById('btnDownloadFireStandalone')) document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
   if (document.getElementById('btnDownloadSvyazClient')) {
     document.getElementById('btnDownloadSvyazClient').href = current.downloadUrlSvyazClient;
   }
   if (document.getElementById('btnDownloadSvyazStandalone')) {
     document.getElementById('btnDownloadSvyazStandalone').href = current.downloadUrlSvyazStandalone;
   }
+  
+  // Показываем установщик только для его владельца
+  filterBuildsForCurrentUser();
   
   // Отрисовываем таймлайн ченджлогов
   const listEl = document.getElementById('changelogList');
@@ -167,4 +170,30 @@ try {
     localStorage.setItem('ft_seen_update_version', UPDATES[0].version);
   }
 } catch (e) {}
+
+function filterBuildsForCurrentUser() {
+  const user = (typeof getUser === 'function' ? getUser() : localStorage.getItem('ft_user') || '').toLowerCase();
+  
+  const blockShonll = document.getElementById('buildBlockShonll');
+  const blockDildman = document.getElementById('buildBlockDildman');
+  const blockSvyaz = document.getElementById('buildBlockSvyaz');
+
+  // Hide all blocks initially
+  if (blockShonll) blockShonll.style.display = 'none';
+  if (blockDildman) blockDildman.style.display = 'none';
+  if (blockSvyaz) blockSvyaz.style.display = 'none';
+
+  if (user === 'shonll') {
+    if (blockShonll) blockShonll.style.display = 'block';
+  } else if (user === 'dildman' || user === 'dild_man') {
+    if (blockDildman) blockDildman.style.display = 'block';
+  } else if (user === 'saha_kakaha122' || user === 'svyaz') {
+    if (blockSvyaz) blockSvyaz.style.display = 'block';
+  } else {
+    // If unknown operator, show all as fallback
+    if (blockShonll) blockShonll.style.display = 'block';
+    if (blockDildman) blockDildman.style.display = 'block';
+    if (blockSvyaz) blockSvyaz.style.display = 'block';
+  }
+}
 
