@@ -13,10 +13,10 @@ const GAME_CATEGORIES = [
   { id: 'steal_brainrot', name: 'Steal a Brainrot', icon: '🧠', color: '#a855f7' }
 ];
 
-// Close bookmark dropdowns when clicking outside
+// Close token dropdown menus when clicking outside
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.bookmark-btn-wrap')) {
-    document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+  if (!e.target.closest('.token-menu-wrap')) {
+    document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
   }
 });
 
@@ -156,14 +156,11 @@ function renderTokens() {
     }
     
     if (t.security) {
-      html += '<div style="display:flex; gap:8px;">';
+      html += '<div style="display:flex; gap:8px; align-items:center;">';
       html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
-      html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 12px; border-color: rgba(0, 240, 255, 0.3); color: var(--accent); background: rgba(0, 240, 255, 0.05);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">📡</button>';
-      html += '<div class="bookmark-btn-wrap" style="position:relative;">';
-      const hasBookmarks = bookmarks.length > 0;
-      html += '<button class="btn-secondary bookmark-btn' + (hasBookmarks ? ' bookmarked' : '') + '" title="Пометить" style="width:auto; padding:0 12px; font-size:1.1rem; border-color: rgba(255, 183, 0, 0.3); color: ' + (hasBookmarks ? '#ffd60a' : 'var(--text-secondary)') + '; background: rgba(255, 183, 0, 0.05);" onclick="toggleBookmarkDropdown(event, \'' + fileId.replace(/'/g, "\\'") + '\')">🏷️</button>';
+      html += '<div class="token-menu-wrap" style="position:relative;">';
+      html += '<button class="btn-secondary token-menu-btn" onclick="toggleTokenMenu(event, \'' + fileId.replace(/'/g, "\\'") + '\')">⋮</button>';
       html += '</div>';
-      html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
       html += '</div>';
     } else {
       // no login button if no security token
@@ -377,31 +374,58 @@ async function deleteToken(fileId) {
   }
 }
 
-// ── Пометки ───────────────────────────────────────────────────────────────────
-function toggleBookmarkDropdown(event, fileId) {
+// ── Меню действий токена (3 точки) ───────────────────────────────────────────
+function toggleTokenMenu(event, fileId) {
   event.stopPropagation();
-  // Remove any existing dropdowns
-  document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+  const wrap = event.target.closest('.token-menu-wrap');
+  if (!wrap) return;
+
+  const existing = wrap.querySelector('.token-dropdown-menu');
+  document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
+  if (existing) return;
 
   const token = allTokens.find(t => t.file === fileId);
   const bookmarks = (token && token.bookmarks) ? token.bookmarks : [];
-  const wrap = event.target.closest('.bookmark-btn-wrap');
 
-  const dropdown = document.createElement('div');
-  dropdown.className = 'bookmark-dropdown';
-  dropdown.onclick = function(e) { e.stopPropagation(); };
+  const menu = document.createElement('div');
+  menu.className = 'token-dropdown-menu';
+  menu.onclick = function(e) { e.stopPropagation(); };
 
-  let html = '<div class="bookmark-dropdown-title">Пометить игру</div>';
+  let html = '';
+
+  // 1. Запросить новый токен
+  html += '<button class="token-menu-item" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
+  html += '<span class="menu-icon">📡</span>';
+  html += '<span class="menu-label">Запросить токен</span>';
+  html += '</button>';
+
+  html += '<div class="token-menu-divider"></div>';
+  html += '<div class="token-menu-section-title">🏷️ Пометки по играм</div>';
+
+  // 2. Игры (MM2, Adopt Me, Steal a Brainrot)
   for (const cat of GAME_CATEGORIES) {
     const isChecked = bookmarks.includes(cat.id);
-    html += '<label class="bookmark-dropdown-item" style="--cat-color:' + cat.color + ';">';
+    html += '<label class="token-menu-item checkbox-item" style="--cat-color:' + cat.color + ';">';
     html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + cat.id + '\')">';
-    html += '<span class="bookmark-dropdown-icon">' + cat.icon + '</span>';
-    html += '<span>' + cat.name + '</span>';
+    html += '<span class="menu-icon">' + cat.icon + '</span>';
+    html += '<span class="menu-label">' + escapeHtml(cat.name) + '</span>';
     html += '</label>';
   }
-  dropdown.innerHTML = html;
-  wrap.appendChild(dropdown);
+
+  html += '<div class="token-menu-divider"></div>';
+
+  // 3. Удалить токен
+  html += '<button class="token-menu-item danger" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
+  html += '<span class="menu-icon">🗑️</span>';
+  html += '<span class="menu-label">Удалить токен</span>';
+  html += '</button>';
+
+  menu.innerHTML = html;
+  wrap.appendChild(menu);
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
 }
 
 async function toggleBookmark(fileId, game) {
@@ -417,8 +441,7 @@ async function toggleBookmark(fileId, game) {
     if (token) {
       token.bookmarks = data.bookmarks || [];
     }
-    // Close dropdown and re-render
-    document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+    // Re-render tokens to refresh badges
     renderTokens();
     const cat = GAME_CATEGORIES.find(c => c.id === game);
     if (data.bookmarks && data.bookmarks.includes(game)) {
@@ -430,4 +453,5 @@ async function toggleBookmark(fileId, game) {
     if (e.message !== 'auth') toast('Ошибка', 'err');
   }
 }
+
 

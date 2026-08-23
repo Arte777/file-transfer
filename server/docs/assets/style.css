@@ -1376,64 +1376,129 @@ body::before {
   background: rgba(255, 214, 10, 0.1) !important;
 }
 
-/* Bookmark dropdown */
-.bookmark-dropdown {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  z-index: 100;
-  min-width: 210px;
-  background: var(--surface-solid);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.3);
-  padding: 8px;
-  backdrop-filter: blur(20px);
-  animation: dropdown-in 0.15s ease-out;
+/* ── Token 3-dots Menu ─────────────────────────────────────────────────── */
+.token-menu-wrap {
+  position: relative;
 }
 
-@keyframes dropdown-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.bookmark-dropdown-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  padding: 4px 8px 8px;
-}
-
-.bookmark-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+.token-menu-btn {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  padding: 0 !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: var(--text-secondary) !important;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text);
   transition: var(--transition);
 }
 
-.bookmark-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+.token-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
 }
 
-.bookmark-dropdown-item input[type="checkbox"] {
+.token-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  min-width: 220px;
+  background: rgba(12, 12, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  backdrop-filter: blur(24px);
+  animation: dropdown-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.token-menu-section-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  padding: 6px 10px 4px;
+}
+
+.token-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 4px 6px;
+}
+
+.token-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  border: none;
+  text-align: left;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.token-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.token-menu-item .menu-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.token-menu-item .menu-label {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.token-menu-item.checkbox-item {
+  position: relative;
+}
+
+.token-menu-item.checkbox-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
   accent-color: var(--cat-color, var(--accent));
   cursor: pointer;
   flex-shrink: 0;
+  margin-right: -2px;
 }
 
-.bookmark-dropdown-icon {
-  font-size: 1.1rem;
-  flex-shrink: 0;
+.token-menu-item.danger {
+  color: #ff4757;
+}
+
+.token-menu-item.danger:hover {
+  background: rgba(255, 71, 87, 0.12);
+  color: #ff6b81;
 }
 
 /* Bookmark category sections on bookmarks page */
