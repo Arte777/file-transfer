@@ -1,19 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyName>PRO</AssemblyName>
+    <AssemblyName>HEART PRO</AssemblyName>
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>7.4.0.0</Version>
     <FileVersion>7.4.0.0</FileVersion>
     <Company>Pyshinka</Company>
-    <Product>PRO</Product>
-    <Description>PRO</Description>
+    <Product>HEART PRO</Product>
+    <Description>HEART PRO</Description>
     <Copyright>Pyshinka</Copyright>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>

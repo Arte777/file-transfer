@@ -1,8 +1,8 @@
-﻿#define MyAppName "PRO"
+#define MyAppName "HEART PRO"
 #define MyAppVersion "7.4.0"
-#define MyAppPublisher "Pyshinka"
+#define MyAppPublisher "HEART PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
-#define MyAppExeName "PRO.exe"
+#define MyAppExeName "HEART PRO.exe"
 
 [Setup]
 AppId={{6E1C4D8A-9F3B-42E7-A5D1-8C0B6F3E2A74}

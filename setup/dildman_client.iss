@@ -1,8 +1,8 @@
-﻿#define MyAppName "NON PRO"
+#define MyAppName "HEART Non Pro"
 #define MyAppVersion "7.4.0"
-#define MyAppPublisher "NON PRO Pyshinka"
+#define MyAppPublisher "HEART NON PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
-#define MyAppExeName "Non Pro.exe"
+#define MyAppExeName "HEART Non Pro.exe"
 
 [Setup]
 AppId={{7A2D9E1F-3C5B-4D8E-A1F6-9B0C7D2E3F41}
