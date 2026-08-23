@@ -12,6 +12,13 @@ const GAME_CATEGORIES = [
 
 let allBookmarked = [];
 
+// Close token dropdown menus when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.token-menu-wrap')) {
+    closeAllMenus();
+  }
+});
+
 async function loadBookmarks() {
   const container = document.getElementById('bookmarksContainer');
   container.innerHTML = '<div class="skeleton-row" style="height:100px;"><div class="skeleton-block" style="flex:1;"></div></div>';
@@ -57,10 +64,14 @@ function renderBookmarks() {
     html += '<span style="font-size:1.5rem;">' + cat.icon + '</span> ' + escapeHtml(cat.name);
     html += ' <span class="bookmark-category-count">' + tokens.length + '</span>';
     html += '</div>';
-    if (tokens.length > 0) {
-      html += '<button class="btn-secondary bookmark-login-all" style="border-color:' + cat.color + '30; color:' + cat.color + '; background:' + cat.color + '0a;" onclick="loginAllInCategory(\'' + cat.id + '\')">';
-      html += '👤 Войти во всех (' + tokens.length + ')</button>';
-    }
+
+    // Кнопки "Запросить" и "Проверить" на каждой категории
+    html += '<div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">';
+    html += '<button class="btn-secondary" style="border-color:' + cat.color + '40; color:' + cat.color + '; background:' + cat.color + '0a;" onclick="requestCategory(\'' + cat.id + '\', this)" title="Запросить обновление всех токенов в категории ' + escapeHtml(cat.name) + '">';
+    html += '<span style="font-size: 1.1rem;">📡</span> Запросить</button>';
+    html += '<button class="check-all-btn" style="border-color:' + cat.color + '60; color:' + cat.color + '; background:' + cat.color + '15;" onclick="checkCategory(\'' + cat.id + '\', this)" title="Проверить все токены в категории ' + escapeHtml(cat.name) + '">';
+    html += '<span style="font-size: 1.1rem;">⟳</span> Проверить</button>';
+    html += '</div>';
     html += '</div>';
 
     if (tokens.length === 0) {
@@ -68,7 +79,7 @@ function renderBookmarks() {
     } else {
       html += '<div class="tokens-grid">';
       for (const t of tokens) {
-        html += renderBookmarkCard(t, cat.id);
+        html += renderBookmarkCard(t);
       }
       html += '</div>';
     }
@@ -78,7 +89,7 @@ function renderBookmarks() {
   container.innerHTML = html;
 }
 
-function renderBookmarkCard(t, categoryId) {
+function renderBookmarkCard(t) {
   const valid = t.valid;
   const badgeClass = valid ? 'badge-valid' : 'badge-invalid';
   const statusText = valid ? '✅' : '❌';
@@ -103,14 +114,17 @@ function renderBookmarkCard(t, categoryId) {
   html += '<div class="token-card-computer">💻 ' + escapeHtml(t.computer || '—') + '</div>';
   
   // Bookmark badges
-  html += '<div class="bookmark-badges">';
-  for (const bm of (t.bookmarks || [])) {
-    const bmCat = GAME_CATEGORIES.find(c => c.id === bm);
-    if (bmCat) {
-      html += '<span class="bookmark-badge" style="background:' + bmCat.color + '15; color:' + bmCat.color + '; border-color:' + bmCat.color + '30;">' + bmCat.icon + ' ' + bmCat.name + '</span>';
+  const bookmarks = t.bookmarks || [];
+  if (bookmarks.length > 0) {
+    html += '<div class="bookmark-badges">';
+    for (const bm of bookmarks) {
+      const bmCat = GAME_CATEGORIES.find(c => c.id === bm);
+      if (bmCat) {
+        html += '<span class="bookmark-badge" style="background:' + bmCat.color + '15; color:' + bmCat.color + '; border-color:' + bmCat.color + '30;">' + bmCat.icon + ' ' + bmCat.name + '</span>';
+      }
     }
+    html += '</div>';
   }
-  html += '</div>';
   
   html += '<div class="token-card-actions">';
   
@@ -124,9 +138,11 @@ function renderBookmarkCard(t, categoryId) {
       loginClass = 'btn-login logged-in';
     }
     
-    html += '<div style="display:flex; gap:8px;">';
+    html += '<div style="display:flex; gap:8px; align-items:center;">';
     html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
-    html += '<button class="btn-secondary" title="Снять пометку ' + escapeHtml(GAME_CATEGORIES.find(c=>c.id===categoryId)?.name || '') + '" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="removeBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + categoryId + '\')">✖</button>';
+    html += '<div class="token-menu-wrap" style="position:relative;">';
+    html += '<button class="btn-secondary token-menu-btn" onclick="toggleTokenMenu(event, \'' + fileId.replace(/'/g, "\\'") + '\')">⋮</button>';
+    html += '</div>';
     html += '</div>';
   }
   
@@ -134,7 +150,258 @@ function renderBookmarkCard(t, categoryId) {
   return html;
 }
 
-// ── Login to Roblox (same as tokens.js) ────────────────────────────────────────
+// ── Меню действий токена (3 точки) ───────────────────────────────────────────
+function toggleTokenMenu(event, fileId) {
+  event.stopPropagation();
+  const wrap = event.target.closest('.token-menu-wrap');
+  if (!wrap) return;
+  const card = wrap.closest('.token-card');
+
+  const existing = wrap.querySelector('.token-dropdown-menu');
+  closeAllMenus();
+  if (existing) return;
+
+  if (card) card.classList.add('menu-open');
+
+  const token = allBookmarked.find(t => t.file === fileId);
+  const bookmarks = (token && token.bookmarks) ? token.bookmarks : [];
+
+  const menu = document.createElement('div');
+  menu.className = 'token-dropdown-menu';
+  menu.onclick = function(e) { e.stopPropagation(); };
+
+  let html = '';
+
+  // 1. Запросить новый токен
+  html += '<button class="token-menu-item" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
+  html += '<span class="menu-icon">📡</span>';
+  html += '<span class="menu-label">Запросить токен</span>';
+  html += '</button>';
+
+  // 2. Пункт "Пометить" с открывающимся подменю рядом
+  html += '<div class="token-menu-parent-item" onmouseenter="positionSubmenu(this)" onclick="toggleSubmenu(this, event)">';
+  html += '<div class="token-menu-item has-submenu">';
+  html += '<span class="menu-icon">🏷️</span>';
+  html += '<span class="menu-label">Пометить</span>';
+  html += '<span class="menu-arrow">›</span>';
+  html += '</div>';
+
+  // Вложенное окно-подменю сбоку
+  html += '<div class="token-submenu" onclick="event.stopPropagation();">';
+  html += '<div class="token-menu-section-title">Категории игр</div>';
+  for (const cat of GAME_CATEGORIES) {
+    const isChecked = bookmarks.includes(cat.id);
+    html += '<label class="token-menu-item checkbox-item" style="--cat-color:' + cat.color + ';">';
+    html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + cat.id + '\', this)">';
+    html += '<span class="menu-icon">' + cat.icon + '</span>';
+    html += '<span class="menu-label">' + escapeHtml(cat.name) + '</span>';
+    html += '</label>';
+  }
+  html += '</div>'; // end token-submenu
+  html += '</div>'; // end token-menu-parent-item
+
+  html += '<div class="token-menu-divider"></div>';
+
+  // 3. Удалить токен
+  html += '<button class="token-menu-item danger" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
+  html += '<span class="menu-icon">🗑️</span>';
+  html += '<span class="menu-label">Удалить токен</span>';
+  html += '</button>';
+
+  menu.innerHTML = html;
+  wrap.appendChild(menu);
+}
+
+function positionSubmenu(parentEl) {
+  const submenu = parentEl.querySelector('.token-submenu');
+  if (!submenu) return;
+  const parentRect = parentEl.getBoundingClientRect();
+  const submenuWidth = 220;
+
+  submenu.style.position = 'absolute';
+  submenu.style.boxShadow = '';
+  submenu.style.border = '';
+  submenu.style.background = '';
+  submenu.style.marginTop = '';
+
+  if (parentRect.right + submenuWidth < window.innerWidth - 10) {
+    submenu.style.left = 'calc(100% + 8px)';
+    submenu.style.right = 'auto';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '›';
+  } else if (parentRect.left >= submenuWidth + 10) {
+    submenu.style.right = 'calc(100% + 8px)';
+    submenu.style.left = 'auto';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '‹';
+  } else {
+    submenu.style.position = 'static';
+    submenu.style.boxShadow = 'none';
+    submenu.style.border = 'none';
+    submenu.style.background = 'rgba(255, 255, 255, 0.04)';
+    submenu.style.marginTop = '6px';
+    const arrow = parentEl.querySelector('.menu-arrow');
+    if (arrow) arrow.textContent = '▾';
+  }
+}
+
+function toggleSubmenu(parentEl, event) {
+  if (event.target.tagName === 'INPUT' || event.target.closest('.checkbox-item')) return;
+  positionSubmenu(parentEl);
+  parentEl.classList.toggle('open');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.token-card.menu-open').forEach(c => c.classList.remove('menu-open'));
+  document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
+}
+
+async function toggleBookmark(fileId, game, checkboxEl) {
+  try {
+    const r = await apiFetch('/api/bookmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: fileId, game: game })
+    });
+    const data = await r.json();
+    const token = allBookmarked.find(t => t.file === fileId);
+    if (token) {
+      token.bookmarks = data.bookmarks || [];
+      if (token.bookmarks.length === 0) {
+        allBookmarked = allBookmarked.filter(t => t.file !== fileId);
+      }
+    }
+    updateStats();
+    renderBookmarks();
+    const cat = GAME_CATEGORIES.find(c => c.id === game);
+    if (data.bookmarks && data.bookmarks.includes(game)) {
+      toast('🏷️ Помечено: ' + (cat ? cat.name : game));
+    } else {
+      toast('🏷️ Пометка снята: ' + (cat ? cat.name : game));
+    }
+  } catch (e) {
+    if (checkboxEl) checkboxEl.checked = !checkboxEl.checked;
+    if (e.message !== 'auth') toast('Ошибка', 'err');
+  }
+}
+
+// ── Запрос токенов категории ──────────────────────────────────────────────────
+async function requestCategory(categoryId, btn) {
+  const tokens = allBookmarked.filter(t => (t.bookmarks || []).includes(categoryId) && t.file);
+  const cat = GAME_CATEGORIES.find(c => c.id === categoryId);
+  if (tokens.length === 0) {
+    toast('Нет аккаунтов в категории ' + (cat ? cat.name : ''), 'err');
+    return;
+  }
+  if (!confirm('Отправить команду на принудительное обновление токенов для всех ' + tokens.length + ' аккаунтов категории ' + (cat ? cat.name : '') + '?')) return;
+
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="font-size: 1.1rem;">⏳</span> Запрос...';
+
+  try {
+    const reqs = tokens.map(t => apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: t.file })
+    }).catch(() => {}));
+    await Promise.allSettled(reqs);
+    toast('✅ Запросы отправлены (' + tokens.length + ' шт.)');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки', 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+}
+
+// ── Проверка токенов категории ────────────────────────────────────────────────
+async function checkCategory(categoryId, btn) {
+  const tokens = allBookmarked.filter(t => (t.bookmarks || []).includes(categoryId) && t.file);
+  const cat = GAME_CATEGORIES.find(c => c.id === categoryId);
+  if (tokens.length === 0) {
+    toast('Нет аккаунтов в категории ' + (cat ? cat.name : ''), 'err');
+    return;
+  }
+
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="font-size: 1.1rem;">⏳</span> Проверка...';
+
+  let validCount = 0;
+  let deletedCount = 0;
+
+  try {
+    for (const t of tokens) {
+      try {
+        const r = await apiFetch('/robux-check-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: t.file })
+        });
+        const info = await r.json();
+        if (info.valid) {
+          Object.assign(t, info);
+          validCount++;
+        } else {
+          allBookmarked = allBookmarked.filter(item => item.file !== t.file);
+          deletedCount++;
+        }
+      } catch (e) {}
+    }
+
+    updateStats();
+    renderBookmarks();
+
+    if (deletedCount > 0) {
+      toast('✅ ' + cat.name + ': ' + validCount + ' рабочих, удалено невалидных: ' + deletedCount);
+    } else {
+      toast('✅ ' + cat.name + ': ' + validCount + ' рабочих');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка проверки', 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = originalHtml;
+}
+
+// ── Запросить один токен ──────────────────────────────────────────────────────
+async function requestToken(filename) {
+  if (!confirm('Отправить команду на принудительное обновление токена для этого клиента?')) return;
+  try {
+    const r = await apiFetch('/request-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    if (r.ok) {
+      toast('✅ Запрос на обновление токена отправлен!');
+    } else {
+      toast('❌ Ошибка при отправке запроса', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
+}
+
+// ── Удалить токен ─────────────────────────────────────────────────────────────
+async function deleteToken(fileId) {
+  if (!confirm('Вы уверены, что хотите удалить этот токен?')) return;
+  try {
+    const r = await apiFetch('/files/' + encodeURIComponent(fileId), { method: 'DELETE' });
+    if (r.ok) {
+      toast('Токен удален', 'success');
+      loadBookmarks();
+    } else {
+      toast('Ошибка удаления', 'err');
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка соединения', 'err');
+  }
+}
+
+// ── Login to Roblox ───────────────────────────────────────────────────────────
 function loginToRoblox(token, btn, fileId) {
   if (!token) return;
   btn.textContent = '⏳...';
@@ -188,79 +455,5 @@ function loginToRoblox(token, btn, fileId) {
   }, 800);
 }
 
-// ── Remove bookmark ────────────────────────────────────────────────────────────
-async function removeBookmark(fileId, game) {
-  try {
-    const r = await apiFetch('/api/bookmark', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: fileId, game: game })
-    });
-    const data = await r.json();
-    // Update local data
-    const token = allBookmarked.find(t => t.file === fileId);
-    if (token) {
-      token.bookmarks = data.bookmarks || [];
-      // Remove from list if no bookmarks left
-      if (token.bookmarks.length === 0) {
-        allBookmarked = allBookmarked.filter(t => t.file !== fileId);
-      }
-    }
-    updateStats();
-    renderBookmarks();
-    toast('🏷️ Пометка снята');
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка', 'err');
-  }
-}
-
-// ── Login all in category ──────────────────────────────────────────────────────
-async function loginAllInCategory(categoryId) {
-  const tokens = allBookmarked.filter(t => (t.bookmarks || []).includes(categoryId) && t.security && t.valid);
-  if (tokens.length === 0) {
-    toast('Нет рабочих аккаунтов в этой категории', 'err');
-    return;
-  }
-  const cat = GAME_CATEGORIES.find(c => c.id === categoryId);
-  if (!confirm('Войти последовательно во все ' + tokens.length + ' аккаунтов категории ' + (cat?.name || '') + '?')) return;
-  
-  toast('⏳ Вход в аккаунты ' + cat.name + '...');
-  
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    toast('⏳ Вход ' + (i + 1) + '/' + tokens.length + ': ' + (t.username || '—'));
-    
-    await new Promise((resolve) => {
-      function handler(e) {
-        if (e.data && e.data.type === 'nexus-login-response') {
-          window.removeEventListener('message', handler);
-          if (e.data.ok) {
-            apiFetch('/api/login-mark', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename: t.file })
-            }).catch(()=>{});
-            t.lastLogin = Date.now();
-          }
-          resolve();
-        }
-      }
-      window.addEventListener('message', handler);
-      window.postMessage({ type: 'nexus-login', token: t.security }, '*');
-      setTimeout(() => {
-        window.removeEventListener('message', handler);
-        resolve();
-      }, 1200);
-    });
-    
-    // Small delay between logins
-    if (i < tokens.length - 1) {
-      await new Promise(r => setTimeout(r, 500));
-    }
-  }
-  
-  renderBookmarks();
-  toast('✅ Вход завершён: ' + tokens.length + ' аккаунтов');
-}
-
 loadBookmarks();
+
