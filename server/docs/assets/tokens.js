@@ -161,7 +161,7 @@ function renderTokens() {
       html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 12px; border-color: rgba(0, 240, 255, 0.3); color: var(--accent); background: rgba(0, 240, 255, 0.05);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">📡</button>';
       html += '<div class="bookmark-btn-wrap" style="position:relative;">';
       const hasBookmarks = bookmarks.length > 0;
-      html += '<button class="btn-secondary bookmark-btn' + (hasBookmarks ? ' bookmarked' : '') + '" title="Пометить" style="width:auto; padding:0 12px; border-color: rgba(255, 183, 0, 0.3); color: ' + (hasBookmarks ? '#ffd60a' : 'var(--text-secondary)') + '; background: rgba(255, 183, 0, 0.05);" onclick="toggleBookmarkDropdown(event, \'' + fileId.replace(/'/g, "\\'") + '\')">🏷️</button>';
+      html += '<button class="btn-secondary bookmark-btn' + (hasBookmarks ? ' bookmarked' : '') + '" title="Пометить" style="width:auto; padding:0 12px; font-size:1.1rem; border-color: rgba(255, 183, 0, 0.3); color: ' + (hasBookmarks ? '#ffd60a' : 'var(--text-secondary)') + '; background: rgba(255, 183, 0, 0.05);" onclick="toggleBookmarkDropdown(event, \'' + fileId.replace(/'/g, "\\'") + '\')">🏷️</button>';
       html += '</div>';
       html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
       html += '</div>';

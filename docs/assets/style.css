@@ -1361,6 +1361,15 @@ body::before {
 }
 
 /* Bookmark button */
+.bookmark-btn {
+  min-width: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem !important;
+}
+
 .bookmark-btn.bookmarked {
   border-color: rgba(255, 214, 10, 0.4) !important;
   color: #ffd60a !important;
