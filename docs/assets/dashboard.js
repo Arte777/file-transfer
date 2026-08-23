@@ -646,13 +646,15 @@ async function checkRobux(name) {
 }
 
 function getOperatorDownloadUrl() {
-  const user = getUser();
-  const base = window.API_BASE || window.location.origin;
-  if (user === 'Shonll') {
-    return base + '/downloads/RAH_Non_Pro.exe';
-  } else {
-    return base + '/downloads/NON_PRO.exe';
+  const user = (getUser() || '').toLowerCase();
+  if (user === 'shonll') {
+    return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
+  } else if (user === 'dildman' || user === 'dild_man') {
+    return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe';
+  } else if (user === 'saha_kakaha122' || user === 'svyaz') {
+    return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe';
   }
+  return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
 }
 
 async function updateClient(filename) {
@@ -698,22 +700,12 @@ async function updateAllClients(outdatedCount) {
 function initUpdateCard() {
   const card = document.getElementById('updateAllCard');
   if (!card) return;
-  const user = getUser();
-  // Активируем кнопку для Shonll и dildman
-  if (user === 'Shonll' || user === 'dildman') {
-    card.classList.add('active-action');
-    card.classList.remove('disabled-action');
-    card.onclick = function() {
-      const outdatedInfo = getOutdatedComputersInfo();
-      updateAllClients(outdatedInfo.outdated);
-    };
-  } else {
-    card.classList.add('disabled-action');
-    card.classList.remove('active-action');
-    card.onclick = function(e) {
-      e.stopPropagation();
-    };
-  }
+  card.classList.add('active-action');
+  card.classList.remove('disabled-action');
+  card.onclick = function() {
+    const outdatedInfo = getOutdatedComputersInfo();
+    updateAllClients(outdatedInfo.outdated);
+  };
 }
 
 initUpdateCard();
