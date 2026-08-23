@@ -379,10 +379,13 @@ function toggleTokenMenu(event, fileId) {
   event.stopPropagation();
   const wrap = event.target.closest('.token-menu-wrap');
   if (!wrap) return;
+  const card = wrap.closest('.token-card');
 
   const existing = wrap.querySelector('.token-dropdown-menu');
-  document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
+  closeAllMenus();
   if (existing) return;
+
+  if (card) card.classList.add('menu-open');
 
   const token = allTokens.find(t => t.file === fileId);
   const bookmarks = (token && token.bookmarks) ? token.bookmarks : [];
@@ -476,6 +479,7 @@ function toggleSubmenu(parentEl, event) {
 }
 
 function closeAllMenus() {
+  document.querySelectorAll('.token-card.menu-open').forEach(c => c.classList.remove('menu-open'));
   document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
 }
 

@@ -461,11 +461,24 @@ body::before {
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-lg);
-  overflow: hidden;
   position: relative;
   transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   cursor: pointer;
   animation: zoomIn 0.5s backwards;
+}
+
+.file-card {
+  overflow: hidden;
+}
+
+.token-card {
+  overflow: visible;
+  z-index: 1;
+}
+
+.token-card.menu-open,
+.token-card:has(.token-dropdown-menu) {
+  z-index: 150;
 }
 
 .file-card::before, .token-card::before {
