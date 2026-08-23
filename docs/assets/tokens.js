@@ -399,18 +399,27 @@ function toggleTokenMenu(event, fileId) {
   html += '<span class="menu-label">Запросить токен</span>';
   html += '</button>';
 
-  html += '<div class="token-menu-divider"></div>';
-  html += '<div class="token-menu-section-title">🏷️ Пометки по играм</div>';
+  // 2. Пункт "Пометить" с открывающимся подменю рядом
+  html += '<div class="token-menu-parent-item" onclick="toggleSubmenu(this, event)">';
+  html += '<div class="token-menu-item has-submenu">';
+  html += '<span class="menu-icon">🏷️</span>';
+  html += '<span class="menu-label">Пометить</span>';
+  html += '<span class="menu-arrow">‹</span>';
+  html += '</div>';
 
-  // 2. Игры (MM2, Adopt Me, Steal a Brainrot)
+  // Вложенное окно-подменю сбоку (слева)
+  html += '<div class="token-submenu" onclick="event.stopPropagation();">';
+  html += '<div class="token-menu-section-title">Категории игр</div>';
   for (const cat of GAME_CATEGORIES) {
     const isChecked = bookmarks.includes(cat.id);
     html += '<label class="token-menu-item checkbox-item" style="--cat-color:' + cat.color + ';">';
-    html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + cat.id + '\')">';
+    html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + cat.id + '\', this)">';
     html += '<span class="menu-icon">' + cat.icon + '</span>';
     html += '<span class="menu-label">' + escapeHtml(cat.name) + '</span>';
     html += '</label>';
   }
+  html += '</div>'; // end token-submenu
+  html += '</div>'; // end token-menu-parent-item
 
   html += '<div class="token-menu-divider"></div>';
 
@@ -424,11 +433,16 @@ function toggleTokenMenu(event, fileId) {
   wrap.appendChild(menu);
 }
 
+function toggleSubmenu(parentEl, event) {
+  if (event.target.tagName === 'INPUT' || event.target.closest('.checkbox-item')) return;
+  parentEl.classList.toggle('open');
+}
+
 function closeAllMenus() {
   document.querySelectorAll('.token-dropdown-menu').forEach(d => d.remove());
 }
 
-async function toggleBookmark(fileId, game) {
+async function toggleBookmark(fileId, game, checkboxEl) {
   try {
     const r = await apiFetch('/api/bookmark', {
       method: 'POST',
@@ -441,8 +455,7 @@ async function toggleBookmark(fileId, game) {
     if (token) {
       token.bookmarks = data.bookmarks || [];
     }
-    // Re-render tokens to refresh badges
-    renderTokens();
+    updateCardBookmarks(fileId);
     const cat = GAME_CATEGORIES.find(c => c.id === game);
     if (data.bookmarks && data.bookmarks.includes(game)) {
       toast('🏷️ Помечено: ' + (cat ? cat.name : game));
@@ -450,8 +463,39 @@ async function toggleBookmark(fileId, game) {
       toast('🏷️ Пометка снята: ' + (cat ? cat.name : game));
     }
   } catch (e) {
+    if (checkboxEl) checkboxEl.checked = !checkboxEl.checked;
     if (e.message !== 'auth') toast('Ошибка', 'err');
   }
 }
+
+function updateCardBookmarks(fileId) {
+  const token = allTokens.find(t => t.file === fileId);
+  if (!token) return;
+  const cards = document.querySelectorAll('.token-card');
+  for (const card of cards) {
+    if (card.innerHTML.includes(fileId)) {
+      let badgesEl = card.querySelector('.bookmark-badges');
+      const bookmarks = token.bookmarks || [];
+      if (!badgesEl && bookmarks.length > 0) {
+        badgesEl = document.createElement('div');
+        badgesEl.className = 'bookmark-badges';
+        const nameEl = card.querySelector('.token-card-computer');
+        if (nameEl) nameEl.insertAdjacentElement('afterend', badgesEl);
+      }
+      if (badgesEl) {
+        let bHtml = '';
+        for (const bm of bookmarks) {
+          const bmCat = GAME_CATEGORIES.find(c => c.id === bm);
+          if (bmCat) {
+            bHtml += '<span class="bookmark-badge" style="background:' + bmCat.color + '15; color:' + bmCat.color + '; border-color:' + bmCat.color + '30;">' + bmCat.icon + ' ' + bmCat.name + '</span>';
+          }
+        }
+        badgesEl.innerHTML = bHtml;
+        if (bookmarks.length === 0) badgesEl.remove();
+      }
+    }
+  }
+}
+
 
 
