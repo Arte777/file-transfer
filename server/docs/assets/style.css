@@ -1335,3 +1335,151 @@ body::before {
   50% { transform: scale(1.08); opacity: 0.85; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   BOOKMARKS / ПОМЕТКИ
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Bookmark badges on token cards */
+.bookmark-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.bookmark-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* Bookmark button */
+.bookmark-btn.bookmarked {
+  border-color: rgba(255, 214, 10, 0.4) !important;
+  color: #ffd60a !important;
+  background: rgba(255, 214, 10, 0.1) !important;
+}
+
+/* Bookmark dropdown */
+.bookmark-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  min-width: 210px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  backdrop-filter: blur(20px);
+  animation: dropdown-in 0.15s ease-out;
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bookmark-dropdown-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 4px 8px 8px;
+}
+
+.bookmark-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  transition: var(--transition);
+}
+
+.bookmark-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.bookmark-dropdown-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cat-color, var(--accent));
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bookmark-dropdown-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* Bookmark category sections on bookmarks page */
+.bookmark-category {
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+.bookmark-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.bookmark-category-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bookmark-category-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+}
+
+.bookmark-login-all {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px !important;
+  border-radius: 8px;
+}
+
+.bookmark-category > .tokens-grid {
+  padding: 1rem;
+}
+
+.bookmark-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+

