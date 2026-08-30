@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Настройки</title>
+  <title>NEXUS вЂ” РќР°СЃС‚СЂРѕР№РєРё</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css?v=160">
 </head>
@@ -12,14 +12,14 @@
     <div id="sidebarSlot"></div>
     <main class="main-content">
       <div class="top-bar">
-        <h1 class="page-title">Настройки</h1>
+        <h1 class="page-title">РќР°СЃС‚СЂРѕР№РєРё</h1>
       </div>
   <div class="container" style="max-width:1100px; margin:0 auto; padding-top:2rem;">
     <div class="settings-grid">
       
       <!-- LEFT COLUMN: Profile & Personalization -->
       <div class="settings-col">
-        <h2 class="settings-section-title">Профиль и Персонализация</h2>
+        <h2 class="settings-section-title">РџСЂРѕС„РёР»СЊ Рё РџРµСЂСЃРѕРЅР°Р»РёР·Р°С†РёСЏ</h2>
         
         <div class="settings-card avatar-card">
           <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()">
@@ -28,7 +28,7 @@
           </div>
           <div class="avatar-controls">
             <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-            <button class="btn-secondary btn-sm" id="btnResetAvatar">Сбросить фото</button>
+            <button class="btn-secondary btn-sm" id="btnResetAvatar">РЎР±СЂРѕСЃРёС‚СЊ С„РѕС‚Рѕ</button>
           </div>
           
           <div class="emoji-picker-compact" id="emojiPicker">
@@ -38,16 +38,16 @@
             <button class="emoji-btn" data-emoji="??">??</button>
             <button class="emoji-btn" data-emoji="?">?</button>
             <button class="emoji-btn" data-emoji="??">??</button>
-            <input type="text" class="settings-input premium-input emoji-custom-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи">
+            <input type="text" class="settings-input premium-input emoji-custom-input" id="avatarInput" maxlength="8" placeholder="РЎРІРѕР№ СЌРјРѕРґР·Рё">
           </div>
         </div>
 
         <div class="settings-card">
-          <label class="settings-label">Отображаемое имя</label>
-          <input type="text" class="settings-input premium-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
+          <label class="settings-label">РћС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РёРјСЏ</label>
+          <input type="text" class="settings-input premium-input" id="displayName" maxlength="32" placeholder="РљР°Рє С‚РµР±СЏ РІРёРґСЏС‚">
           
-          <label class="settings-label" style="margin-top:1.5rem;">Статус / О себе</label>
-          <input type="text" class="settings-input premium-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
+          <label class="settings-label" style="margin-top:1.5rem;">РЎС‚Р°С‚СѓСЃ / Рћ СЃРµР±Рµ</label>
+          <input type="text" class="settings-input premium-input" id="bio" maxlength="120" placeholder="РќР°РїСЂРёРјРµСЂ: Root Admin">
           
           <!-- Hidden preview elements to keep JS happy -->
           <div style="display:none;">
@@ -59,7 +59,7 @@
         </div>
 
         <div class="settings-card">
-          <label class="settings-label">Цвет акцента</label>
+          <label class="settings-label">Р¦РІРµС‚ Р°РєС†РµРЅС‚Р°</label>
           <div class="color-picker-premium" id="colorPicker">
             <button class="color-dot" data-color="#00f0ff" style="background:#00f0ff;"></button>
             <button class="color-dot" data-color="#00ff88" style="background:#00ff88;"></button>
@@ -76,31 +76,31 @@
 
       <!-- RIGHT COLUMN: Security & Modules -->
       <div class="settings-col">
-        <h2 class="settings-section-title">Безопасность и Модули</h2>
+        <h2 class="settings-section-title">Р‘РµР·РѕРїР°СЃРЅРѕСЃС‚СЊ Рё РњРѕРґСѓР»Рё</h2>
 
         <!-- Separate Extension Card -->
         <div class="settings-card extension-card" style="border: 1px solid rgba(0, 240, 255, 0.2); background: rgba(0, 240, 255, 0.03); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
           <div style="display:flex; align-items:center; gap:12px;">
             <div style="font-size:2rem; background:rgba(0, 240, 255, 0.1); border-radius:10px; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">??</div>
             <div>
-              <h3 style="margin:0; font-size:1.1rem; color:var(--accent);">Расширение NEXUS</h3>
-              <p style="margin:4px 0 0 0; font-size:0.85rem; color:rgba(255,255,255,0.6);">Необходимо для автоматического входа в аккаунты.</p>
+              <h3 style="margin:0; font-size:1.1rem; color:var(--accent);">Р Р°СЃС€РёСЂРµРЅРёРµ NEXUS</h3>
+              <p style="margin:4px 0 0 0; font-size:0.85rem; color:rgba(255,255,255,0.6);">РќРµРѕР±С…РѕРґРёРјРѕ РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РІС…РѕРґР° РІ Р°РєРєР°СѓРЅС‚С‹.</p>
             </div>
           </div>
           <a href="downloads/NEXUS_extension.zip" class="btn-submit" style="display:block; text-align:center; text-decoration:none; background: linear-gradient(135deg, #00f0ff, #00b5c2); color:#000; font-weight:700; border-radius:8px; padding:10px; font-size:0.9rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15); border: none; cursor: pointer;" download>
-            ?? Скачать расширение NEXUS (.zip)
+            ?? РЎРєР°С‡Р°С‚СЊ СЂР°СЃС€РёСЂРµРЅРёРµ NEXUS (.zip)
           </a>
         </div>
 
         <div class="settings-card">
-          <label class="settings-label">Смена пароля</label>
-          <input type="password" class="settings-input premium-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:1rem;">
-          <input type="password" class="settings-input premium-input" id="newPassword" placeholder="Новый пароль">
-          <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
+          <label class="settings-label">РЎРјРµРЅР° РїР°СЂРѕР»СЏ</label>
+          <input type="password" class="settings-input premium-input" id="currentPassword" placeholder="РўРµРєСѓС‰РёР№ РїР°СЂРѕР»СЊ" style="margin-bottom:1rem;">
+          <input type="password" class="settings-input premium-input" id="newPassword" placeholder="РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ">
+          <div class="settings-hint">РћСЃС‚Р°РІСЊ РїСѓСЃС‚С‹Рј, РµСЃР»Рё РЅРµ С…РѕС‡РµС€СЊ РјРµРЅСЏС‚СЊ</div>
         </div>
 
         <button class="btn-submit premium-btn-save" id="btnSave">
-          <span class="save-icon">??</span> Сохранить изменения
+          <span class="save-icon">??</span> РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ
         </button>
       </div>
 
