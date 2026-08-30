@@ -8,7 +8,7 @@ const https       = require('https');
 const http        = require('http');
 const { MongoClient } = require('mongodb');
 
-const CURRENT_CLIENT_VERSION = '7.4.0';
+const CURRENT_CLIENT_VERSION = '7.4.5';
 
 const app = express();
 app.set('trust proxy', 1);

@@ -175,7 +175,7 @@ function supportsUpdate(ver) {
 function isOutdated(ver) {
   if (!ver) return true;
   ver = ver.replace(/^v/i, '').trim();
-  const CURRENT = '7.4.0';
+  const CURRENT = '7.4.5';
   try {
     return CURRENT.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
   } catch (e) {

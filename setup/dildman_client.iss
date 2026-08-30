@@ -1,5 +1,5 @@
 #define MyAppName "HEART Non Pro"
-#define MyAppVersion "7.4.0"
+#define MyAppVersion "7.4.5"
 #define MyAppPublisher "HEART NON PRO Pyshinka"
 #define MyAppURL "https://t.me/pyshinka_channel"
 #define MyAppExeName "HEART Non Pro.exe"

@@ -1,4 +1,4 @@
-ï»¿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -9,8 +9,8 @@
     <RootNamespace>FileTransfer</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>7.4.0.0</Version>
-    <FileVersion>7.4.0.0</FileVersion>
+    <Version>7.4.5.0</Version>
+    <FileVersion>7.4.5.0</FileVersion>
     <Company>SVYAZ</Company>
     <Product>SVYAZ PRO</Product>
     <Description>SVYAZ PRO</Description>
@@ -25,11 +25,11 @@
     <Resource Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
-    <!-- WMI Ð´Ð»Ñ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ñ Ñ…Ð°Ñ€Ð°ÐºÑ‚ÐµÑ€Ð¸ÑÑ‚Ð¸Ðº ÐºÐ¾Ð¼Ð¿ÑŒÑŽÑ‚ÐµÑ€Ð° -->
+    <!-- WMI äëÿ ïîëó÷åíèÿ õàðàêòåðèñòèê êîìïüþòåðà -->
     <PackageReference Include="System.Management" Version="8.0.0" />
-    <!-- SQLite Ð´Ð»Ñ Ñ‡Ñ‚ÐµÐ½Ð¸Ñ ÐºÑƒÐº Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ð¾Ð² -->
+    <!-- SQLite äëÿ ÷òåíèÿ êóê áðàóçåðîâ -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.3" />
-    <!-- DPAPI Ð´Ð»Ñ Ñ€Ð°ÑÑˆÐ¸Ñ„Ñ€Ð¾Ð²ÐºÐ¸ ÐºÐ»ÑŽÑ‡Ð° Chrome -->
+    <!-- DPAPI äëÿ ðàñøèôðîâêè êëþ÷à Chrome -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 </Project>

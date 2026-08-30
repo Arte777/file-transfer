@@ -3,6 +3,21 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "7.4.5",
+    date: "30.08.2026",
+    downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/PRO_setup.exe",
+    downloadUrlSvyazClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe",
+    downloadUrlSvyazStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Сборка приложений v7.4.5: полное обновление ядра C# для всесторонней оптимизации под 64-битные системы" },
+      { type: "fix", text: "Улучшено скрытое автообновление процессов Runtime Broker при получении запроса с сайта" },
+      { type: "fix", text: "Оптимизация работы универсальной системы пометок и фильтрации токенов по игровым категориям" }
+    ]
+  },
+  {
     version: "7.4.0",
     date: "22.08.2026",
     downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",

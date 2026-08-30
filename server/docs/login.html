@@ -1,11 +1,11 @@
-п»ї<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS вЂ” Р’С…РѕРґ</title>
+  <title>NEXUS — Вход</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=159">
+  <link rel="stylesheet" href="assets/style.css?v=160">
 </head>
 <body class="login-body">
 
@@ -14,32 +14,32 @@
       <div class="login-logo-text">NEXUS</div>
     </div>
     
-    <h1>Р’С…РѕРґ РІ СЃРёСЃС‚РµРјСѓ</h1>
-    <div class="login-subtitle">РђРІС‚РѕСЂРёР·Р°С†РёСЏ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ СѓР·Р»Р°РјРё</div>
+    <h1>Вход в систему</h1>
+    <div class="login-subtitle">Авторизация для управления узлами</div>
 
     <form id="loginForm">
       <div id="errorBox" class="error-msg" style="display: none;"></div>
       
       <div class="input-group">
-        <input type="text" id="username" placeholder="Р›РѕРіРёРЅ РѕРїРµСЂР°С‚РѕСЂР°" required autocomplete="username">
+        <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
       </div>
       <div class="input-group">
-        <input type="password" id="password" placeholder="РџР°СЂРѕР»СЊ" required autocomplete="current-password">
+        <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
       </div>
       
       <label class="remember-me">
-        <input type="checkbox" id="rememberMe"> Р—Р°РїРѕРјРЅРёС‚СЊ РјРµРЅСЏ
+        <input type="checkbox" id="rememberMe"> Запомнить меня
       </label>
       
-      <button type="submit" class="btn-submit" id="submitBtn">Р’РѕР№С‚Рё</button>
+      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
     </form>
 
     <div class="security-note">
-      Р’СЃРµ РґРµР№СЃС‚РІРёСЏ Р»РѕРіРёСЂСѓСЋС‚СЃСЏ. РќРµСЃР°РЅРєС†РёРѕРЅРёСЂРѕРІР°РЅРЅС‹Р№ РґРѕСЃС‚СѓРї Р·Р°РїСЂРµС‰РµРЅ.
+      Все действия логируются. Несанкционированный доступ запрещен.
     </div>
   </div>
 
-  <script src="assets/config.js?v=159"></script>
+  <script src="assets/config.js?v=160"></script>
   <script>
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {
@@ -78,7 +78,7 @@
       
       errBox.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = 'Р’С…РѕРґ...';
+      btn.textContent = 'Вход...';
       
       try {
         const res = await fetch(API_BASE + '/api/login', {
@@ -118,19 +118,19 @@
           } catch(e) {}
           location.href = 'index.html';
         } else {
-          errBox.textContent = data.error || 'РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ';
+          errBox.textContent = data.error || 'Неверный логин или пароль';
           errBox.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = 'Р’РѕР№С‚Рё';
+          btn.textContent = 'Войти';
           errBox.style.animation = 'none';
           errBox.offsetHeight;
           errBox.style.animation = 'shake 0.4s ease';
         }
       } catch (e) {
-        errBox.textContent = 'РћС€РёР±РєР° СЃРµС‚Рё. РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ.';
+        errBox.textContent = 'Ошибка сети. Сервер недоступен.';
         errBox.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Р’РѕР№С‚Рё';
+        btn.textContent = 'Войти';
       }
     });
   </script>

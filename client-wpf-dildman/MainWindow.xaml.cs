@@ -79,9 +79,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "NON PRO";
-        private static string AppTitleVersionText = " v7.4.0";
-        private static string WindowTitleText = "NON PRO v7.4.0";
-        private static string ClientVersion = "7.4.0";
+        private static string AppTitleVersionText = " v7.4.5";
+        private static string WindowTitleText = "NON PRO v7.4.5";
+        private static string ClientVersion = "7.4.5";
         private static string ThemeAccentHex = "#00F0FF";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
