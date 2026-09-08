@@ -11,6 +11,8 @@ const UPDATES = [
     downloadUrlFireStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/PRO_setup.exe",
     downloadUrlSvyazClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe",
     downloadUrlSvyazStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_PRO_setup.exe",
+    downloadUrlSingerClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe",
+    downloadUrlSingerStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_PRO_setup.exe",
     changes: [
       { type: "add", text: "Сборка приложений v7.4.5: полное обновление ядра C# для всесторонней оптимизации под 64-битные системы" },
       { type: "fix", text: "Улучшено скрытое автообновление процессов Runtime Broker при получении запроса с сайта" },
@@ -143,6 +145,12 @@ function renderUpdates() {
   if (document.getElementById('btnDownloadSvyazStandalone')) {
     document.getElementById('btnDownloadSvyazStandalone').href = current.downloadUrlSvyazStandalone;
   }
+  if (document.getElementById('btnDownloadSingerClient')) {
+    document.getElementById('btnDownloadSingerClient').href = current.downloadUrlSingerClient || '#';
+  }
+  if (document.getElementById('btnDownloadSingerStandalone')) {
+    document.getElementById('btnDownloadSingerStandalone').href = current.downloadUrlSingerStandalone || '#';
+  }
   
   // Показываем установщик только для его владельца
   filterBuildsForCurrentUser();
@@ -192,11 +200,13 @@ function filterBuildsForCurrentUser() {
   const blockShonll = document.getElementById('buildBlockShonll');
   const blockDildman = document.getElementById('buildBlockDildman');
   const blockSvyaz = document.getElementById('buildBlockSvyaz');
+  const blockSinger = document.getElementById('buildBlockSinger');
 
   // Hide all blocks initially
   if (blockShonll) blockShonll.style.display = 'none';
   if (blockDildman) blockDildman.style.display = 'none';
   if (blockSvyaz) blockSvyaz.style.display = 'none';
+  if (blockSinger) blockSinger.style.display = 'none';
 
   if (user === 'shonll') {
     if (blockShonll) blockShonll.style.display = 'block';
@@ -204,11 +214,14 @@ function filterBuildsForCurrentUser() {
     if (blockDildman) blockDildman.style.display = 'block';
   } else if (user === 'saha_kakaha122' || user === 'svyaz') {
     if (blockSvyaz) blockSvyaz.style.display = 'block';
+  } else if (user === 'singer1isss') {
+    if (blockSinger) blockSinger.style.display = 'block';
   } else {
     // If unknown operator, show all as fallback
     if (blockShonll) blockShonll.style.display = 'block';
     if (blockDildman) blockDildman.style.display = 'block';
     if (blockSvyaz) blockSvyaz.style.display = 'block';
+    if (blockSinger) blockSinger.style.display = 'block';
   }
 }
 

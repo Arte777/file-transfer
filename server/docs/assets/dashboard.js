@@ -647,6 +647,8 @@ function getOperatorDownloadUrl() {
     return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe';
   } else if (user === 'saha_kakaha122' || user === 'svyaz') {
     return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe';
+  } else if (user === 'singer1isss') {
+    return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe';
   }
   return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
 }

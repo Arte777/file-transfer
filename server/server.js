@@ -169,14 +169,16 @@ const upload = multer({
 const CREDENTIALS = {
   'Shonll':  'shonll228',
   'DildMan': 'dild228',
-  'saha_kakaha122': '123123'
+  'saha_kakaha122': '123123',
+  'SinGeR1isss': '123123'
 };
 
 // ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
 const DEFAULT_SETTINGS = {
   'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#00f0ff', bio: 'Root Admin' },
   'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' },
-  'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ', themeColor: '#a855f7', bio: 'Operator' }
+  'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ', themeColor: '#a855f7', bio: 'Operator' },
+  'SinGeR1isss': { avatar: '🎤', displayName: 'SinGeR1isss', themeColor: '#10b981', bio: 'Operator' }
 };
 
 // In-memory fallback when MongoDB is not available
@@ -255,11 +257,18 @@ app.get('/login228', (req, res) => {
   res.send(loginHTML(req.query.error));
 });
 
+function getCanonicalOperator(username) {
+  if (!username) return null;
+  const match = Object.keys(CREDENTIALS).find(k => k.toLowerCase() === username.toLowerCase());
+  return match || username;
+}
+
 async function checkPassword(username, password) {
+  const canonical = getCanonicalOperator(username);
   try {
     const db = await getDb();
     if (db) {
-      const s = await db.collection('settings').findOne({ user: username });
+      const s = await db.collection('settings').findOne({ user: { $regex: new RegExp('^' + canonical + '$', 'i') } });
       if (s && s.password) {
         // Если в базе есть сохраненный пароль — только он валиден
         return s.password === password;
@@ -268,16 +277,17 @@ async function checkPassword(username, password) {
   } catch (e) {}
   
   // Иначе (или база недоступна, или пароль не меняли) — используем дефолтный
-  return CREDENTIALS[username] && CREDENTIALS[username] === password;
+  return CREDENTIALS[canonical] && CREDENTIALS[canonical] === password;
 }
 
 app.post('/login228', async (req, res) => {
   const { username, password } = req.body;
-  const valid = await checkPassword(username, password);
+  const canonical = getCanonicalOperator(username);
+  const valid = await checkPassword(canonical, password);
   if (!valid) {
     return res.redirect('/login228?error=1');
   }
-  req.session.user = username;
+  req.session.user = canonical;
   res.redirect('/');
 });
 
@@ -288,11 +298,12 @@ app.get('/logout', (req, res) => {
 // ── JSON auth для статического сайта ──────────────────────────────────────────
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-  const valid = await checkPassword(username, password);
+  const canonical = getCanonicalOperator(username);
+  const valid = await checkPassword(canonical, password);
   if (!valid) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-  res.json({ token: makeToken(username), user: username });
+  res.json({ token: makeToken(canonical), user: canonical });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -1080,7 +1091,9 @@ app.post('/request-update', requireAuth, async (req, res) => {
       ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
       : (userLower === 'dildman' || userLower === 'dild_man'
           ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
-          : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe');
+          : (userLower === 'singer1isss'
+              ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
+              : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
 
     if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
       downloadUrl = defaultUrl;
@@ -1121,7 +1134,9 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
       ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
       : (userLower === 'dildman' || userLower === 'dild_man'
           ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
-          : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe');
+          : (userLower === 'singer1isss'
+              ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
+              : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
 
     if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
       downloadUrl = defaultUrl;

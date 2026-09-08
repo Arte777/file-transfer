@@ -128,7 +128,12 @@ function operatorAvatarHTML(user) {
   }
   const emoji = localStorage.getItem('ft_avatar');
   if (emoji) return escapeHtml(emoji);
-  return user === 'Shonll' ? '🦊' : '🐉';
+  const u = (user || '').toLowerCase();
+  if (u === 'shonll') return '🦊';
+  if (u === 'dildman' || u === 'dild_man') return '🐉';
+  if (u === 'saha_kakaha122' || u === 'svyaz') return '🔗';
+  if (u === 'singer1isss') return '🎤';
+  return '👤';
 }
 
 // Отображаемое имя (с поддержкой кастомных настроек)
