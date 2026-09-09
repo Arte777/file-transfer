@@ -31,12 +31,48 @@
             <span class="badge badge-valid">Stable</span>
           </div>
           
-          <div class="stat-value" id="heroVersion" style="font-size: 2rem; margin-bottom: 0.25rem;">Загрузка...</div>
+          <div class="stat-value" id="heroVersion" style="font-size: 2rem; margin-bottom: 0.25rem;">v8.0.0</div>
           <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-            Скачайте клиентскую сборку для синхронизации и обновления токенов.
+            Скачайте универсальный билдер или готовую клиентскую сборку для синхронизации и обновления токенов.
           </p>
+
+          <!-- Universal Builder Hero Box -->
+          <div style="background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(0, 240, 255, 0.35); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.6rem;">⚡</span>
+                <div>
+                  <div style="font-weight: 800; color: #fff; font-size: 1.05rem;">NEXUS Universal Builder v8.0.0</div>
+                  <div style="font-size: 0.78rem; color: #94a3b8;">Автономный сборщик Standalone и Client версий с выбором любого профиля</div>
+                </div>
+              </div>
+              <span class="badge" style="background: rgba(0, 240, 255, 0.2); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.4);">v8.0.0</span>
+            </div>
+            <a href="downloads/NEXUS_Builder.exe" id="btnDownloadBuilder" class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px; font-weight: 700; font-size: 0.95rem; width: 100%; box-sizing: border-box;" download>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              <span>Скачать NEXUS Builder v8.0.0 (Windows x64)</span>
+            </a>
+          </div>
           
           <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+
+            <!-- HuilaEbanaya -->
+            <div id="buildBlockHuilaEbanaya" class="download-build-block" style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem;">
+              <div style="font-weight: 600; color: #fff; font-size: 0.88rem; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Сборка HuilaEbanaya</span>
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">Windows x64</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="downloads/NEXUS_Builder.exe" class="btn-secondary" style="flex: 1;" download>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  <span>Клиент (через Builder)</span>
+                </a>
+                <a href="downloads/NEXUS_Builder.exe" class="btn-secondary" style="flex: 1;" download>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  <span>Standalone (через Builder)</span>
+                </a>
+              </div>
+            </div>
             
             <!-- RAH -->
             <div id="buildBlockShonll" class="download-build-block" style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem;">

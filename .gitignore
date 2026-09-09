@@ -67,3 +67,6 @@ UCompilers/
 *history*.txt
 full_conversation_history.txt
 conversation_context.txt
+
+builder-wpf/
+templates/

