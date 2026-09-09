@@ -210,7 +210,7 @@ function renderHeader(activePage) {
       ${navLink('files', 'index.html', iconDashboard, 'Воркеры')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Аккаунты')}
       ${navLink('bookmarks', 'bookmarks.html', iconBookmarks, 'Пометки')}
-      <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat()" title="Открыть служебный чат операторов">
+      <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat('full')" title="Открыть служебный чат операторов (полная версия)">
         <div class="nav-icon" style="display:flex;align-items:center;justify-content:center;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </div>
@@ -232,7 +232,7 @@ function renderHeader(activePage) {
     <!-- Sidebar Chat Launcher & Extension Widgets -->
     <div class="sidebar-widgets desktop-only">
       <!-- Operators Chat Card Button -->
-      <button type="button" class="sidebar-chat-launcher-card" onclick="openOperatorChat()" title="Открыть служебный чат операторов">
+      <button type="button" class="sidebar-chat-launcher-card" onclick="openOperatorChat('mini')" title="Открыть мини-чат в плавающем окне">
         <div class="sclc-content">
           <div class="sclc-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -352,13 +352,38 @@ function updatePresenceUI(onlineList) {
     const me = operatorDisplayName(getUser() || 'Shonll');
     onlineList = [me];
   }
-  const text = 'В сети: ' + onlineList.join(', ');
 
-  const namesEl = document.getElementById('cwhOnlineNames');
-  if (namesEl) namesEl.textContent = text;
+  const avatarsContainer = document.getElementById('cwhOnlineAvatars');
+  if (avatarsContainer) {
+    let avHtml = '';
+    for (const name of onlineList) {
+      const op = OPERATOR_ACCOUNTS.find(o => 
+        o.displayName.toLowerCase() === name.toLowerCase() || 
+        o.username.toLowerCase() === name.toLowerCase()
+      ) || {
+        username: name,
+        displayName: name,
+        role: 'Оператор',
+        avatar: '👤'
+      };
+
+      const avIcon = operatorAvatarHTML(op.username);
+      avHtml += `
+        <div class="cwh-avatar-pill" onclick="insertChatMention('${escapeHtml(op.displayName)}')" title="${escapeHtml(op.displayName)} (${escapeHtml(op.role)}) — в сети (клик чтобы упомянуть)">
+          <div class="cwh-avatar-circle">
+            ${avIcon}
+            <span class="cwh-online-dot-mini"></span>
+          </div>
+          <span class="cwh-avatar-name">${escapeHtml(op.displayName)}</span>
+        </div>
+      `;
+    }
+    avatarsContainer.innerHTML = avHtml;
+  }
 
   const sclcSub = document.getElementById('sclcPresenceSub');
   if (sclcSub) {
+    const text = 'В сети: ' + onlineList.join(', ');
     sclcSub.textContent = text.length > 32 ? text.slice(0, 30) + '…' : text;
     sclcSub.title = text;
   }
@@ -543,8 +568,124 @@ function getOperatorRoleBadge(user) {
   return '<span class="cmr-role operator">Оператор</span>';
 }
 
-function openOperatorChat() {
+let currentChatMode = 'mini'; // 'full' or 'mini'
+let chatDragState = {
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  initialLeft: 0,
+  initialTop: 0
+};
+
+function toggleChatWindowMode() {
+  setChatWindowMode(currentChatMode === 'mini' ? 'full' : 'mini');
+}
+
+function setChatWindowMode(mode) {
+  currentChatMode = mode;
+  const win = document.querySelector('.operator-chat-window');
+  const overlay = document.getElementById('operatorChatModal');
+  const btn = document.getElementById('cwhBtnToggleMode');
+  if (!win || !overlay) return;
+
+  if (mode === 'full') {
+    win.classList.remove('is-mini');
+    win.classList.add('is-full');
+    overlay.classList.remove('is-mini');
+    overlay.classList.add('is-full');
+    win.style.top = '';
+    win.style.left = '';
+    win.style.right = '';
+    win.style.bottom = '';
+    if (btn) {
+      btn.title = 'Свернуть в мини-окно';
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+    }
+  } else {
+    win.classList.remove('is-full');
+    win.classList.add('is-mini');
+    overlay.classList.remove('is-full');
+    overlay.classList.add('is-mini');
+    if (btn) {
+      btn.title = 'Развернуть на весь экран';
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+    }
+  }
+
+  const feed = document.getElementById('operatorChatFeed');
+  if (feed) feed.scrollTop = feed.scrollHeight;
+}
+
+function initChatWindowDrag() {
+  const win = document.querySelector('.operator-chat-window');
+  const header = document.querySelector('.chat-win-header');
+  if (!win || !header || win._dragInitialized) return;
+  win._dragInitialized = true;
+
+  header.addEventListener('mousedown', e => {
+    // Двигаем только в мини-режиме и если клик не по интерактивным элементам
+    if (!win.classList.contains('is-mini')) return;
+    if (e.target.closest('button') || e.target.closest('.cwh-avatar-pill') || e.target.closest('a') || e.target.closest('input')) return;
+
+    chatDragState.isDragging = true;
+    chatDragState.startX = e.clientX;
+    chatDragState.startY = e.clientY;
+
+    const rect = win.getBoundingClientRect();
+    chatDragState.initialLeft = rect.left;
+    chatDragState.initialTop = rect.top;
+
+    win.style.bottom = 'auto';
+    win.style.right = 'auto';
+    win.style.left = rect.left + 'px';
+    win.style.top = rect.top + 'px';
+
+    header.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!chatDragState.isDragging) return;
+    const dx = e.clientX - chatDragState.startX;
+    const dy = e.clientY - chatDragState.startY;
+
+    let newLeft = chatDragState.initialLeft + dx;
+    let newTop = chatDragState.initialTop + dy;
+
+    const winWidth = win.offsetWidth;
+    const winHeight = win.offsetHeight;
+    const maxLeft = window.innerWidth - winWidth - 10;
+    const maxTop = window.innerHeight - winHeight - 10;
+
+    newLeft = Math.max(10, Math.min(newLeft, maxLeft));
+    newTop = Math.max(10, Math.min(newTop, maxTop));
+
+    win.style.left = newLeft + 'px';
+    win.style.top = newTop + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (chatDragState.isDragging) {
+      chatDragState.isDragging = false;
+      const header = document.querySelector('.chat-win-header');
+      if (header) header.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+}
+
+function openOperatorChat(mode) {
   ensureOperatorChatModal();
+  if (mode) {
+    setChatWindowMode(mode);
+  } else if (!currentChatMode) {
+    setChatWindowMode('mini');
+  } else {
+    setChatWindowMode(currentChatMode);
+  }
+
+  fetchOperatorPresence();
+
   const modal = document.getElementById('operatorChatModal');
   if (modal) {
     modal.classList.add('show');
@@ -1432,19 +1573,22 @@ function ensureOperatorChatModal() {
 
   div.innerHTML = `
     <div class="operator-chat-window">
-      <!-- Шапка (БЕЗ ДУБЛИРУЮЩЕЙ КНОПКИ ПОДЕЛИТЬСЯ) -->
+      <!-- Шапка с аватарами онлайн и кнопкой режима -->
       <div class="chat-win-header">
         <div class="cwh-left">
           <div class="cwh-title">
             <svg class="cwh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>Чат операторов</span>
           </div>
-          <div class="cwh-status" id="cwhPresenceStatus">
-            <span class="cwh-status-dot"></span>
-            <span id="cwhPresenceText">Защищенная консоль • <strong id="cwhOnlineNames" style="color:var(--success);font-weight:600;">В сети: ...</strong></span>
+          <div class="cwh-online-wrap" id="cwhPresenceStatus">
+            <span class="cwh-online-label">В сети:</span>
+            <div class="cwh-online-avatars" id="cwhOnlineAvatars"></div>
           </div>
         </div>
         <div class="cwh-right">
+          <button type="button" class="cwh-btn-toggle-mode" id="cwhBtnToggleMode" onclick="toggleChatWindowMode()" title="Развернуть / Свернуть">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+          </button>
           <button type="button" class="cwh-btn-close" onclick="closeOperatorChat()" title="Закрыть чат (Esc)">✕</button>
         </div>
       </div>
@@ -1457,19 +1601,8 @@ function ensureOperatorChatModal() {
         <!-- Панель предпросмотра прикрепленного фото/скриншота -->
         <div class="chat-attach-preview-bar" id="chatAttachPreviewBar"></div>
 
-        <!-- Тулбар действий (ОДНА аккуратная кнопка Поделиться аккаунтом + Прикрепить) -->
-        <div class="chat-toolbar-row">
-          <button type="button" class="ctr-btn" onclick="openAccountPickerForChat()" title="Поделиться аккаунтом из базы с операторами">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a8.38 8.38 0 0 1 13 0"></path></svg>
-            <span>Поделиться аккаунтом</span>
-          </button>
-          
-          <button type="button" class="ctr-btn" onclick="triggerChatFileSelect()" title="Прикрепить скриншот или изображение">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-            <span>Прикрепить скриншот</span>
-          </button>
-          <input type="file" id="chatFileInput" accept="image/*" style="display:none;" onchange="handleChatFileSelect(event)">
-        </div>
+        <!-- Скрытый инпут выбора файла -->
+        <input type="file" id="chatFileInput" accept="image/*" style="display:none;" onchange="handleChatFileSelect(event)">
 
         <!-- Панель записи голосового сообщения -->
         <div class="chat-recording-panel" id="chatRecordingPanel">
@@ -1487,10 +1620,16 @@ function ensureOperatorChatModal() {
         <!-- Выпадающий список упоминаний (@оператор) -->
         <div class="chat-mention-dropdown" id="chatMentionDropdown"></div>
 
-        <!-- Форма ввода с прямой СКРЕПКОЙ 📎 -->
+        <!-- Форма ввода с кнопкой аккаунтов (👤) и скрепкой (📎) внутри -->
         <form class="chat-input-form" id="chatInputForm" onsubmit="handleSendOperatorMessage(event)">
-          <button type="button" class="chat-paperclip-btn" onclick="triggerChatFileSelect()" title="Прикрепить скриншот (📎) или выберите файл">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button type="button" class="chat-input-action-btn chat-share-btn" onclick="openAccountPickerForChat()" title="Поделиться аккаунтом из базы">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+          <button type="button" class="chat-input-action-btn chat-paperclip-btn" onclick="triggerChatFileSelect()" title="Прикрепить скриншот (📎) или выберите файл">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
             </svg>
           </button>
@@ -1507,6 +1646,7 @@ function ensureOperatorChatModal() {
   `;
 
   document.body.appendChild(div);
+  initChatWindowDrag();
 
   // Слушатели поля ввода для упоминаний
   const chatInput = div.querySelector('#chatTextInput');
