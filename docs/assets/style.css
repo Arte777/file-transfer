@@ -4526,20 +4526,21 @@ tr.selected {
 
 .wpc-avatar-wrap {
   position: relative;
-  width: 92px;
-  height: 92px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   padding: 3px;
   background: linear-gradient(135deg, #00f0ff, #a855f7);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 .wpc-avatar-img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  object-fit: cover;
+  overflow: hidden;
   background: #111;
   display: flex;
   align-items: center;
@@ -4548,16 +4549,25 @@ tr.selected {
   color: #fff;
 }
 
+.wpc-avatar-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
 .wpc-online-dot {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
+  bottom: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #22c55e;
   border: 3px solid #0f111a;
   box-shadow: 0 0 10px #22c55e;
+  z-index: 2;
 }
 
 .wpc-online-dot.offline {
