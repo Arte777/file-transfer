@@ -215,7 +215,7 @@ function renderHeader(activePage) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </div>
         <span class="nav-label">Чат операторов</span>
-        <span class="chat-online-dot-badge">4</span>
+        <span class="chat-online-dot-badge" id="navChatOnlineDot" title="Канал связи"></span>
       </button>
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', badgeNew)}
       ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
@@ -239,7 +239,7 @@ function renderHeader(activePage) {
           </div>
           <div class="sclc-info">
             <div class="sclc-title">Чат операторов</div>
-            <div class="sclc-sub">Служебный канал • 4 онлайн</div>
+            <div class="sclc-sub" id="sclcPresenceSub">Служебный канал</div>
           </div>
         </div>
         <div class="sclc-open-btn">
@@ -319,6 +319,174 @@ function renderRobloxAvatar(userId, username) {
   </div>`;
 }
 
+// ── Список операторов панели и их профили ─────────────────────────────────────
+const OPERATOR_ACCOUNTS = [
+  { username: 'Shonll', displayName: 'Shonll', role: 'Админ', avatar: '🦊' },
+  { username: 'DildMan', displayName: 'DildMan', role: 'Воркер', avatar: '🐉' },
+  { username: 'saha_kakaha122', displayName: 'SVYAZ', role: 'Оператор', avatar: '🔗' },
+  { username: 'SinGeR1isss', displayName: 'SinGeR1isss', role: 'Оператор', avatar: '🎤' }
+];
+
+let chatOnlineOperators = [];
+let presencePollInterval = null;
+
+async function fetchOperatorPresence() {
+  try {
+    const res = await apiFetch('/api/chat/presence');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.online)) {
+        chatOnlineOperators = data.online;
+        updatePresenceUI(data.online);
+        return;
+      }
+    }
+  } catch (_) {}
+
+  const me = operatorDisplayName(getUser() || 'Shonll');
+  updatePresenceUI([me]);
+}
+
+function updatePresenceUI(onlineList) {
+  if (!Array.isArray(onlineList) || onlineList.length === 0) {
+    const me = operatorDisplayName(getUser() || 'Shonll');
+    onlineList = [me];
+  }
+  const text = 'В сети: ' + onlineList.join(', ');
+
+  const namesEl = document.getElementById('cwhOnlineNames');
+  if (namesEl) namesEl.textContent = text;
+
+  const sclcSub = document.getElementById('sclcPresenceSub');
+  if (sclcSub) {
+    sclcSub.textContent = text.length > 32 ? text.slice(0, 30) + '…' : text;
+    sclcSub.title = text;
+  }
+}
+
+// Запуск фонового присутствия
+if (!window._nexusPresenceStarted) {
+  window._nexusPresenceStarted = true;
+  setTimeout(fetchOperatorPresence, 400);
+  setInterval(fetchOperatorPresence, 20000);
+}
+
+// ── Управление упоминаниями (@username) ───────────────────────────────────────
+let activeMentionIndex = 0;
+let filteredMentions = [];
+
+function insertChatMention(name) {
+  const input = document.getElementById('chatTextInput');
+  if (!input) return;
+  const tag = '@' + name + ' ';
+  const val = input.value || '';
+  const selStart = input.selectionStart != null ? input.selectionStart : val.length;
+  const beforeCursor = val.slice(0, selStart);
+  const match = beforeCursor.match(/@([a-zA-Z0-9_а-яА-ЯёЁ]*)$/);
+
+  if (match) {
+    const prefixStart = beforeCursor.lastIndexOf('@');
+    const afterCursor = val.slice(selStart);
+    input.value = val.slice(0, prefixStart) + tag + afterCursor;
+    input.selectionStart = input.selectionEnd = prefixStart + tag.length;
+  } else {
+    if (!val.includes(tag)) {
+      input.value = val ? val.trim() + ' ' + tag : tag;
+    }
+    input.selectionStart = input.selectionEnd = input.value.length;
+  }
+
+  input.focus();
+  hideMentionDropdown();
+}
+
+function handleChatInputMentions(e) {
+  const input = e.target;
+  const val = input.value || '';
+  const selStart = input.selectionStart || 0;
+  const beforeCursor = val.slice(0, selStart);
+  const match = beforeCursor.match(/@([a-zA-Z0-9_а-яА-ЯёЁ]*)$/);
+
+  if (match) {
+    const query = match[1].toLowerCase();
+    const list = [
+      { username: 'all', displayName: 'Все операторы', role: 'Общий', avatar: '📢' },
+      ...OPERATOR_ACCOUNTS
+    ];
+    filteredMentions = list.filter(item =>
+      item.username.toLowerCase().includes(query) ||
+      item.displayName.toLowerCase().includes(query)
+    );
+
+    if (filteredMentions.length > 0) {
+      activeMentionIndex = 0;
+      renderMentionDropdown(filteredMentions);
+      return;
+    }
+  }
+  hideMentionDropdown();
+}
+
+function handleChatInputKeydown(e) {
+  const dd = document.getElementById('chatMentionDropdown');
+  if (!dd || !dd.classList.contains('show')) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeMentionIndex = (activeMentionIndex + 1) % filteredMentions.length;
+    highlightMentionItem();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeMentionIndex = (activeMentionIndex - 1 + filteredMentions.length) % filteredMentions.length;
+    highlightMentionItem();
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    if (filteredMentions[activeMentionIndex]) {
+      e.preventDefault();
+      const target = filteredMentions[activeMentionIndex];
+      insertChatMention(target.username === 'all' ? 'all' : target.displayName);
+    }
+  } else if (e.key === 'Escape') {
+    hideMentionDropdown();
+  }
+}
+
+function renderMentionDropdown(items) {
+  const dd = document.getElementById('chatMentionDropdown');
+  if (!dd) return;
+  let html = '<div class="cmd-header">Упомянуть оператора (@)</div>';
+  items.forEach((item, idx) => {
+    const isActive = idx === activeMentionIndex ? 'active' : '';
+    const mentionTag = item.username === 'all' ? 'all' : item.displayName;
+    html += `
+      <div class="cmd-item ${isActive}" onclick="insertChatMention('${escapeHtml(mentionTag)}')">
+        <span class="cmd-avatar">${item.avatar || '👤'}</span>
+        <span class="cmd-name">${escapeHtml(item.displayName)}</span>
+        <span class="cmd-role">${escapeHtml(item.role)}</span>
+      </div>
+    `;
+  });
+  dd.innerHTML = html;
+  dd.classList.add('show');
+}
+
+function highlightMentionItem() {
+  const dd = document.getElementById('chatMentionDropdown');
+  if (!dd) return;
+  const items = dd.querySelectorAll('.cmd-item');
+  items.forEach((el, idx) => {
+    if (idx === activeMentionIndex) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+
+function hideMentionDropdown() {
+  const dd = document.getElementById('chatMentionDropdown');
+  if (dd) {
+    dd.classList.remove('show');
+    dd.innerHTML = '';
+  }
+}
+
 // ── Получение и сохранение сообщений ─────────────────────────────────────────
 function getLocalChatMessages() {
   try {
@@ -343,6 +511,21 @@ async function fetchChatMessagesFromServer() {
     if (res.ok) {
       const msgs = await res.json();
       if (Array.isArray(msgs)) {
+        if (chatMessagesCache.length > 0 && msgs.length > chatMessagesCache.length) {
+          const newMsgs = msgs.slice(chatMessagesCache.length);
+          const currentUser = (getUser() || '').toLowerCase();
+          const currentDisplayName = operatorDisplayName(getUser() || '').toLowerCase();
+          for (const nm of newMsgs) {
+            if ((nm.user || '').toLowerCase() !== currentUser) {
+              const txt = ((nm.text || '') + ' ' + (nm.caption || '')).toLowerCase();
+              if (txt.includes('@' + currentUser) || txt.includes('@' + currentDisplayName) || txt.includes('@all') || txt.includes('@все')) {
+                playChime();
+                toast('🔔 Вас упомянул @' + (nm.user || 'оператор') + ' в чате', 'ok');
+                break;
+              }
+            }
+          }
+        }
         chatMessagesCache = msgs;
         saveLocalChatMessages(msgs);
         return msgs;
@@ -419,8 +602,15 @@ function renderOperatorChatMessages() {
   let html = '';
   for (const m of msgs) {
     const isMe = (m.user || '').toLowerCase() === currentUser;
+    const currentDisplayName = operatorDisplayName(getUser() || '').toLowerCase();
     const avatar = operatorAvatarHTML(m.user);
     const roleBadge = getOperatorRoleBadge(m.user);
+
+    const fullMsgText = ((m.text || '') + ' ' + (m.caption || '')).toLowerCase();
+    const isMentioned = fullMsgText.includes('@' + currentUser) ||
+                        fullMsgText.includes('@' + currentDisplayName) ||
+                        fullMsgText.includes('@all') ||
+                        fullMsgText.includes('@все');
 
     let contentHtml = '';
     if (m.type === 'text') {
@@ -534,7 +724,7 @@ function renderOperatorChatMessages() {
     }
 
     html += `
-      <div class="chat-msg-row ${isMe ? 'is-me' : ''}" id="row-${m.id}">
+      <div class="chat-msg-row ${isMe ? 'is-me' : ''} ${isMentioned && !isMe ? 'has-mention' : ''}" id="row-${m.id}">
         <div class="cmr-hover-tools">
           ${isMe || currentUser === 'shonll' ? `
             <button type="button" class="cht-btn del" onclick="deleteOperatorMessage('${m.id}')" title="Удалить сообщение">
@@ -546,7 +736,7 @@ function renderOperatorChatMessages() {
         <div class="cmr-avatar">${avatar}</div>
         <div class="cmr-body">
           <div class="cmr-header">
-            <span class="cmr-user">${escapeHtml(m.user || 'operator')}</span>
+            <span class="cmr-user" onclick="insertChatMention('${escapeHtml(m.user || 'operator')}')" title="Нажмите, чтобы упомянуть @${escapeHtml(m.user || 'operator')}">${escapeHtml(m.user || 'operator')}</span>
             ${roleBadge}
             <span class="cmr-time">${escapeHtml(m.time || '')}</span>
           </div>
@@ -563,6 +753,16 @@ function renderOperatorChatMessages() {
 function formatChatMarkdown(text) {
   if (!text) return '';
   let s = escapeHtml(text);
+  const currentUser = (getUser() || '').toLowerCase();
+  const currentDisplayName = operatorDisplayName(getUser() || '').toLowerCase();
+
+  // Highlight mentions like @Shonll, @DildMan, @SVYAZ, @SinGeR1isss, @all, @все
+  s = s.replace(/@([a-zA-Z0-9_а-яА-ЯёЁ]+)/g, function(match, name) {
+    const nLow = name.toLowerCase();
+    const isMe = nLow === currentUser || nLow === currentDisplayName || nLow === 'all' || nLow === 'все';
+    return `<span class="chat-mention ${isMe ? 'mention-me' : ''}" onclick="insertChatMention('${escapeHtml(name)}')" title="Упоминание @${escapeHtml(name)}">@${escapeHtml(name)}</span>`;
+  });
+
   s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/\*(.*?)\*/g, '<em>$1</em>');
   s = s.replace(/`(.*?)`/g, '<code>$1</code>');
@@ -1239,9 +1439,9 @@ function ensureOperatorChatModal() {
             <svg class="cwh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>Чат операторов</span>
           </div>
-          <div class="cwh-status">
+          <div class="cwh-status" id="cwhPresenceStatus">
             <span class="cwh-status-dot"></span>
-            <span>Защищенная консоль • В сети: Shonll, DildMan, SVYAZ, SinGeR1isss</span>
+            <span id="cwhPresenceText">Защищенная консоль • <strong id="cwhOnlineNames" style="color:var(--success);font-weight:600;">В сети: ...</strong></span>
           </div>
         </div>
         <div class="cwh-right">
@@ -1284,6 +1484,9 @@ function ensureOperatorChatModal() {
           </div>
         </div>
 
+        <!-- Выпадающий список упоминаний (@оператор) -->
+        <div class="chat-mention-dropdown" id="chatMentionDropdown"></div>
+
         <!-- Форма ввода с прямой СКРЕПКОЙ 📎 -->
         <form class="chat-input-form" id="chatInputForm" onsubmit="handleSendOperatorMessage(event)">
           <button type="button" class="chat-paperclip-btn" onclick="triggerChatFileSelect()" title="Прикрепить скриншот (📎) или выберите файл">
@@ -1291,7 +1494,7 @@ function ensureOperatorChatModal() {
               <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
             </svg>
           </button>
-          <input type="text" id="chatTextInput" class="chat-text-input" placeholder="Написать сообщение... (скриншот можно вставить через Ctrl+V)" autocomplete="off">
+          <input type="text" id="chatTextInput" class="chat-text-input" placeholder="Написать сообщение... (@ для упоминания, Ctrl+V для скриншота)" autocomplete="off">
           <button type="button" class="chat-mic-btn" onclick="startVoiceRecording()" title="Записать голосовое сообщение">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
           </button>
@@ -1304,6 +1507,20 @@ function ensureOperatorChatModal() {
   `;
 
   document.body.appendChild(div);
+
+  // Слушатели поля ввода для упоминаний
+  const chatInput = div.querySelector('#chatTextInput');
+  if (chatInput) {
+    chatInput.addEventListener('input', handleChatInputMentions);
+    chatInput.addEventListener('keydown', handleChatInputKeydown);
+  }
+
+  // Скрытие выпадающего списка при клике вне него
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#chatMentionDropdown') && e.target.id !== 'chatTextInput') {
+      hideMentionDropdown();
+    }
+  });
 
   // Esc key listener
   document.addEventListener('keydown', e => {

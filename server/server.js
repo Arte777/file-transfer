@@ -1467,9 +1467,53 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
   }
 });
 
-// ── OPERATOR CHAT API ────────────────────────────────────────────────────────
+// ── OPERATOR CHAT & PRESENCE API ─────────────────────────────────────────────
+const operatorPresenceMap = new Map();
+
+function recordOperatorPresence(username) {
+  if (!username) return;
+  operatorPresenceMap.set(String(username).toLowerCase(), Date.now());
+}
+
+app.get('/api/chat/presence', requireAuth, (req, res) => {
+  const user = req.authUser || req.session.user || 'operator';
+  recordOperatorPresence(user);
+
+  const now = Date.now();
+  const ACTIVE_WINDOW_MS = 60 * 1000; // 60 seconds
+
+  const knownOps = [
+    { username: 'Shonll', displayName: 'Shonll', role: 'Админ' },
+    { username: 'DildMan', displayName: 'DildMan', role: 'Воркер' },
+    { username: 'saha_kakaha122', displayName: 'SVYAZ', role: 'Оператор' },
+    { username: 'SinGeR1isss', displayName: 'SinGeR1isss', role: 'Оператор' }
+  ];
+
+  const onlineOps = [];
+  for (const op of knownOps) {
+    const lastSeen = operatorPresenceMap.get(op.username.toLowerCase());
+    if (lastSeen && (now - lastSeen) < ACTIVE_WINDOW_MS) {
+      onlineOps.push(op.displayName);
+    }
+  }
+
+  // Ensure current requesting user is included
+  const curFound = knownOps.find(k => k.username.toLowerCase() === user.toLowerCase());
+  const curName = curFound ? curFound.displayName : user;
+  if (!onlineOps.includes(curName)) {
+    onlineOps.push(curName);
+  }
+
+  res.json({
+    online: onlineOps,
+    count: onlineOps.length
+  });
+});
+
 app.get('/api/chat/messages', requireAuth, async (req, res) => {
   try {
+    const user = req.authUser || req.session.user || 'operator';
+    recordOperatorPresence(user);
     const db = await getDb();
     if (db) {
       const msgs = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(150).toArray();
@@ -1486,6 +1530,7 @@ app.get('/api/chat/messages', requireAuth, async (req, res) => {
 app.post('/api/chat/messages', requireAuth, async (req, res) => {
   try {
     const user = req.authUser || req.session.user || 'operator';
+    recordOperatorPresence(user);
     const { type, text, caption, imageUrl, account, duration, audioUrl } = req.body || {};
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
