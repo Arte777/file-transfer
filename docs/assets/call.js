@@ -1,5 +1,5 @@
 // ── NEXUS WebRTC Call & Discord-Style Video/Screen Stage Module ─────────────────
-// Pure SVG UI, Multi-User WebRTC Mesh, DSP Noise Suppression & Theatre Mode
+// Pure SVG UI, Multi-User WebRTC Mesh, DSP Noise Suppression, Discord 0%-200% Sound Mixer & Theatre Mode
 
 (function() {
   let callState = {
@@ -9,6 +9,8 @@
     screenStream: null,    // Local display media stream
     audioContext: null,
     audioAnalyser: null,
+    masterGainNode: null,
+    masterVolume: 100,
     isMuted: false,
     isVideoOn: false,
     isScreenSharing: false,
@@ -18,7 +20,9 @@
     lastSignalTime: 0,
     pollInterval: null,
     speakingInterval: null,
-    processedSignalIds: new Set()
+    processedSignalIds: new Set(),
+    openVolumeTileUser: null,
+    isMixerOpen: false
   };
 
   const RTC_CONFIG = {
@@ -61,6 +65,90 @@
     return `<span class="user-initials op">${escapeHtml(initials)}</span>`;
   }
 
+  // ── Volume & Mixer Persistence ───────────────────────────────────────────────
+  function getUserVolume(username) {
+    const uKey = (username || '').toLowerCase();
+    const stored = localStorage.getItem('nexus_user_vol_' + uKey);
+    if (stored !== null && stored !== undefined) {
+      const v = parseInt(stored, 10);
+      if (!isNaN(v)) return Math.max(0, Math.min(200, v));
+    }
+    return 100;
+  }
+
+  function getSavedMasterVolume() {
+    const stored = localStorage.getItem('nexus_master_vol');
+    if (stored !== null && stored !== undefined) {
+      const v = parseInt(stored, 10);
+      if (!isNaN(v)) return Math.max(0, Math.min(100, v));
+    }
+    return 100;
+  }
+
+  function setPeerVolume(username, volVal) {
+    const uKey = (username || '').toLowerCase();
+    const val = Math.max(0, Math.min(200, parseInt(volVal, 10) || 0));
+    localStorage.setItem('nexus_user_vol_' + uKey, val.toString());
+
+    const peerObj = callState.peers.get(uKey);
+    if (peerObj) {
+      peerObj.userVolume = val;
+      if (peerObj.gainNode) {
+        peerObj.gainNode.gain.value = val / 100;
+      }
+      const audioEl = document.getElementById('ncwAudio_' + uKey);
+      if (audioEl && !peerObj.gainNode) {
+        audioEl.volume = Math.max(0, Math.min(1, val / 100));
+      }
+    }
+
+    const isBoosted = val > 100;
+    const isMuted = val === 0;
+
+    // Update tile popover elements if open
+    const nvpVal = document.getElementById('nvpVal_' + uKey);
+    if (nvpVal) {
+      nvpVal.textContent = val + (isBoosted ? '% 🔥' : '%');
+      nvpVal.classList.toggle('boost', isBoosted);
+    }
+    const nvpSlider = document.getElementById('nvpSlider_' + uKey);
+    if (nvpSlider && Number(nvpSlider.value) !== val) {
+      nvpSlider.value = val;
+    }
+
+    // Update mixer modal elements if open
+    const nmVal = document.getElementById('nmVal_' + uKey);
+    if (nmVal) {
+      nmVal.textContent = val + (isBoosted ? '% 🔥' : '%');
+      nmVal.classList.toggle('boost', isBoosted);
+    }
+    const nmSlider = document.getElementById('nmSlider_' + uKey);
+    if (nmSlider && Number(nmSlider.value) !== val) {
+      nmSlider.value = val;
+    }
+
+    const pop = document.getElementById('ncwVolPopover_' + uKey);
+    if (pop) {
+      pop.querySelectorAll('.nvp-pbtn').forEach(b => b.classList.remove('active'));
+      if (val === 0) pop.querySelector('.nvp-pbtn:nth-child(1)')?.classList.add('active');
+      if (val === 100) pop.querySelector('.nvp-pbtn:nth-child(2)')?.classList.add('active');
+      if (val === 200) pop.querySelector('.nvp-pbtn:nth-child(3)')?.classList.add('active');
+    }
+  }
+
+  function setMasterVolume(valVal) {
+    const val = Math.max(0, Math.min(100, parseInt(valVal, 10) || 0));
+    localStorage.setItem('nexus_master_vol', val.toString());
+    callState.masterVolume = val;
+    if (callState.masterGainNode) {
+      callState.masterGainNode.gain.value = val / 100;
+    }
+    const valEl = document.getElementById('ncwMasterVolVal');
+    if (valEl) valEl.textContent = val + '%';
+    const sliderEl = document.getElementById('ncwMasterVolSlider');
+    if (sliderEl && Number(sliderEl.value) !== val) sliderEl.value = val;
+  }
+
   // ── SVG Icons ─────────────────────────────────────────────────────────────────
   const SVG_ICONS = {
     micOn: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
@@ -68,6 +156,9 @@
     camOn: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
     screenOn: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
     dsp: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>`,
+    mixer: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+    volume: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`,
+    volumeMute: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`,
     leave: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="23" y1="1" x2="1" y2="23"/></svg>`,
     expand: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`,
     collapse: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`,
@@ -136,12 +227,41 @@
         <button type="button" class="ncw-ctrl-btn" id="ncwBtnScreen" onclick="window.nexusCall.toggleScreen()" title="Демонстрация экрана (как в Discord)">
           ${SVG_ICONS.screenOn}
         </button>
+        <button type="button" class="ncw-ctrl-btn" id="ncwBtnMixer" onclick="window.nexusCall.toggleMixerModal()" title="Микшер звука (0-200% как в Discord)">
+          ${SVG_ICONS.mixer}
+        </button>
         <button type="button" class="ncw-ctrl-btn dsp active" id="ncwBtnDsp" onclick="window.nexusCall.toggleDSP()" title="Шумоподавление (DSP 85Hz)">
           ${SVG_ICONS.dsp}
         </button>
         <button type="button" class="ncw-ctrl-btn end-call" onclick="window.nexusCall.leaveCall()" title="Покинуть звонок">
           ${SVG_ICONS.leave}
         </button>
+      </div>
+
+      <!-- Discord Sound Mixer Modal Overlay -->
+      <div class="ncw-mixer-overlay" id="ncwMixerOverlay" style="display:none;" onclick="if (event.target === this) window.nexusCall.toggleMixerModal()">
+        <div class="ncw-mixer-modal">
+          <div class="ncw-mixer-header">
+            <div class="ncw-mixer-title">
+              ${SVG_ICONS.mixer}
+              <span>Микшер звука</span>
+            </div>
+            <button type="button" class="ncw-mixer-close" onclick="window.nexusCall.toggleMixerModal()">✕</button>
+          </div>
+          <div class="ncw-mixer-desc">Регулировка громкости участников (как в Discord от 0% до 200%)</div>
+
+          <div class="ncw-mixer-list" id="ncwMixerList"></div>
+
+          <div class="ncw-mixer-footer">
+            <div class="ncw-mixer-master-row">
+              <div class="nmm-label">
+                <span>Общая громкость звонка</span>
+                <span class="nmm-val" id="ncwMasterVolVal">100%</span>
+              </div>
+              <input type="range" min="0" max="100" step="1" value="100" class="nvp-slider" id="ncwMasterVolSlider" oninput="window.nexusCall.setMasterVolume(this.value)">
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -170,6 +290,7 @@
 
     header.addEventListener('mousedown', e => {
       if (e.target.closest('button')) return;
+      if (e.target.closest('.ncw-vol-popover')) return;
       if (win.classList.contains('is-fullscreen')) return;
 
       isDragging = true;
@@ -224,7 +345,7 @@
       callState.peers.forEach((peerObj, userKey) => {
         const tile = document.getElementById('ncwParticipant_' + userKey);
         if (!tile) return;
-        if (peerObj.analyser && !peerObj.isMuted) {
+        if (peerObj.analyser && !peerObj.isMuted && peerObj.userVolume > 0) {
           peerObj.analyser.getByteFrequencyData(buf);
           let sum = 0;
           for (let i = 0; i < buf.length; i++) sum += buf[i];
@@ -235,6 +356,49 @@
         }
       });
     }, 100);
+  }
+
+  // ── Remote Audio Pipeline (Analyser + GainNode for 0%-200% Mixer) ─────────────
+  function setupRemoteAudioPipeline(peerObj, audioTrack) {
+    try {
+      if (!callState.audioContext) {
+        callState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = callState.audioContext;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(()=>{});
+      }
+
+      if (!callState.masterGainNode) {
+        callState.masterGainNode = ctx.createGain();
+        const masterVol = getSavedMasterVolume();
+        callState.masterGainNode.gain.value = masterVol / 100;
+        callState.masterGainNode.connect(ctx.destination);
+      }
+
+      if (audioTrack) {
+        const stream = new MediaStream([audioTrack]);
+        const src = ctx.createMediaStreamSource(stream);
+
+        // 1. Analyser for Discord-style green speaking ring
+        const an = ctx.createAnalyser();
+        an.fftSize = 256;
+        src.connect(an);
+        peerObj.analyser = an;
+
+        // 2. GainNode for individual user volume slider (0% to 200%)
+        const userGain = ctx.createGain();
+        const savedVol = getUserVolume(peerObj.user);
+        userGain.gain.value = savedVol / 100;
+        peerObj.gainNode = userGain;
+        peerObj.userVolume = savedVol;
+
+        src.connect(userGain);
+        userGain.connect(callState.masterGainNode);
+      }
+    } catch (err) {
+      console.warn('[WebRTC] Remote audio pipeline fallback:', err);
+    }
   }
 
   // ── Multi-User WebRTC Peer Connection Factory ─────────────────────────────────
@@ -283,6 +447,8 @@
       isScreen: false,
       isMuted: false,
       analyser: null,
+      gainNode: null,
+      userVolume: getUserVolume(remoteUser),
       pendingCandidates: []
     };
 
@@ -302,17 +468,23 @@
 
       if (e.track.kind === 'audio') {
         const audioEl = document.getElementById('ncwAudio_' + uKey);
+        setupRemoteAudioPipeline(peerObj, e.track);
+
         if (audioEl) {
           audioEl.srcObject = new MediaStream([e.track]);
+          // Keep audioEl muted so sound isn't doubled by GainNode
+          audioEl.muted = true;
           audioEl.play().catch(() => {
             const unlock = () => {
+              if (callState.audioContext && callState.audioContext.state === 'suspended') {
+                callState.audioContext.resume().catch(()=>{});
+              }
               audioEl.play().catch(()=>{});
               document.removeEventListener('click', unlock);
             };
             document.addEventListener('click', unlock);
           });
         }
-        setupRemoteAudioAnalyser(peerObj, e.track);
       } else if (e.track.kind === 'video') {
         const videoEl = document.getElementById('ncwVideo_' + uKey);
         if (videoEl) {
@@ -334,6 +506,7 @@
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         removeRemoteParticipantUI(remoteUser);
         callState.peers.delete(uKey);
+        if (callState.isMixerOpen) renderMixerList();
       }
     };
 
@@ -347,26 +520,8 @@
     }
 
     ensureRemoteParticipantTile(remoteUser);
+    if (callState.isMixerOpen) renderMixerList();
     return pc;
-  }
-
-  function setupRemoteAudioAnalyser(peerObj, audioTrack) {
-    try {
-      if (!callState.audioContext) {
-        callState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (callState.audioContext.state === 'suspended') {
-        callState.audioContext.resume().catch(()=>{});
-      }
-      if (audioTrack) {
-        const stream = new MediaStream([audioTrack]);
-        const src = callState.audioContext.createMediaStreamSource(stream);
-        const an = callState.audioContext.createAnalyser();
-        an.fftSize = 256;
-        src.connect(an);
-        peerObj.analyser = an;
-      }
-    } catch (_) {}
   }
 
   // ── Remote Participant DOM Elements ──────────────────────────────────────────
@@ -382,6 +537,11 @@
       tile.id = tileId;
       tile.className = 'ncw-participant remote';
       tile.ondblclick = () => window.nexusCall.focusUser(user);
+      tile.oncontextmenu = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.nexusCall.toggleTileVolumeMenu(user);
+      };
 
       tile.innerHTML = `
         <video id="ncwVideo_${uKey}" autoplay playsinline muted></video>
@@ -396,6 +556,9 @@
           <span id="ncwMicIcon_${uKey}">${SVG_ICONS.micOn}</span>
         </div>
         <div class="ncw-tile-tools">
+          <button type="button" class="ncw-tile-btn" onclick="window.nexusCall.toggleTileVolumeMenu('${escapeHtml(user)}'); event.stopPropagation();" title="Громкость пользователя (0-200%)">
+            ${SVG_ICONS.volume}
+          </button>
           <button type="button" class="ncw-tile-btn" onclick="window.nexusCall.focusUser('${escapeHtml(user)}'); event.stopPropagation();" title="Закрепить на сцене (Discord Focus)">
             ${SVG_ICONS.focusPin}
           </button>
@@ -403,10 +566,142 @@
             ${SVG_ICONS.fullscreen}
           </button>
         </div>
+        <div class="ncw-vol-anchor" id="ncwVolAnchor_${uKey}"></div>
       `;
       grid.appendChild(tile);
     }
     return tile;
+  }
+
+  function toggleTileVolumeMenu(username) {
+    const uKey = (username || '').toLowerCase();
+    const anchor = document.getElementById('ncwVolAnchor_' + uKey);
+    if (!anchor) return;
+
+    const existing = document.getElementById('ncwVolPopover_' + uKey);
+    if (existing) {
+      existing.remove();
+      callState.openVolumeTileUser = null;
+      return;
+    }
+
+    // Remove any other open popovers
+    document.querySelectorAll('.ncw-vol-popover').forEach(el => el.remove());
+
+    const vol = getUserVolume(username);
+    const isBoosted = vol > 100;
+
+    const popover = document.createElement('div');
+    popover.className = 'ncw-vol-popover';
+    popover.id = 'ncwVolPopover_' + uKey;
+    popover.onclick = e => e.stopPropagation();
+
+    popover.innerHTML = `
+      <div class="nvp-header">
+        <div class="nvp-user-info">
+          <span class="nvp-title">Громкость</span>
+          <span class="nvp-name">@${escapeHtml(username)}</span>
+        </div>
+        <span class="nvp-val ${isBoosted ? 'boost' : ''}" id="nvpVal_${uKey}">${vol}${isBoosted ? '% 🔥' : '%'}</span>
+      </div>
+      <div class="nvp-slider-wrap">
+        <input type="range" min="0" max="200" step="1" value="${vol}" class="nvp-slider" id="nvpSlider_${uKey}" oninput="window.nexusCall.setPeerVolume('${escapeHtml(username)}', this.value)">
+      </div>
+      <div class="nvp-presets">
+        <button type="button" class="nvp-pbtn ${vol === 0 ? 'active' : ''}" onclick="window.nexusCall.setPeerVolume('${escapeHtml(username)}', 0)">0%</button>
+        <button type="button" class="nvp-pbtn ${vol === 100 ? 'active' : ''}" onclick="window.nexusCall.setPeerVolume('${escapeHtml(username)}', 100)">100%</button>
+        <button type="button" class="nvp-pbtn boost ${vol === 200 ? 'active' : ''}" onclick="window.nexusCall.setPeerVolume('${escapeHtml(username)}', 200)">200% 🔥</button>
+      </div>
+    `;
+
+    anchor.appendChild(popover);
+    callState.openVolumeTileUser = uKey;
+
+    const closeListener = e => {
+      if (!popover.contains(e.target)) {
+        popover.remove();
+        callState.openVolumeTileUser = null;
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeListener), 20);
+  }
+
+  // ── Discord Sound Mixer Modal Panel ──────────────────────────────────────────
+  function toggleMixerModal() {
+    ensureCallWindowUI();
+    const overlay = document.getElementById('ncwMixerOverlay');
+    const btn = document.getElementById('ncwBtnMixer');
+    if (!overlay) return;
+
+    callState.isMixerOpen = !callState.isMixerOpen;
+    overlay.style.display = callState.isMixerOpen ? 'flex' : 'none';
+    if (btn) btn.classList.toggle('active', callState.isMixerOpen);
+
+    if (callState.isMixerOpen) {
+      renderMixerList();
+      const mv = getSavedMasterVolume();
+      const mvVal = document.getElementById('ncwMasterVolVal');
+      if (mvVal) mvVal.textContent = mv + '%';
+      const mvSlider = document.getElementById('ncwMasterVolSlider');
+      if (mvSlider) mvSlider.value = mv;
+    }
+  }
+
+  function renderMixerList() {
+    const listEl = document.getElementById('ncwMixerList');
+    if (!listEl) return;
+
+    if (callState.peers.size === 0) {
+      listEl.innerHTML = `
+        <div class="ncw-mixer-empty">
+          <div class="nme-icon">🎧</div>
+          <div class="nme-text">В звонке пока нет других участников</div>
+          <div class="nme-sub">Когда кто-то зайдет в канал, вы сможете индивидуально настроить громкость каждого</div>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    callState.peers.forEach((peerObj, uKey) => {
+      const user = peerObj.user;
+      const vol = getUserVolume(user);
+      const isMuted = vol === 0;
+      const isBoosted = vol > 100;
+      const avatarHtml = getCallAvatarHTML(user);
+
+      html += `
+        <div class="ncw-mixer-row" id="nmRow_${uKey}">
+          <div class="nmr-user">
+            <div class="nmr-avatar">${avatarHtml}</div>
+            <div class="nmr-info">
+              <div class="nmr-name">@${escapeHtml(user)}</div>
+              <div class="nmr-status">${peerObj.isMuted ? '🔇 Заглушен' : '🎙️ Голос активен'}</div>
+            </div>
+          </div>
+
+          <div class="nmr-slider-wrap">
+            <div class="nmr-val-row">
+              <span class="nmr-label">Громкость</span>
+              <span class="nmr-val ${isBoosted ? 'boost' : ''}" id="nmVal_${uKey}">${vol}${isBoosted ? '% 🔥' : '%'}</span>
+            </div>
+            <input type="range" min="0" max="200" step="1" value="${vol}" class="nvp-slider" id="nmSlider_${uKey}" oninput="window.nexusCall.setPeerVolume('${escapeHtml(user)}', this.value)">
+          </div>
+
+          <div class="nmr-actions">
+            <button type="button" class="nmr-btn ${isMuted ? 'active' : ''}" onclick="window.nexusCall.setPeerVolume('${escapeHtml(user)}', ${isMuted ? 100 : 0})" title="${isMuted ? 'Включить звук' : 'Заглушить'}">
+              ${isMuted ? SVG_ICONS.volumeMute : SVG_ICONS.volume}
+            </button>
+            <button type="button" class="nmr-btn boost ${vol === 200 ? 'active' : ''}" onclick="window.nexusCall.setPeerVolume('${escapeHtml(user)}', 200)" title="Выкрутить на 200% (Discord Boost)">
+              200% 🔥
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
   }
 
   function updateRemoteParticipantUI(user) {
@@ -432,6 +727,11 @@
     const micIcon = document.getElementById('ncwMicIcon_' + uKey);
     if (micIcon) {
       micIcon.innerHTML = peerObj.isMuted ? SVG_ICONS.micOff : SVG_ICONS.micOn;
+    }
+
+    if (callState.isMixerOpen) {
+      const stEl = document.querySelector(`#nmRow_${uKey} .nmr-status`);
+      if (stEl) stEl.textContent = peerObj.isMuted ? '🔇 Заглушен' : '🎙️ Голос активен';
     }
   }
 
@@ -552,7 +852,6 @@
       callState.localStream = stream;
       setupAudioDSP(stream);
       callState.active = true;
-      // Look back 25s so we don't miss signals from peers who joined seconds before
       callState.lastSignalTime = Date.now() - 25000;
       callState.processedSignalIds.clear();
 
@@ -633,7 +932,6 @@
       if (btn) btn.classList.remove('active');
 
       if (callState.isScreenSharing && callState.screenStream) {
-        // Fallback to screen share
         const sTrack = callState.screenStream.getVideoTracks()[0];
         if (localVideo) { localVideo.srcObject = callState.screenStream; localVideo.style.display = 'block'; }
         if (localTile) { localTile.classList.add('has-video', 'has-screen'); }
@@ -655,7 +953,6 @@
         callState.videoStream = vStream;
         callState.isVideoOn = true;
 
-        // If screen sharing was active, stop screen sharing to focus on camera
         if (callState.isScreenSharing && callState.screenStream) {
           callState.screenStream.getTracks().forEach(t => t.stop());
           callState.screenStream = null;
@@ -842,6 +1139,7 @@
     callState.videoStream = null;
     callState.screenStream = null;
     callState.processedSignalIds.clear();
+    callState.isMixerOpen = false;
 
     const win = document.getElementById('nexusCallWindow');
     if (win) {
@@ -851,8 +1149,9 @@
 
     resetTheaterMode();
 
-    // Clean remote participant DOM elements
+    // Clean remote participant DOM elements & popovers
     document.querySelectorAll('.ncw-participant.remote').forEach(el => el.remove());
+    document.querySelectorAll('.ncw-vol-popover').forEach(el => el.remove());
 
     broadcastSignal('leave', {});
     if (typeof apiFetch === 'function') {
@@ -896,7 +1195,7 @@
           }
         }
       } catch (_) {}
-    }, 750); // Fast 750ms polling for instant call response
+    }, 750);
   }
 
   async function handleIncomingSignal(data) {
@@ -983,6 +1282,7 @@
       if (callState.peers.has(uKey)) {
         callState.peers.get(uKey).pc.close();
         callState.peers.delete(uKey);
+        if (callState.isMixerOpen) renderMixerList();
       }
     }
   }
@@ -1001,7 +1301,11 @@
     focusUser,
     fullscreenTile,
     minimize,
-    leaveCall
+    leaveCall,
+    toggleTileVolumeMenu,
+    toggleMixerModal,
+    setPeerVolume,
+    setMasterVolume
   };
 
   window.toggleNexusCall = function() {
