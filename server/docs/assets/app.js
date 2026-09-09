@@ -1354,7 +1354,7 @@ function ensureAccountPickerModal() {
     <div class="chat-acc-picker-box">
       <div class="cap-header">
         <div class="cap-title">Выбор реального аккаунта для отправки</div>
-        <button type="button" class="chb-close-btn" onclick="closeAccountPickerForChat()">✕</button>
+        <button type="button" class="cwh-btn-close chb-close-btn" title="Закрыть" onclick="closeAccountPickerForChat()">✕</button>
       </div>
       <div class="cap-search">
         <input type="text" id="capSearchInput" placeholder="Поиск по нику или ID Roblox..." oninput="renderAccountPickerList(this.value)">

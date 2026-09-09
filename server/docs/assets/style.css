@@ -490,9 +490,10 @@ body {
   gap: 8px;
 }
 
-.cwh-btn-close {
+.cwh-btn-close,
+.chb-close-btn {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-muted);
   width: 32px;
   height: 32px;
@@ -503,9 +504,11 @@ body {
   cursor: pointer;
   font-size: 0.95rem;
   transition: var(--transition);
+  outline: none;
 }
 
-.cwh-btn-close:hover {
+.cwh-btn-close:hover,
+.chb-close-btn:hover {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.4);
   color: #ef4444;
