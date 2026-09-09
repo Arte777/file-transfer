@@ -439,7 +439,7 @@ async function setOperatorSettings(user, patch) {
 
   if (update.password) {
     update.password = hashPassword(update.password);
-    update.tokenVersion = ((memSettings[canonical] && memSettings[canonical].tokenVersion) || 1) + 1;
+    // NOTE: do NOT put tokenVersion in update/$set — it's handled by $inc below to avoid path conflict
     update.kickedAt = new Date();
     if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
   }
@@ -450,14 +450,17 @@ async function setOperatorSettings(user, patch) {
     for (const k of Object.keys(unset)) {
       delete memSettings[canonical][k];
     }
+    // Update tokenVersion in memory when password changes
+    if (update.password) {
+      update.tokenVersion = ((memSettings[canonical] && memSettings[canonical].tokenVersion) || 1) + 1;
+    }
     Object.assign(memSettings[canonical], update);
     return;
   }
 
   const setObj = { ...update, user: canonical, updatedAt: new Date() };
-  if (update.password) {
-    setObj.kickedAt = new Date();
-  }
+  // tokenVersion must NOT be in $set when also in $inc (MongoDB path conflict)
+  delete setObj.tokenVersion;
 
   const mongoUpdate = {};
   if (Object.keys(setObj).length > 0) mongoUpdate.$set = setObj;
@@ -470,6 +473,7 @@ async function setOperatorSettings(user, patch) {
     { upsert: true }
   );
   if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
+
 }
 
 // Инициализация профилей операторов и поддержка начальных паролей из env переменных
