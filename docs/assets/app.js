@@ -63,17 +63,42 @@ async function apiFetch(path, opts = {}) {
   const token = getToken();
   if (token) opts.headers['Authorization'] = 'Bearer ' + token;
 
+  const isBackground = opts.isBackground || 
+    path.includes('/api/call/') || 
+    path.includes('/api/chat/') || 
+    path.includes('/api/operators');
+
   try {
-    const resp = await fetch(API_BASE + path, opts);
+    let resp = await fetch(API_BASE + path, opts);
 
     if (resp.status === 401) {
+      // Для фонового поллинга (звонки, чаты, присутствие операторов)
+      // НИКОГДА не сбрасываем авторизацию и не редиректим на логин!
+      if (isBackground) {
+        throw new Error('auth_bg');
+      }
+
+      // Для явных действий пользователя даем 1 попытку повторить запрос через 1.2 сек,
+      // если сервер перезагружался или обновлял подключение к БД
+      if (!opts._retried) {
+        await new Promise(r => setTimeout(r, 1200));
+        const retryOpts = { ...opts, _retried: true };
+        const currentToken = getToken();
+        if (currentToken) retryOpts.headers['Authorization'] = 'Bearer ' + currentToken;
+        resp = await fetch(API_BASE + path, retryOpts);
+        if (resp.status !== 401) {
+          return resp;
+        }
+      }
+
+      // Если и повторный запрос вернул 401, сессия действительно недействительна
       clearAuth();
       location.href = 'login.html';
       throw new Error('auth');
     }
     return resp;
   } catch (err) {
-    if (err.message === 'auth') throw err;
+    if (err.message === 'auth' || err.message === 'auth_bg') throw err;
     throw err;
   }
 }

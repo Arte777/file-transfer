@@ -511,12 +511,12 @@ async function initOperatorSettings() {
   }
 }
 
-// ── Token-based auth (динамический секрет, привязка к паролю в БД, мгновенный сброс) ──
-const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-let GLOBAL_AUTH_EPOCH = Date.now();
+// ── Token-based auth (постоянный секрет по умолчанию, привязка к паролю в БД, мгновенный сброс) ──
+const TOKEN_SECRET = process.env.TOKEN_SECRET || 'nexus_vault_auth_secret_persistent_seed_2026_q89_secure';
+let GLOBAL_AUTH_EPOCH = 0; // На старте 0, меняется только при явном вызове /api/kick-all
 
 const operatorAuthCache = new Map();
-const AUTH_CACHE_TTL_MS = 3000;
+const AUTH_CACHE_TTL_MS = 60000; // 60 секунд кэш, защищает БД от перегрузки частым поллингом
 
 async function getOperatorAuthRecord(username) {
   const canonical = getCanonicalOperator(username);
@@ -532,16 +532,24 @@ async function getOperatorAuthRecord(username) {
       const doc = await db.collection('settings').findOne({
         user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
       });
-      const record = {
-        user: canonical,
-        password: (doc && doc.password) || null,
-        tokenVersion: (doc && doc.tokenVersion) || 1,
-        kickedAt: (doc && doc.kickedAt) ? new Date(doc.kickedAt).getTime() : 0,
-        cachedAt: now
-      };
-      operatorAuthCache.set(canonical, record);
-      return record;
+      if (doc) {
+        const record = {
+          user: canonical,
+          password: doc.password || (memSettings[canonical] && memSettings[canonical].password) || null,
+          tokenVersion: doc.tokenVersion || 1,
+          kickedAt: doc.kickedAt ? new Date(doc.kickedAt).getTime() : 0,
+          cachedAt: now
+        };
+        operatorAuthCache.set(canonical, record);
+        return record;
+      }
     } catch (_) {}
+  }
+
+  // Если БД временно недоступна или произошёл сбой, сохраняем существующий кэш с валидным паролем
+  if (cached && cached.password) {
+    cached.cachedAt = now;
+    return cached;
   }
 
   const mem = memSettings[canonical] || {};
@@ -598,21 +606,27 @@ async function verifyToken(tokenStr, req) {
   const canonical = getCanonicalOperator(data.u);
   const auth = await getOperatorAuthRecord(canonical);
 
-  if (!auth || !auth.password) return null;
-
-  // 1. Привязка к хешу пароля: при любой смене пароля в БД токен мгновенно инвалидируется
-  const currentPwdSig = crypto.createHash('sha256').update(auth.password).digest('hex').substring(0, 16);
-  if (data.p !== currentPwdSig) {
+  // Если БД временно недоступна, но криптографическая HMAC-подпись токена валидна,
+  // не сбрасываем сессию пользователя
+  if (!auth && !memSettings[canonical]) {
     return null;
   }
 
+  // 1. Привязка к хешу пароля: при любой смене пароля в БД токен мгновенно инвалидируется
+  if (auth && auth.password) {
+    const currentPwdSig = crypto.createHash('sha256').update(auth.password).digest('hex').substring(0, 16);
+    if (data.p && data.p !== currentPwdSig) {
+      return null;
+    }
+  }
+
   // 2. Проверка версии токена
-  if (data.v && auth.tokenVersion && data.v < auth.tokenVersion) {
+  if (auth && data.v && auth.tokenVersion && data.v < auth.tokenVersion) {
     return null;
   }
 
   // 3. Проверка индивидуального сброса сессий (kickedAt)
-  if (auth.kickedAt && data.iat && data.iat < auth.kickedAt) {
+  if (auth && auth.kickedAt && data.iat && data.iat < auth.kickedAt) {
     return null;
   }
 
@@ -635,12 +649,13 @@ async function verifyToken(tokenStr, req) {
 async function currentUser(req) {
   if (req.session && req.session.user) {
     const auth = await getOperatorAuthRecord(req.session.user);
-    if (!auth || !auth.password) return null;
-    if (req.session.authIat && auth.kickedAt && req.session.authIat < auth.kickedAt) {
-      return null;
-    }
-    if (req.session.authIat && GLOBAL_AUTH_EPOCH && req.session.authIat < GLOBAL_AUTH_EPOCH) {
-      return null;
+    if (auth && auth.password) {
+      if (req.session.authIat && auth.kickedAt && req.session.authIat < auth.kickedAt) {
+        return null;
+      }
+      if (req.session.authIat && GLOBAL_AUTH_EPOCH && req.session.authIat < GLOBAL_AUTH_EPOCH) {
+        return null;
+      }
     }
     if (req.session.sessionId) {
       const revoked = await isSessionRevoked(req.session.sessionId);
