@@ -331,6 +331,7 @@ if (saveBtn) {
       });
       const resp = await r.json();
       if (resp.success) {
+        const passwordWasChanged = !!data.newPassword;
         toast('✅ Настройки сохранены');
         if (document.getElementById('newPassword')) document.getElementById('newPassword').value = '';
         if (document.getElementById('currentPassword')) document.getElementById('currentPassword').value = '';
@@ -352,8 +353,20 @@ if (saveBtn) {
           remoteOperatorProfiles[curUser] = { ...(remoteOperatorProfiles[curUser] || {}), ...currentSettings };
         }
         
+        if (passwordWasChanged) {
+          // Server invalidated the JWT — must re-login
+          toast('🔑 Пароль изменён. Повторный вход...', 'ok');
+          setTimeout(() => {
+            localStorage.removeItem('ft_token');
+            localStorage.removeItem('ft_user');
+            window.location.href = 'login.html';
+          }, 1800);
+          return;
+        }
+
         document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
         bindLogout();
+
       } else {
         toast(resp.error || 'Ошибка сохранения', 'err');
       }

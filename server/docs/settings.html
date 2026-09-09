@@ -23,7 +23,7 @@
       <div class="container" style="max-width: 960px; margin: 0 auto;">
         <div class="settings-grid">
           
-          <!-- LEFT COLUMN: Profile & Interface -->
+          <!-- LEFT COLUMN: Profile identity -->
           <div class="settings-col">
             <h2 class="settings-section-title">Профиль оператора</h2>
             
@@ -45,75 +45,6 @@
                 <button class="emoji-btn" data-emoji="👤">👤</button>
                 <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи" style="width: 105px; text-align: center; padding: 5px 8px; font-size: 0.8rem;">
               </div>
-            </div>
-
-            <!-- Banner Card -->
-            <div class="settings-card" style="margin-top: 1rem;">
-              <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                🖼️ Баннер профиля
-              </h3>
-
-              <!-- Banner preview strip -->
-              <div id="bannerPreviewStrip" style="height: 70px; border-radius: 10px; margin-bottom: 0.85rem; overflow: hidden; position: relative; border: 1px solid var(--border);">
-                <div id="bannerPreviewInner" style="width: 100%; height: 100%; background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(168, 85, 247, 0.18));"></div>
-                <button id="btnClearBanner" title="Сбросить баннер" style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">✕ Сброс</button>
-              </div>
-
-              <!-- Preset banner swatches -->
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 0.85rem;">
-                <div class="banner-swatch" data-preset="aurora"   style="background: linear-gradient(135deg,#0b3954,#20dfb0); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Аврора"></div>
-                <div class="banner-swatch" data-preset="fire"     style="background: linear-gradient(135deg,#7a1200,#ffb347); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Огонь"></div>
-                <div class="banner-swatch" data-preset="neon"     style="background: linear-gradient(135deg,#2d0066,#cc00ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Неон"></div>
-                <div class="banner-swatch" data-preset="forest"   style="background: linear-gradient(135deg,#143314,#55c355); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Лес"></div>
-                <div class="banner-swatch" data-preset="ocean"    style="background: linear-gradient(135deg,#001a4f,#0098ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Океан"></div>
-                <div class="banner-swatch" data-preset="sunset"   style="background: linear-gradient(135deg,#4b0066,#ff9800); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Закат"></div>
-                <div class="banner-swatch" data-preset="cyber"    style="background: linear-gradient(135deg,#001a30,#00f0ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Кибер"></div>
-                <div class="banner-swatch" data-preset="rose"     style="background: linear-gradient(135deg,#4a003a,#ff6b9e); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Роза"></div>
-              </div>
-
-              <!-- Custom banner image upload -->
-              <div style="display: flex; gap: 8px;">
-                <input type="file" id="bannerFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
-                <button class="btn-secondary" onclick="document.getElementById('bannerFileInput').click()" style="flex:1; font-size:0.8rem; padding:7px;">
-                  📁 Загрузить своё фото
-                </button>
-              </div>
-              <input type="hidden" id="bannerValue">
-            </div>
-
-            <!-- Profile Effect Card -->
-            <div class="settings-card" style="margin-top: 1rem;">
-              <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                ✨ Эффект профиля
-              </h3>
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                <button class="effect-btn" data-effect="none"    style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">🚫 Нет</button>
-                <button class="effect-btn" data-effect="snow"    style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">❄️ Снег</button>
-                <button class="effect-btn" data-effect="leaves"  style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">🍂 Листья</button>
-                <button class="effect-btn" data-effect="stars"   style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">✨ Звёзды</button>
-                <button class="effect-btn" data-effect="fire"    style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">🔥 Искры</button>
-                <button class="effect-btn" data-effect="bubbles" style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">🫧 Пузыри</button>
-                <button class="effect-btn" data-effect="sakura"  style="padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;" style="grid-column:span 3">🌸 Сакура</button>
-              </div>
-              <input type="hidden" id="profileEffectValue" value="none">
-            </div>
-
-            <!-- Avatar Decoration Card -->
-            <div class="settings-card" style="margin-top: 1rem;">
-              <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                💎 Рамка аватарки
-              </h3>
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-                <div class="deco-btn" data-deco="none"    style="height:42px; border-radius:50%; width:42px; margin:auto; background:var(--surface); border:2px solid var(--border); cursor:pointer; position:relative; transition:transform 0.15s;" title="Нет"></div>
-                <div class="deco-btn" data-deco="rainbow" style="height:42px; border-radius:50%; width:42px; margin:auto; background:conic-gradient(#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff,#ff0000); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Радуга"></div>
-                <div class="deco-btn" data-deco="fire"    style="height:42px; border-radius:50%; width:42px; margin:auto; background:conic-gradient(#ff0000,#ff6600,#ffcc00,#ff6600,#ff0000); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Огонь"></div>
-                <div class="deco-btn" data-deco="ice"     style="height:42px; border-radius:50%; width:42px; margin:auto; background:linear-gradient(135deg,#00cfff,#a0e8ff); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Лёд"></div>
-                <div class="deco-btn" data-deco="gold"    style="height:42px; border-radius:50%; width:42px; margin:auto; background:conic-gradient(#b8860b,#ffd700,#daa520,#ffd700,#b8860b); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Золото"></div>
-                <div class="deco-btn" data-deco="neon"    style="height:42px; border-radius:50%; width:42px; margin:auto; background:conic-gradient(#ff00ff,#00f0ff,#a855f7,#ff00ff); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Неон"></div>
-                <div class="deco-btn" data-deco="matrix"  style="height:42px; border-radius:50%; width:42px; margin:auto; background:conic-gradient(#00ff00,#006600,#00ff00); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Матрица"></div>
-                <div class="deco-btn" data-deco="pulse"   style="height:42px; border-radius:50%; width:42px; margin:auto; background:linear-gradient(135deg,#00f0ff,#a855f7); border:2px solid transparent; cursor:pointer; position:relative; transition:transform 0.15s;" title="Пульс"></div>
-              </div>
-              <input type="hidden" id="avatarDecorationValue" value="none">
             </div>
 
             <!-- Identity Card -->
@@ -176,9 +107,86 @@
 
           </div>
 
-          <!-- RIGHT COLUMN: Extension & Security -->
+          <!-- RIGHT COLUMN: Appearance + Security -->
           <div class="settings-col">
-            <h2 class="settings-section-title">Безопасность и Расширение</h2>
+            <h2 class="settings-section-title">Оформление профиля</h2>
+
+            <!-- Banner Card -->
+            <div class="settings-card">
+              <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;">
+                🖼️ Баннер профиля
+              </h3>
+
+              <!-- Banner preview strip -->
+              <div id="bannerPreviewStrip" style="height: 70px; border-radius: 10px; margin-bottom: 0.85rem; overflow: hidden; position: relative; border: 1px solid var(--border);">
+                <div id="bannerPreviewInner" style="width: 100%; height: 100%; background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(168, 85, 247, 0.18));"></div>
+                <button id="btnClearBanner" title="Сбросить баннер" style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">✕ Сброс</button>
+              </div>
+
+              <!-- Preset banner swatches -->
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 0.85rem;">
+                <div class="banner-swatch" data-preset="aurora"   style="background: linear-gradient(135deg,#0b3954,#20dfb0); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Аврора"></div>
+                <div class="banner-swatch" data-preset="fire"     style="background: linear-gradient(135deg,#7a1200,#ffb347); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Огонь"></div>
+                <div class="banner-swatch" data-preset="neon"     style="background: linear-gradient(135deg,#2d0066,#cc00ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Неон"></div>
+                <div class="banner-swatch" data-preset="forest"   style="background: linear-gradient(135deg,#143314,#55c355); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Лес"></div>
+                <div class="banner-swatch" data-preset="ocean"    style="background: linear-gradient(135deg,#001a4f,#0098ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Океан"></div>
+                <div class="banner-swatch" data-preset="sunset"   style="background: linear-gradient(135deg,#4b0066,#ff9800); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Закат"></div>
+                <div class="banner-swatch" data-preset="cyber"    style="background: linear-gradient(135deg,#001a30,#00f0ff); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Кибер"></div>
+                <div class="banner-swatch" data-preset="rose"     style="background: linear-gradient(135deg,#4a003a,#ff6b9e); height:38px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:all 0.15s;" title="Роза"></div>
+              </div>
+
+              <!-- Custom banner image upload -->
+              <div style="display: flex; gap: 8px;">
+                <input type="file" id="bannerFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
+                <button class="btn-secondary" onclick="document.getElementById('bannerFileInput').click()" style="flex:1; font-size:0.8rem; padding:7px;">
+                  📁 Загрузить своё фото
+                </button>
+              </div>
+              <input type="hidden" id="bannerValue">
+            </div>
+
+            <!-- Effect + Decoration row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+
+              <!-- Profile Effect Card -->
+              <div class="settings-card">
+                <h3 style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                  ✨ Эффект
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                  <button class="effect-btn" data-effect="none"    style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">🚫 Нет</button>
+                  <button class="effect-btn" data-effect="snow"    style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">❄️ Снег</button>
+                  <button class="effect-btn" data-effect="leaves"  style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">🍂 Листья</button>
+                  <button class="effect-btn" data-effect="stars"   style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">✨ Звёзды</button>
+                  <button class="effect-btn" data-effect="fire"    style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">🔥 Искры</button>
+                  <button class="effect-btn" data-effect="bubbles" style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">🫧 Пузыри</button>
+                  <button class="effect-btn" data-effect="sakura"  style="padding: 8px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.2s; grid-column: span 2;">🌸 Сакура</button>
+                </div>
+                <input type="hidden" id="profileEffectValue" value="none">
+              </div>
+
+              <!-- Avatar Decoration Card -->
+              <div class="settings-card">
+                <h3 style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                  💎 Рамка
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: center; justify-items: center;">
+                  <div class="deco-btn" data-deco="none"    style="height:36px; border-radius:50%; width:36px; background:var(--surface); border:2px solid var(--border); cursor:pointer; transition:transform 0.15s;" title="Нет"></div>
+                  <div class="deco-btn" data-deco="rainbow" style="height:36px; border-radius:50%; width:36px; background:conic-gradient(#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff,#ff0000); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Радуга"></div>
+                  <div class="deco-btn" data-deco="fire"    style="height:36px; border-radius:50%; width:36px; background:conic-gradient(#ff0000,#ff6600,#ffcc00,#ff6600,#ff0000); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Огонь"></div>
+                  <div class="deco-btn" data-deco="ice"     style="height:36px; border-radius:50%; width:36px; background:linear-gradient(135deg,#00cfff,#a0e8ff); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Лёд"></div>
+                  <div class="deco-btn" data-deco="gold"    style="height:36px; border-radius:50%; width:36px; background:conic-gradient(#b8860b,#ffd700,#daa520,#ffd700,#b8860b); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Золото"></div>
+                  <div class="deco-btn" data-deco="neon"    style="height:36px; border-radius:50%; width:36px; background:conic-gradient(#ff00ff,#00f0ff,#a855f7,#ff00ff); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Неон"></div>
+                  <div class="deco-btn" data-deco="matrix"  style="height:36px; border-radius:50%; width:36px; background:conic-gradient(#00ff00,#006600,#00ff00); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Матрица"></div>
+                  <div class="deco-btn" data-deco="pulse"   style="height:36px; border-radius:50%; width:36px; background:linear-gradient(135deg,#00f0ff,#a855f7); border:2px solid transparent; cursor:pointer; transition:transform 0.15s;" title="Пульс"></div>
+                </div>
+                <input type="hidden" id="avatarDecorationValue" value="none">
+              </div>
+
+            </div>
+
+            <!-- Divider -->
+            <h2 class="settings-section-title" style="margin-top: 2rem;">Безопасность и Расширение</h2>
 
             <!-- Extension Card -->
             <div class="settings-card">
@@ -213,7 +221,7 @@
               <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom: 0.75rem;">
               <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
               <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
-                Оставьте пустым, если менять пароль не нужно.
+                После смены пароля потребуется повторный вход.
               </div>
             </div>
 
@@ -225,6 +233,7 @@
           </div>
 
         </div>
+
 
         <!-- ADMIN PANEL (Shonll Only) -->
         <div id="adminPanelSection" style="display: none; margin-top: 2.5rem;">
