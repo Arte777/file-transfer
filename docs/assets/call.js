@@ -1,5 +1,5 @@
 // ── NEXUS WebRTC Call & Discord-Style Video/Screen Stage Module ─────────────────
-// Pure SVG UI, Multi-User WebRTC Mesh, DSP Noise Suppression, Discord 0%-200% Sound Mixer & Theatre Mode
+// Multi-User WebRTC Mesh, Perfect Negotiation, Unmuted Hardware Audio, 0%-200% Sound Mixer & Theatre Mode
 
 (function() {
   let callState = {
@@ -7,9 +7,9 @@
     localStream: null,     // Raw microphone stream
     videoStream: null,     // Local webcam stream
     screenStream: null,    // Local display media stream
+    dummyVideoTrack: null, // Warm video pipeline track
     audioContext: null,
     audioAnalyser: null,
-    masterGainNode: null,
     masterVolume: 100,
     isMuted: false,
     isVideoOn: false,
@@ -29,12 +29,33 @@
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ]
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
   };
 
-  // ── Audio Context & Analyser (For Discord Speaking Ring & Voice DSP) ──────────
-  function setupAudioDSP(rawStream) {
+  // ── Warm Dummy Video Track (Ensures video codec is negotiated from the start) ─
+  function createDummyVideoTrack() {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#060812';
+      ctx.fillRect(0, 0, 64, 64);
+      const stream = canvas.captureStream(5);
+      const track = stream.getVideoTracks()[0];
+      track.enabled = false;
+      return track;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Audio Context & Analyser (For Discord Speaking Ring only) ─────────────────
+  function setupLocalAudioAnalyser(rawStream) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
@@ -52,8 +73,27 @@
       callState.audioAnalyser.fftSize = 256;
       source.connect(callState.audioAnalyser);
     } catch (e) {
-      console.warn('Audio analyser init fallback:', e);
+      console.warn('Local audio analyser init fallback:', e);
     }
+  }
+
+  function setupRemoteSpeakingAnalyser(peerObj, audioTrack) {
+    try {
+      if (!callState.audioContext) {
+        callState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (callState.audioContext.state === 'suspended') {
+        callState.audioContext.resume().catch(()=>{});
+      }
+      if (audioTrack) {
+        const stream = new MediaStream([audioTrack]);
+        const src = callState.audioContext.createMediaStreamSource(stream);
+        const an = callState.audioContext.createAnalyser();
+        an.fftSize = 256;
+        src.connect(an);
+        peerObj.analyser = an;
+      }
+    } catch (_) {}
   }
 
   // ── Real User Avatar Helper (No ugly emojis!) ────────────────────────────────
@@ -93,17 +133,18 @@
     const peerObj = callState.peers.get(uKey);
     if (peerObj) {
       peerObj.userVolume = val;
-      if (peerObj.gainNode) {
-        peerObj.gainNode.gain.value = val / 100;
-      }
-      const audioEl = document.getElementById('ncwAudio_' + uKey);
-      if (audioEl && !peerObj.gainNode) {
-        audioEl.volume = Math.max(0, Math.min(1, val / 100));
-      }
+    }
+
+    // Direct hardware audio element volume control
+    const audioEl = document.getElementById('ncwAudio_' + uKey);
+    if (audioEl) {
+      const masterScale = (callState.masterVolume || 100) / 100;
+      // Volume scales 0.0 to 1.0 (clamped)
+      audioEl.volume = Math.max(0, Math.min(1, (val / 100) * masterScale));
+      audioEl.muted = (val === 0);
     }
 
     const isBoosted = val > 100;
-    const isMuted = val === 0;
 
     // Update tile popover elements if open
     const nvpVal = document.getElementById('nvpVal_' + uKey);
@@ -140,9 +181,16 @@
     const val = Math.max(0, Math.min(100, parseInt(valVal, 10) || 0));
     localStorage.setItem('nexus_master_vol', val.toString());
     callState.masterVolume = val;
-    if (callState.masterGainNode) {
-      callState.masterGainNode.gain.value = val / 100;
-    }
+
+    // Apply master scale to all peer audio elements
+    callState.peers.forEach((p, uKey) => {
+      const audioEl = document.getElementById('ncwAudio_' + uKey);
+      if (audioEl) {
+        const uVol = getUserVolume(p.user);
+        audioEl.volume = Math.max(0, Math.min(1, (uVol / 100) * (val / 100)));
+      }
+    });
+
     const valEl = document.getElementById('ncwMasterVolVal');
     if (valEl) valEl.textContent = val + '%';
     const sliderEl = document.getElementById('ncwMasterVolSlider');
@@ -358,49 +406,6 @@
     }, 100);
   }
 
-  // ── Remote Audio Pipeline (Analyser + GainNode for 0%-200% Mixer) ─────────────
-  function setupRemoteAudioPipeline(peerObj, audioTrack) {
-    try {
-      if (!callState.audioContext) {
-        callState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = callState.audioContext;
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(()=>{});
-      }
-
-      if (!callState.masterGainNode) {
-        callState.masterGainNode = ctx.createGain();
-        const masterVol = getSavedMasterVolume();
-        callState.masterGainNode.gain.value = masterVol / 100;
-        callState.masterGainNode.connect(ctx.destination);
-      }
-
-      if (audioTrack) {
-        const stream = new MediaStream([audioTrack]);
-        const src = ctx.createMediaStreamSource(stream);
-
-        // 1. Analyser for Discord-style green speaking ring
-        const an = ctx.createAnalyser();
-        an.fftSize = 256;
-        src.connect(an);
-        peerObj.analyser = an;
-
-        // 2. GainNode for individual user volume slider (0% to 200%)
-        const userGain = ctx.createGain();
-        const savedVol = getUserVolume(peerObj.user);
-        userGain.gain.value = savedVol / 100;
-        peerObj.gainNode = userGain;
-        peerObj.userVolume = savedVol;
-
-        src.connect(userGain);
-        userGain.connect(callState.masterGainNode);
-      }
-    } catch (err) {
-      console.warn('[WebRTC] Remote audio pipeline fallback:', err);
-    }
-  }
-
   // ── Multi-User WebRTC Peer Connection Factory ─────────────────────────────────
   function createPeerConnection(remoteUser, isInitiator = false) {
     const uKey = remoteUser.toLowerCase();
@@ -410,16 +415,7 @@
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
-    // 1. Upfront video transceiver ensures video RTCRtpSender exists from the start
-    // This allows instant toggleCam() and toggleScreen() without SDP renegotiation!
-    let videoTransceiver = null;
-    try {
-      videoTransceiver = pc.addTransceiver('video', { direction: 'sendrecv' });
-    } catch (e) {
-      console.warn('addTransceiver error:', e);
-    }
-
-    // 2. Add local microphone audio track directly (preserves hardware echo cancellation & AGC)
+    // 1. Add raw microphone audio track (direct hardware AEC + AGC)
     if (callState.localStream) {
       const audioTrack = callState.localStream.getAudioTracks()[0];
       if (audioTrack) {
@@ -429,25 +425,28 @@
       }
     }
 
-    // 3. If local video or screen is currently active, attach it to the transceiver sender
-    const activeVideoTrack = (callState.screenStream && callState.screenStream.getVideoTracks()[0]) ||
-                             (callState.videoStream && callState.videoStream.getVideoTracks()[0]);
-    if (activeVideoTrack && videoTransceiver && videoTransceiver.sender) {
+    // 2. Add video track (real webcam/screen or dummy black canvas track)
+    // Adding an actual video track upfront ensures VP8/H264 codec parameters are negotiated immediately
+    const initialVideoTrack = (callState.screenStream && callState.screenStream.getVideoTracks()[0]) ||
+                             (callState.videoStream && callState.videoStream.getVideoTracks()[0]) ||
+                             callState.dummyVideoTrack;
+
+    let videoSender = null;
+    if (initialVideoTrack) {
       try {
-        videoTransceiver.sender.replaceTrack(activeVideoTrack);
+        videoSender = pc.addTrack(initialVideoTrack, callState.localStream || new MediaStream());
       } catch (_) {}
     }
 
     const peerObj = {
       user: remoteUser,
       pc,
-      videoTransceiver,
+      videoSender,
       remoteStream: new MediaStream(),
       isCam: false,
       isScreen: false,
       isMuted: false,
       analyser: null,
-      gainNode: null,
       userVolume: getUserVolume(remoteUser),
       pendingCandidates: []
     };
@@ -468,37 +467,44 @@
 
       if (e.track.kind === 'audio') {
         const audioEl = document.getElementById('ncwAudio_' + uKey);
-        setupRemoteAudioPipeline(peerObj, e.track);
-
         if (audioEl) {
           audioEl.srcObject = new MediaStream([e.track]);
-          // Keep audioEl muted so sound isn't doubled by GainNode
-          audioEl.muted = true;
-          audioEl.play().catch(() => {
+          // Direct hardware audio: MUST BE UNMUTED!
+          audioEl.muted = (peerObj.userVolume === 0);
+          audioEl.volume = Math.max(0, Math.min(1, (peerObj.userVolume / 100) * ((callState.masterVolume || 100) / 100)));
+          audioEl.play().catch(err => {
+            console.warn('[WebRTC] Audio autoplay blocked until user gesture:', err);
             const unlock = () => {
-              if (callState.audioContext && callState.audioContext.state === 'suspended') {
-                callState.audioContext.resume().catch(()=>{});
-              }
               audioEl.play().catch(()=>{});
               document.removeEventListener('click', unlock);
             };
             document.addEventListener('click', unlock);
           });
         }
+        setupRemoteSpeakingAnalyser(peerObj, e.track);
       } else if (e.track.kind === 'video') {
         const videoEl = document.getElementById('ncwVideo_' + uKey);
+        peerObj.remoteStream = new MediaStream([e.track]);
+
         if (videoEl) {
-          videoEl.srcObject = new MediaStream([e.track]);
+          videoEl.srcObject = peerObj.remoteStream;
           videoEl.muted = true;
           videoEl.play().catch(()=>{});
         }
-        peerObj.remoteStream = new MediaStream([e.track]);
+
+        e.track.onunmute = () => {
+          if (videoEl) videoEl.play().catch(()=>{});
+          updateRemoteParticipantUI(remoteUser);
+        };
+        e.track.onmute = () => {
+          updateRemoteParticipantUI(remoteUser);
+        };
+        e.track.onended = () => {
+          updateRemoteParticipantUI(remoteUser);
+        };
+
         updateRemoteParticipantUI(remoteUser);
       }
-
-      e.track.onmute = () => updateRemoteParticipantUI(remoteUser);
-      e.track.onunmute = () => updateRemoteParticipantUI(remoteUser);
-      e.track.onended = () => updateRemoteParticipantUI(remoteUser);
     };
 
     pc.onconnectionstatechange = () => {
@@ -510,6 +516,7 @@
       }
     };
 
+    // If initiator, send initial offer
     if (isInitiator) {
       pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }).then(async offer => {
         await pc.setLocalDescription(offer);
@@ -585,7 +592,6 @@
       return;
     }
 
-    // Remove any other open popovers
     document.querySelectorAll('.ncw-vol-popover').forEach(el => el.remove());
 
     const vol = getUserVolume(username);
@@ -711,17 +717,16 @@
     if (!peerObj || !tile) return;
 
     const videoEl = document.getElementById('ncwVideo_' + uKey);
-    const hasLiveVideoTrack = peerObj.remoteStream && peerObj.remoteStream.getVideoTracks().some(t => t.enabled && t.readyState === 'live' && !t.muted);
-    const showVideo = hasLiveVideoTrack || peerObj.isCam || peerObj.isScreen;
+    const showVideo = !!(peerObj.isCam || peerObj.isScreen);
 
-    tile.classList.toggle('has-video', !!showVideo);
+    tile.classList.toggle('has-video', showVideo);
     tile.classList.toggle('has-screen', !!peerObj.isScreen);
 
     if (videoEl && showVideo && peerObj.remoteStream && peerObj.remoteStream.getVideoTracks().length > 0) {
       if (videoEl.srcObject !== peerObj.remoteStream) {
         videoEl.srcObject = peerObj.remoteStream;
-        videoEl.play().catch(()=>{});
       }
+      videoEl.play().catch(()=>{});
     }
 
     const micIcon = document.getElementById('ncwMicIcon_' + uKey);
@@ -850,7 +855,8 @@
       });
 
       callState.localStream = stream;
-      setupAudioDSP(stream);
+      callState.dummyVideoTrack = createDummyVideoTrack();
+      setupLocalAudioAnalyser(stream);
       callState.active = true;
       callState.lastSignalTime = Date.now() - 25000;
       callState.processedSignalIds.clear();
@@ -871,7 +877,7 @@
         isMuted: callState.isMuted
       });
 
-      // Discover existing users in call room and initiate connections
+      // Discover existing users in call room
       fetchExistingCallUsers();
       toast('✅ Вы вошли в голосовой канал связи', 'ok');
     } catch (err) {
@@ -888,8 +894,11 @@
         const me = (typeof getUser === 'function' ? getUser() : '').toLowerCase();
         if (Array.isArray(data.participants)) {
           for (const p of data.participants) {
-            if (p.user && p.user.toLowerCase() !== me) {
-              createPeerConnection(p.user, true);
+            const remote = (p.user || '').toLowerCase();
+            if (remote && remote !== me) {
+              // Deterministic offer initiator rule: higher username initiates offer
+              const shouldInitiate = me.localeCompare(remote) > 0;
+              createPeerConnection(p.user, shouldInitiate);
             }
           }
         }
@@ -940,7 +949,7 @@
       } else {
         if (localVideo) { localVideo.srcObject = null; localVideo.style.display = 'none'; }
         if (localTile) { localTile.classList.remove('has-video', 'has-screen'); }
-        replaceVideoTrackOnPeers(null);
+        replaceVideoTrackOnPeers(callState.dummyVideoTrack);
         broadcastSignal('state_update', { isCam: false, isScreen: false });
       }
       toast('Камера выключена');
@@ -1005,7 +1014,7 @@
       } else {
         if (localVideo) { localVideo.srcObject = null; localVideo.style.display = 'none'; }
         if (localTile) { localTile.classList.remove('has-video', 'has-screen'); }
-        replaceVideoTrackOnPeers(null);
+        replaceVideoTrackOnPeers(callState.dummyVideoTrack);
         broadcastSignal('state_update', { isCam: false, isScreen: false });
       }
 
@@ -1046,14 +1055,15 @@
 
   // Instant track switching across all peers via RTCRtpSender.replaceTrack
   function replaceVideoTrackOnPeers(newTrack) {
+    const trackToSend = newTrack || callState.dummyVideoTrack;
     callState.peers.forEach(peerObj => {
-      let videoSender = peerObj.videoTransceiver ? peerObj.videoTransceiver.sender : null;
+      let videoSender = peerObj.videoSender;
       if (!videoSender) {
         videoSender = peerObj.pc.getSenders().find(s => s.track && s.track.kind === 'video') ||
                       peerObj.pc.getSenders().find(s => !s.track);
       }
       if (videoSender && typeof videoSender.replaceTrack === 'function') {
-        videoSender.replaceTrack(newTrack).catch(err => {
+        videoSender.replaceTrack(trackToSend).catch(err => {
           console.warn('Sender replaceTrack error:', err);
         });
       }
@@ -1128,6 +1138,9 @@
     if (callState.screenStream) {
       callState.screenStream.getTracks().forEach(t => t.stop());
     }
+    if (callState.dummyVideoTrack) {
+      callState.dummyVideoTrack.stop();
+    }
     if (callState.audioContext) {
       callState.audioContext.close().catch(()=>{});
     }
@@ -1138,6 +1151,7 @@
     callState.localStream = null;
     callState.videoStream = null;
     callState.screenStream = null;
+    callState.dummyVideoTrack = null;
     callState.processedSignalIds.clear();
     callState.isMixerOpen = false;
 
@@ -1186,11 +1200,30 @@
         const res = await apiFetch(`/api/call/signals?since=${callState.lastSignalTime}&room=main`);
         if (res.ok) {
           const data = await res.json();
-          if (data.now) callState.lastSignalTime = data.now;
+          // Keep a 1.5s lookback with ID deduplication so signals with identical timestamp are never missed
+          if (data.now) callState.lastSignalTime = Math.max(0, data.now - 1500);
 
           if (Array.isArray(data.signals)) {
             for (const sig of data.signals) {
               handleIncomingSignal(sig);
+            }
+          }
+
+          // ── Auto-Heal: guarantee both peers connect even if an initial signal was missed ──
+          if (Array.isArray(data.participants)) {
+            const me = (typeof getUser === 'function' ? getUser() : '').toLowerCase();
+            for (const p of data.participants) {
+              const remote = (p.user || '').toLowerCase();
+              if (remote && remote !== me) {
+                const existing = callState.peers.get(remote);
+                const isHealthy = existing && (existing.pc.connectionState === 'connected' || existing.pc.connectionState === 'connecting');
+                if (!isHealthy) {
+                  // Deterministic offer initiator rule: higher username sends offer
+                  const shouldInitiate = me.localeCompare(remote) > 0;
+                  console.log(`[WebRTC Auto-heal] ${shouldInitiate ? 'Initiating offer to' : 'Awaiting offer from'} ${p.user}`);
+                  createPeerConnection(p.user, shouldInitiate);
+                }
+              }
             }
           }
         }
@@ -1207,7 +1240,7 @@
     if (data.id && callState.processedSignalIds.has(data.id)) return;
     if (data.id) {
       callState.processedSignalIds.add(data.id);
-      if (callState.processedSignalIds.size > 250) {
+      if (callState.processedSignalIds.size > 300) {
         const first = callState.processedSignalIds.values().next().value;
         callState.processedSignalIds.delete(first);
       }
@@ -1215,15 +1248,31 @@
 
     const sender = data.from;
     const uKey = sender.toLowerCase();
+    const me = currentUser;
 
     if (data.type === 'join') {
       toast(`📞 @${sender} зашел в голосовой канал`, 'ok');
-      createPeerConnection(sender, true);
+      const shouldInitiate = me.localeCompare(uKey) > 0;
+      createPeerConnection(sender, shouldInitiate);
     } else if (data.type === 'offer' && data.signal) {
+      // Perfect Negotiation / Polite Peer: lower username yields in case of glare collision
+      const isPolite = me.localeCompare(uKey) < 0;
       const pc = createPeerConnection(sender, false);
       const peerObj = callState.peers.get(uKey);
+
       try {
+        const offerCollision = (pc.signalingState !== 'stable');
+        if (offerCollision) {
+          if (!isPolite) {
+            console.warn(`[WebRTC] Glare collision: impolite peer ignoring offer from ${sender}`);
+            return;
+          }
+          console.log(`[WebRTC] Glare collision: polite peer rolling back offer for ${sender}`);
+          await pc.setLocalDescription({ type: 'rollback' });
+        }
+
         await pc.setRemoteDescription(new RTCSessionDescription(data.signal));
+
         // Flush buffered ICE candidates
         if (peerObj && peerObj.pendingCandidates && peerObj.pendingCandidates.length > 0) {
           for (const cand of peerObj.pendingCandidates) {
@@ -1231,6 +1280,7 @@
           }
           peerObj.pendingCandidates = [];
         }
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         broadcastSignal('answer', answer, sender);
@@ -1242,7 +1292,7 @@
         const peerObj = callState.peers.get(uKey);
         const pc = peerObj.pc;
         try {
-          if (pc.signalingState !== 'stable') {
+          if (pc.signalingState === 'have-local-offer') {
             await pc.setRemoteDescription(new RTCSessionDescription(data.signal));
           }
           // Flush buffered candidates

@@ -2658,12 +2658,26 @@ app.post('/api/call/signal', requireAuth, (req, res) => {
 });
 
 app.get('/api/call/signals', requireAuth, (req, res) => {
-  const user = (req.authUser || req.session.user || '').toLowerCase();
+  const rawUser = req.authUser || req.session.user || '';
+  const user = rawUser.toLowerCase();
   const since = parseInt(req.query.since || '0', 10);
   const room = req.query.room || 'main';
+  const now = Date.now();
 
-  if (activeCallParticipants.has(user)) {
-    activeCallParticipants.get(user).lastPing = Date.now();
+  if (user) {
+    if (!activeCallParticipants.has(user)) {
+      activeCallParticipants.set(user, {
+        user: rawUser,
+        room: room,
+        joinedAt: now,
+        lastPing: now,
+        isCam: false,
+        isScreen: false,
+        isMuted: false
+      });
+    } else {
+      activeCallParticipants.get(user).lastPing = now;
+    }
   }
 
   const matching = callSignalsQueue.filter(s => {
@@ -2676,7 +2690,7 @@ app.get('/api/call/signals', requireAuth, (req, res) => {
 
   return res.json({
     signals: matching,
-    now: Date.now(),
+    now: now,
     participants: [...activeCallParticipants.values()].filter(p => p.room === room)
   });
 });
