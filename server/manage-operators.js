@@ -90,13 +90,36 @@ async function setPassword(username, newPassword) {
         $set: {
           user: canonical,
           password: hashed,
+          kickedAt: new Date(),
           updatedAt: new Date()
-        }
+        },
+        $inc: { tokenVersion: 1 }
       },
       { upsert: true }
     );
 
     console.log(`✅ Пароль для оператора "${canonical}" успешно установлен в MongoDB (захеширован scrypt).`);
+    console.log(`Предыдущие сессии и токены для "${canonical}" аннулированы.`);
+  } finally {
+    await client.close();
+  }
+}
+
+async function kickAll() {
+  const { client, db } = await connectDb();
+  try {
+    const now = new Date();
+    await db.collection('settings').updateMany(
+      {},
+      { $inc: { tokenVersion: 1 }, $set: { kickedAt: now, updatedAt: now } }
+    );
+    await db.collection('system').updateOne(
+      { _id: 'auth_epoch' },
+      { $set: { epoch: now.getTime() } },
+      { upsert: true }
+    );
+    console.log(`✅ Все операторы успешно кикнуты со всех устройств (${now.toISOString()}).`);
+    console.log(`Все ранее выданные токены и сессии аннулированы.`);
   } finally {
     await client.close();
   }
@@ -111,6 +134,7 @@ async function resetAll(password) {
   const { client, db } = await connectDb();
   try {
     const hashed = hashPassword(password);
+    const now = new Date();
     for (const op of KNOWN_OPERATORS) {
       await db.collection('settings').updateOne(
         { user: { $regex: new RegExp('^' + escapeRegex(op) + '$', 'i') } },
@@ -118,14 +142,16 @@ async function resetAll(password) {
           $set: {
             user: op,
             password: hashed,
-            updatedAt: new Date()
-          }
+            kickedAt: now,
+            updatedAt: now
+          },
+          $inc: { tokenVersion: 1 }
         },
         { upsert: true }
       );
       console.log(`✅ Установлен пароль для: ${op}`);
     }
-    console.log(`\n🎉 Все операторы успешно обновлены!`);
+    console.log(`\n🎉 Все операторы успешно обновлены! Все старые сессии аннулированы.`);
   } finally {
     await client.close();
   }
@@ -158,6 +184,9 @@ async function main() {
     case 'set-password':
       await setPassword(args[1], args[2]);
       break;
+    case 'kick-all':
+      await kickAll();
+      break;
     case 'reset-all':
       await resetAll(args[1]);
       break;
@@ -170,6 +199,7 @@ NEXUS Operator Manager
 
 Команды:
   node manage-operators.js list
+  node manage-operators.js kick-all
   node manage-operators.js set-password <username> <newPassword>
   node manage-operators.js reset-all <password>
   node manage-operators.js remove <username>

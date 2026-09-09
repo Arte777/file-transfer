@@ -247,6 +247,9 @@ async function setOperatorSettings(user, patch) {
 
   if (update.password) {
     update.password = hashPassword(update.password);
+    update.tokenVersion = ((memSettings[canonical] && memSettings[canonical].tokenVersion) || 1) + 1;
+    update.kickedAt = new Date();
+    if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
   }
 
   // In-memory fallback
@@ -256,11 +259,19 @@ async function setOperatorSettings(user, patch) {
     return;
   }
 
+  const setObj = { ...update, user: canonical, updatedAt: new Date() };
+  if (update.password) {
+    setObj.kickedAt = new Date();
+  }
+
   await db.collection('settings').updateOne(
     { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
-    { $set: { ...update, user: canonical, updatedAt: new Date() } },
+    update.password 
+      ? { $set: setObj, $inc: { tokenVersion: 1 } }
+      : { $set: setObj },
     { upsert: true }
   );
+  if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
 }
 
 // Инициализация профилей операторов и поддержка начальных паролей из env переменных
@@ -313,58 +324,152 @@ async function initOperatorSettings() {
   }
 }
 
-// ── Token-based auth (динамический секрет, защита от подделки токенов) ─────────
+// ── Token-based auth (динамический секрет, привязка к паролю в БД, мгновенный сброс) ──
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+let GLOBAL_AUTH_EPOCH = Date.now();
 
-function makeToken(username) {
+const operatorAuthCache = new Map();
+const AUTH_CACHE_TTL_MS = 3000;
+
+async function getOperatorAuthRecord(username) {
   const canonical = getCanonicalOperator(username);
-  const payload = Buffer.from(canonical, 'utf8').toString('base64url');
+  const now = Date.now();
+  const cached = operatorAuthCache.get(canonical);
+  if (cached && (now - cached.cachedAt < AUTH_CACHE_TTL_MS)) {
+    return cached;
+  }
+
+  const db = await getDb();
+  if (db) {
+    try {
+      const doc = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+      });
+      const record = {
+        user: canonical,
+        password: (doc && doc.password) || null,
+        tokenVersion: (doc && doc.tokenVersion) || 1,
+        kickedAt: (doc && doc.kickedAt) ? new Date(doc.kickedAt).getTime() : 0,
+        cachedAt: now
+      };
+      operatorAuthCache.set(canonical, record);
+      return record;
+    } catch (_) {}
+  }
+
+  const mem = memSettings[canonical] || {};
+  const record = {
+    user: canonical,
+    password: mem.password || null,
+    tokenVersion: mem.tokenVersion || 1,
+    kickedAt: mem.kickedAt || 0,
+    cachedAt: now
+  };
+  operatorAuthCache.set(canonical, record);
+  return record;
+}
+
+function makeToken(username, authRecord) {
+  const canonical = getCanonicalOperator(username);
+  const pwdHash = authRecord ? authRecord.password : null;
+  const tokenVersion = authRecord ? (authRecord.tokenVersion || 1) : 1;
+  const pwdSig = pwdHash ? crypto.createHash('sha256').update(pwdHash).digest('hex').substring(0, 16) : 'nopass';
+
+  const payload = Buffer.from(JSON.stringify({
+    u: canonical,
+    v: tokenVersion,
+    p: pwdSig,
+    iat: Date.now()
+  }), 'utf8').toString('base64url');
+
   const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
 
-function verifyToken(tokenStr) {
+async function verifyToken(tokenStr) {
   if (!tokenStr || typeof tokenStr !== 'string') return null;
   const parts = tokenStr.split('.');
-  if (parts.length === 2) {
-    try {
-      const [payload, sig] = parts;
-      const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
-      const sigBuf = Buffer.from(sig, 'hex');
-      const expBuf = Buffer.from(expectedSig, 'hex');
-      if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
-        const username = Buffer.from(payload, 'base64url').toString('utf8');
-        return getCanonicalOperator(username);
-      }
-    } catch (_) {}
+  if (parts.length !== 2) return null;
+
+  const [payloadStr, sig] = parts;
+  const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(payloadStr).digest('hex');
+  const sigBuf = Buffer.from(sig, 'hex');
+  const expBuf = Buffer.from(expectedSig, 'hex');
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return null;
   }
-  // Fallback для HMAC токенов с текущим TOKEN_SECRET
-  for (const op of KNOWN_OPERATORS) {
-    const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(op).digest('hex');
-    if (expected === tokenStr) return op;
+
+  let data;
+  try {
+    data = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
+  } catch (_) {
+    return null;
   }
-  return null;
+
+  if (!data || !data.u) return null;
+  const canonical = getCanonicalOperator(data.u);
+  const auth = await getOperatorAuthRecord(canonical);
+
+  if (!auth || !auth.password) return null;
+
+  // 1. Привязка к хешу пароля: при любой смене пароля в БД токен мгновенно инвалидируется
+  const currentPwdSig = crypto.createHash('sha256').update(auth.password).digest('hex').substring(0, 16);
+  if (data.p !== currentPwdSig) {
+    return null;
+  }
+
+  // 2. Проверка версии токена
+  if (data.v && auth.tokenVersion && data.v < auth.tokenVersion) {
+    return null;
+  }
+
+  // 3. Проверка индивидуального сброса сессий (kickedAt)
+  if (auth.kickedAt && data.iat && data.iat < auth.kickedAt) {
+    return null;
+  }
+
+  // 4. Проверка глобального кика (GLOBAL_AUTH_EPOCH)
+  if (GLOBAL_AUTH_EPOCH && data.iat && data.iat < GLOBAL_AUTH_EPOCH) {
+    return null;
+  }
+
+  return canonical;
 }
 
-function currentUser(req) {
-  if (req.session && req.session.user) return req.session.user;
+async function currentUser(req) {
+  if (req.session && req.session.user) {
+    const auth = await getOperatorAuthRecord(req.session.user);
+    if (!auth || !auth.password) return null;
+    if (req.session.authIat && auth.kickedAt && req.session.authIat < auth.kickedAt) {
+      return null;
+    }
+    if (req.session.authIat && GLOBAL_AUTH_EPOCH && req.session.authIat < GLOBAL_AUTH_EPOCH) {
+      return null;
+    }
+    return req.session.user;
+  }
+
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    const user = verifyToken(t);
+    const user = await verifyToken(t);
     if (user) return user;
   }
   if (req.query && req.query.token) {
-    const user = verifyToken(req.query.token);
+    const user = await verifyToken(req.query.token);
     if (user) return user;
   }
   return null;
 }
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
-  const user = currentUser(req);
-  if (user) { req.authUser = user; return next(); }
+async function requireAuth(req, res, next) {
+  try {
+    const user = await currentUser(req);
+    if (user) { req.authUser = user; return next(); }
+  } catch (e) {
+    console.error('[AUTH] requireAuth error:', e.message);
+  }
   res.status(401).json({ error: 'Unauthorized' });
 }
 
@@ -426,6 +531,7 @@ app.post('/login228', async (req, res) => {
     return res.redirect('/login228?error=1');
   }
   req.session.user = canonical;
+  req.session.authIat = Date.now();
   res.redirect('/');
 });
 
@@ -441,11 +547,46 @@ app.post('/api/login', async (req, res) => {
   if (!valid) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
-  res.json({ token: makeToken(canonical), user: canonical });
+  const authRecord = await getOperatorAuthRecord(canonical);
+  res.json({ token: makeToken(canonical, authRecord), user: canonical });
 });
 
 app.post('/api/logout', (req, res) => {
   res.json({ success: true });
+});
+
+// Принудительный сброс всех авторизаций на всех устройствах
+app.post('/api/kick-all', async (req, res) => {
+  GLOBAL_AUTH_EPOCH = Date.now();
+  operatorAuthCache.clear();
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const now = new Date();
+      await db.collection('settings').updateMany(
+        {},
+        { $inc: { tokenVersion: 1 }, $set: { kickedAt: now, updatedAt: now } }
+      );
+      await db.collection('system').updateOne(
+        { _id: 'auth_epoch' },
+        { $set: { epoch: now.getTime() } },
+        { upsert: true }
+      );
+    }
+  } catch (err) {
+    console.error('[AUTH] kick-all db error:', err.message);
+  }
+
+  for (const client of sseClients) {
+    try {
+      client.write(`event: auth_revoked\ndata: ${JSON.stringify({ error: 'Все сессии сброшены администратором' })}\n\n`);
+      client.end();
+    } catch (_) {}
+  }
+  sseClients = [];
+
+  res.json({ success: true, message: 'Все операторы успешно кикнуты со всех устройств', epoch: GLOBAL_AUTH_EPOCH });
 });
 
 app.get('/api/debug-db', async (req, res) => {
