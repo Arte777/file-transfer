@@ -217,6 +217,183 @@ function verifyPassword(password, stored) {
   return stored === password;
 }
 
+function isAdmin(user) {
+  return (user || '').toLowerCase() === 'shonll';
+}
+
+// ── Определение IP и устройства ───────────────────────────────────────────────
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket.remoteAddress || req.ip || 'Unknown';
+}
+
+function getDeviceSummary(userAgent) {
+  if (!userAgent) return 'Неизвестно';
+  let os = 'Другое';
+  if (/windows/i.test(userAgent)) os = 'Windows';
+  else if (/macintosh|mac os x/i.test(userAgent)) os = 'macOS';
+  else if (/android/i.test(userAgent)) os = 'Android';
+  else if (/iphone|ipad|ipod/i.test(userAgent)) os = 'iOS';
+  else if (/linux/i.test(userAgent)) os = 'Linux';
+
+  let browser = 'Браузер';
+  if (/edg/i.test(userAgent)) browser = 'Edge';
+  else if (/opr|opera/i.test(userAgent)) browser = 'Opera';
+  else if (/chrome|crios/i.test(userAgent)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(userAgent)) browser = 'Firefox';
+  else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) browser = 'Safari';
+
+  return `${os} / ${browser}`;
+}
+
+// ── Telegram Bot оповещения ───────────────────────────────────────────────────
+async function getTelegramConfig() {
+  let botToken = process.env.TG_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || null;
+  let chatId = process.env.TG_CHAT_ID || process.env.TELEGRAM_CHAT_ID || null;
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const doc = await db.collection('system').findOne({ _id: 'telegram_config' });
+      if (doc) {
+        if (!botToken && doc.botToken) botToken = doc.botToken;
+        if (!chatId && doc.chatId) chatId = doc.chatId;
+      }
+    }
+  } catch (_) {}
+
+  return { botToken, chatId };
+}
+
+async function sendTelegramNotification(textHtml) {
+  const { botToken, chatId } = await getTelegramConfig();
+  if (!botToken || !chatId) return false;
+
+  return new Promise((resolve) => {
+    const postData = JSON.stringify({
+      chat_id: chatId,
+      text: textHtml,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    });
+
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      port: 443,
+      path: `/bot${botToken}/sendMessage`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      },
+      timeout: 6000
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        resolve(res.statusCode === 200);
+      });
+    });
+
+    req.on('error', (e) => {
+      console.error('[TG] send error:', e.message);
+      resolve(false);
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+
+    req.write(postData);
+    req.end();
+  });
+}
+
+// ── Управление сессиями ───────────────────────────────────────────────────────
+const revokedSessionCache = new Set();
+const lastActiveUpdateMap = new Map(); // sessionId -> timestamp
+
+async function createSession(user, req) {
+  const sessionId = 'sess_' + crypto.randomBytes(16).toString('hex');
+  const ip = getClientIp(req);
+  const userAgent = req.headers['user-agent'] || '';
+  const device = getDeviceSummary(userAgent);
+  const now = new Date();
+
+  const sessionDoc = {
+    sessionId,
+    user,
+    ip,
+    userAgent,
+    device,
+    createdAt: now,
+    lastActive: now,
+    revoked: false
+  };
+
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.collection('sessions').insertOne(sessionDoc);
+    }
+  } catch (e) {
+    console.error('[SESSION] Create session error:', e.message);
+  }
+
+  if (!global.memSessions) global.memSessions = new Map();
+  global.memSessions.set(sessionId, sessionDoc);
+
+  // Оповещение в Telegram (в фоновом режиме, не задерживая авторизацию)
+  const timeStr = now.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const tgMsg = `🚨 <b>ВХОД В ПАНЕЛЬ NEXUS</b> 🚨\n\n` +
+    `👤 <b>Оператор:</b> <code>${escapeHtml(user)}</code>\n` +
+    `🌐 <b>IP-адрес:</b> <code>${escapeHtml(ip)}</code>\n` +
+    `💻 <b>Устройство:</b> ${escapeHtml(device)}\n` +
+    `⏰ <b>Время (МСК):</b> ${escapeHtml(timeStr)}\n` +
+    `🆔 <b>ID сессии:</b> <code>${escapeHtml(sessionId.substring(0, 16))}...</code>\n\n` +
+    `<i>Если это были не вы — немедленно завершите сессию в панели управления!</i>`;
+
+  sendTelegramNotification(tgMsg).catch(e => console.error('[TG] Notification error:', e.message));
+
+  return sessionId;
+}
+
+async function isSessionRevoked(sessionId) {
+  if (!sessionId) return false;
+  if (revokedSessionCache.has(sessionId)) return true;
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const s = await db.collection('sessions').findOne({ sessionId });
+      if (s && s.revoked) {
+        revokedSessionCache.add(sessionId);
+        return true;
+      }
+    } else if (global.memSessions) {
+      const s = global.memSessions.get(sessionId);
+      if (s && s.revoked) return true;
+    }
+  } catch (_) {}
+
+  return false;
+}
+
+function touchSessionActivity(sessionId) {
+  if (!sessionId) return;
+  const now = Date.now();
+  const last = lastActiveUpdateMap.get(sessionId) || 0;
+  if (now - last < 30000) return; // дебаунс: пишем в БД не чаще 1 раза в 30 сек
+  lastActiveUpdateMap.set(sessionId, now);
+
+  getDb().then(db => {
+    if (db) {
+      db.collection('sessions').updateOne({ sessionId }, { $set: { lastActive: new Date() } }).catch(() => {});
+    }
+  }).catch(() => {});
+}
+
 // In-memory fallback when MongoDB is not available (dev only)
 const memSettings = {};
 
@@ -369,7 +546,7 @@ async function getOperatorAuthRecord(username) {
   return record;
 }
 
-function makeToken(username, authRecord) {
+function makeToken(username, authRecord, sessionId) {
   const canonical = getCanonicalOperator(username);
   const pwdHash = authRecord ? authRecord.password : null;
   const tokenVersion = authRecord ? (authRecord.tokenVersion || 1) : 1;
@@ -379,6 +556,7 @@ function makeToken(username, authRecord) {
     u: canonical,
     v: tokenVersion,
     p: pwdSig,
+    sid: sessionId || null,
     iat: Date.now()
   }), 'utf8').toString('base64url');
 
@@ -386,7 +564,7 @@ function makeToken(username, authRecord) {
   return `${payload}.${sig}`;
 }
 
-async function verifyToken(tokenStr) {
+async function verifyToken(tokenStr, req) {
   if (!tokenStr || typeof tokenStr !== 'string') return null;
   const parts = tokenStr.split('.');
   if (parts.length !== 2) return null;
@@ -433,6 +611,14 @@ async function verifyToken(tokenStr) {
     return null;
   }
 
+  // 5. Проверка сессии на отзыв
+  if (data.sid) {
+    const revoked = await isSessionRevoked(data.sid);
+    if (revoked) return null;
+    touchSessionActivity(data.sid);
+    if (req) req.authSessionId = data.sid;
+  }
+
   return canonical;
 }
 
@@ -446,17 +632,23 @@ async function currentUser(req) {
     if (req.session.authIat && GLOBAL_AUTH_EPOCH && req.session.authIat < GLOBAL_AUTH_EPOCH) {
       return null;
     }
+    if (req.session.sessionId) {
+      const revoked = await isSessionRevoked(req.session.sessionId);
+      if (revoked) return null;
+      touchSessionActivity(req.session.sessionId);
+      req.authSessionId = req.session.sessionId;
+    }
     return req.session.user;
   }
 
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    const user = await verifyToken(t);
+    const user = await verifyToken(t, req);
     if (user) return user;
   }
   if (req.query && req.query.token) {
-    const user = await verifyToken(req.query.token);
+    const user = await verifyToken(req.query.token, req);
     if (user) return user;
   }
   return null;
@@ -530,12 +722,20 @@ app.post('/login228', async (req, res) => {
   if (!valid) {
     return res.redirect('/login228?error=1');
   }
+  const sessionId = await createSession(canonical, req);
   req.session.user = canonical;
+  req.session.sessionId = sessionId;
   req.session.authIat = Date.now();
   res.redirect('/');
 });
 
 app.get('/logout', (req, res) => {
+  if (req.session && req.session.sessionId) {
+    revokedSessionCache.add(req.session.sessionId);
+    getDb().then(db => {
+      if (db) db.collection('sessions').updateOne({ sessionId: req.session.sessionId }, { $set: { revoked: true, revokedAt: new Date() } }).catch(()=>{});
+    }).catch(()=>{});
+  }
   req.session.destroy(() => res.redirect('/login228'));
 });
 
@@ -548,10 +748,27 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
   const authRecord = await getOperatorAuthRecord(canonical);
-  res.json({ token: makeToken(canonical, authRecord), user: canonical });
+  const sessionId = await createSession(canonical, req);
+  res.json({ token: makeToken(canonical, authRecord, sessionId), user: canonical, sessionId });
 });
 
 app.post('/api/logout', (req, res) => {
+  const h = req.headers.authorization;
+  if (h && h.startsWith('Bearer ')) {
+    const t = h.slice(7).trim();
+    try {
+      const parts = t.split('.');
+      if (parts.length === 2) {
+        const data = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+        if (data.sid) {
+          revokedSessionCache.add(data.sid);
+          getDb().then(db => {
+            if (db) db.collection('sessions').updateOne({ sessionId: data.sid }, { $set: { revoked: true, revokedAt: new Date() } }).catch(()=>{});
+          }).catch(()=>{});
+        }
+      }
+    } catch (_) {}
+  }
   res.json({ success: true });
 });
 
@@ -567,6 +784,10 @@ app.post('/api/kick-all', async (req, res) => {
       await db.collection('settings').updateMany(
         {},
         { $inc: { tokenVersion: 1 }, $set: { kickedAt: now, updatedAt: now } }
+      );
+      await db.collection('sessions').updateMany(
+        { revoked: { $ne: true } },
+        { $set: { revoked: true, revokedAt: now } }
       );
       await db.collection('system').updateOne(
         { _id: 'auth_epoch' },
@@ -587,6 +808,216 @@ app.post('/api/kick-all', async (req, res) => {
   sseClients = [];
 
   res.json({ success: true, message: 'Все операторы успешно кикнуты со всех устройств', epoch: GLOBAL_AUTH_EPOCH });
+});
+
+// ── Admin: Сессии операторов ───────────────────────────────────────────────────
+app.get('/api/admin/sessions', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) {
+    return res.status(403).json({ error: 'Доступ разрешен только главному администратору (Shonll)' });
+  }
+  try {
+    const db = await getDb();
+    let sessions = [];
+    if (db) {
+      sessions = await db.collection('sessions').find({ revoked: { $ne: true } }).sort({ lastActive: -1 }).limit(100).toArray();
+    } else if (global.memSessions) {
+      sessions = Array.from(global.memSessions.values()).filter(s => !s.revoked);
+    }
+
+    const currentSid = req.authSessionId || null;
+    const formatted = sessions.map(s => ({
+      sessionId: s.sessionId,
+      user: s.user,
+      ip: s.ip || '—',
+      device: s.device || 'Неизвестно',
+      userAgent: s.userAgent || '',
+      createdAt: s.createdAt,
+      lastActive: s.lastActive,
+      isCurrent: currentSid === s.sessionId
+    }));
+
+    res.json({ success: true, sessions: formatted });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/admin/sessions/:id', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) {
+    return res.status(403).json({ error: 'Доступ разрешен только главному администратору' });
+  }
+  const sid = req.params.id;
+  if (!sid) return res.status(400).json({ error: 'Missing session ID' });
+
+  revokedSessionCache.add(sid);
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.collection('sessions').updateOne(
+        { sessionId: sid },
+        { $set: { revoked: true, revokedAt: new Date() } }
+      );
+    } else if (global.memSessions && global.memSessions.has(sid)) {
+      global.memSessions.get(sid).revoked = true;
+    }
+  } catch (e) {
+    console.error('[ADMIN] revoke session error:', e.message);
+  }
+
+  res.json({ success: true, message: 'Сессия успешно завершена' });
+});
+
+app.post('/api/admin/sessions/kick-user', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) {
+    return res.status(403).json({ error: 'Доступ разрешен только главному администратору' });
+  }
+  const { username } = req.body || {};
+  if (!username) return res.status(400).json({ error: 'Missing username' });
+  const canonical = getCanonicalOperator(username);
+
+  try {
+    const now = new Date();
+    const db = await getDb();
+    if (db) {
+      await db.collection('sessions').updateMany(
+        { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+        { $set: { revoked: true, revokedAt: now } }
+      );
+      await db.collection('settings').updateOne(
+        { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+        { $set: { kickedAt: now }, $inc: { tokenVersion: 1 } }
+      );
+    }
+    operatorAuthCache.delete(canonical);
+  } catch (e) {
+    console.error('[ADMIN] kick user error:', e.message);
+  }
+
+  res.json({ success: true, message: `Все сессии оператора ${canonical} завершены` });
+});
+
+// ── Admin: Настройка и тест Telegram бота ──────────────────────────────────────
+app.get('/api/admin/telegram-config', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Forbidden' });
+  const { botToken, chatId } = await getTelegramConfig();
+  res.json({
+    configured: !!(botToken && chatId),
+    maskedToken: botToken ? (botToken.substring(0, 7) + '...' + botToken.slice(-4)) : '',
+    chatId: chatId || ''
+  });
+});
+
+app.post('/api/admin/telegram-config', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Forbidden' });
+  const { botToken, chatId } = req.body || {};
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const update = { updatedAt: new Date() };
+      if (typeof botToken === 'string' && botToken.trim()) update.botToken = botToken.trim();
+      if (typeof chatId === 'string' && chatId.trim()) update.chatId = chatId.trim();
+
+      await db.collection('system').updateOne(
+        { _id: 'telegram_config' },
+        { $set: update },
+        { upsert: true }
+      );
+    }
+    res.json({ success: true, message: 'Настройки Telegram сохранены' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/telegram-test', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Forbidden' });
+  const { botToken, chatId } = req.body || {};
+
+  let tokenToUse = botToken;
+  let chatToUse = chatId;
+  if (!tokenToUse || !chatToUse) {
+    const cfg = await getTelegramConfig();
+    tokenToUse = tokenToUse || cfg.botToken;
+    chatToUse = chatToUse || cfg.chatId;
+  }
+
+  if (!tokenToUse || !chatToUse) {
+    return res.status(400).json({ error: 'Не задан Bot Token или Chat ID' });
+  }
+
+  const nowStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+  const testMsg = `🔔 <b>ТЕСТОВОЕ УВЕДОМЛЕНИЕ NEXUS</b>\n\n` +
+    `✅ Telegram-бот успешно подключен к панели управления!\n` +
+    `⏰ Время теста: <code>${escapeHtml(nowStr)} MSK</code>\n\n` +
+    `Теперь вы будете получать мгновенные алерты при каждом входе операторов.`;
+
+  try {
+    const ok = await new Promise((resolve) => {
+      const postData = JSON.stringify({
+        chat_id: chatToUse,
+        text: testMsg,
+        parse_mode: 'HTML'
+      });
+      const tgReq = https.request({
+        hostname: 'api.telegram.org',
+        port: 443,
+        path: `/bot${tokenToUse}/sendMessage`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        },
+        timeout: 6000
+      }, (tgRes) => {
+        let body = '';
+        tgRes.on('data', c => { body += c; });
+        tgRes.on('end', () => {
+          resolve(tgRes.statusCode === 200);
+        });
+      });
+      tgReq.on('error', (err) => {
+        console.error('[TG] test error:', err.message);
+        resolve(false);
+      });
+      tgReq.on('timeout', () => { tgReq.destroy(); resolve(false); });
+      tgReq.write(postData);
+      tgReq.end();
+    });
+
+    if (ok) {
+      res.json({ success: true, message: 'Тестовое сообщение успешно доставлено в Telegram!' });
+    } else {
+      res.status(400).json({ error: 'Ошибка отправки в Telegram. Проверьте правильность токена и Chat ID (нажмите /start у бота).' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Список операторов и их публичные профили (аватарки, цвета) ───────────────
+app.get('/api/operators', requireAuth, async (req, res) => {
+  try {
+    const list = [];
+    const now = Date.now();
+    for (const op of KNOWN_OPERATORS) {
+      const s = await getOperatorSettings(op);
+      const lastSeen = operatorPresenceMap.get(op.toLowerCase());
+      const isOnline = !!(lastSeen && (now - lastSeen) < 60000);
+      list.push({
+        user: op,
+        displayName: s.displayName || op,
+        avatar: s.avatar || (DEFAULT_SETTINGS[op] && DEFAULT_SETTINGS[op].avatar) || '👤',
+        avatarImage: s.avatarImage || null,
+        themeColor: s.themeColor || '#00f0ff',
+        bio: s.bio || '',
+        isOnline
+      });
+    }
+    res.json(list);
+  } catch (e) {
+    res.json([]);
+  }
 });
 
 app.get('/api/debug-db', async (req, res) => {
@@ -1828,10 +2259,14 @@ app.post('/api/chat/messages', requireAuth, async (req, res) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    const senderSettings = await getOperatorSettings(user);
     const msg = {
       id: 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       type: type || 'text',
       user: user,
+      displayName: senderSettings.displayName || user,
+      avatar: senderSettings.avatar || (DEFAULT_SETTINGS[user] && DEFAULT_SETTINGS[user].avatar) || '👤',
+      avatarImage: senderSettings.avatarImage || null,
       time: timeStr,
       createdAt: now.toISOString(),
       text: typeof text === 'string' ? text.substring(0, 4000) : '',

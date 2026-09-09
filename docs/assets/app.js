@@ -121,27 +121,94 @@ function escapeHtml(s) {
 }
 
 // ── Аватарка оператора (Профессиональные монограммы + фото) ───────────────────
-function operatorAvatarHTML(user) {
-  const avatarImage = localStorage.getItem('ft_avatarImage');
-  if (avatarImage) {
-    return '<img src="' + avatarImage + '" alt="avatar">';
-  }
+const OPERATOR_PRESETS = {
+  'shonll': { name: 'Shonll', avatar: '🦊', initials: 'SH', cls: 'sh', color: '#00f0ff' },
+  'dildman': { name: 'DildMan', avatar: '🐉', initials: 'DM', cls: 'dm', color: '#ff007f' },
+  'dild_man': { name: 'DildMan', avatar: '🐉', initials: 'DM', cls: 'dm', color: '#ff007f' },
+  'singer1isss': { name: 'SinGeR1isss', avatar: '🎤', initials: 'SG', cls: 'sg', color: '#10b981' },
+  'saha_kakaha122': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' },
+  'svyaz': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' }
+};
+
+let remoteOperatorProfiles = {};
+
+async function fetchRemoteOperatorProfiles() {
+  try {
+    const res = await apiFetch('/api/operators');
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) {
+        for (const op of list) {
+          remoteOperatorProfiles[(op.user || '').toLowerCase()] = op;
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+function operatorAvatarHTML(user, explicitImage, explicitAvatar) {
   const u = (user || '').toLowerCase();
-  let initials = 'OP';
-  let cls = 'op';
-  if (u === 'shonll') { initials = 'SH'; cls = 'sh'; }
-  else if (u === 'dildman' || u === 'dild_man') { initials = 'DM'; cls = 'dm'; }
-  else if (u === 'singer1isss') { initials = 'SG'; cls = 'sg'; }
-  else if (u === 'saha_kakaha122' || u === 'svyaz') { initials = 'SK'; cls = 'sk'; }
-  else if (user) { initials = user.slice(0, 2).toUpperCase(); }
-  return '<span class="user-initials ' + cls + '">' + initials + '</span>';
+  const currentLogged = (getUser() || '').toLowerCase();
+  const isMe = u === currentLogged;
+
+  // 1. Прямое фото из сообщения
+  if (explicitImage) {
+    return '<img src="' + explicitImage + '" alt="avatar">';
+  }
+
+  // 2. Для текущего пользователя проверяем локальные настройки
+  if (isMe) {
+    const myImg = localStorage.getItem('ft_avatarImage');
+    if (myImg) return '<img src="' + myImg + '" alt="avatar">';
+    const myAv = localStorage.getItem('ft_avatar');
+    if (myAv && myAv.length <= 4) {
+      return '<span class="user-initials me">' + escapeHtml(myAv) + '</span>';
+    }
+  }
+
+  // 3. Проверяем загруженные профили операторов
+  const profile = remoteOperatorProfiles[u];
+  if (profile) {
+    if (profile.avatarImage) return '<img src="' + profile.avatarImage + '" alt="avatar">';
+    if (profile.avatar && profile.avatar.length <= 4) {
+      const cls = OPERATOR_PRESETS[u]?.cls || 'op';
+      return '<span class="user-initials ' + cls + '">' + escapeHtml(profile.avatar) + '</span>';
+    }
+  }
+
+  // 4. Передан явный эмодзи/символ
+  if (explicitAvatar && explicitAvatar.length <= 4) {
+    const cls = OPERATOR_PRESETS[u]?.cls || 'op';
+    return '<span class="user-initials ' + cls + '">' + escapeHtml(explicitAvatar) + '</span>';
+  }
+
+  // 5. Пресет оператора
+  const preset = OPERATOR_PRESETS[u];
+  if (preset) {
+    return '<span class="user-initials ' + preset.cls + '">' + preset.avatar + '</span>';
+  }
+
+  const initials = user ? user.slice(0, 2).toUpperCase() : 'OP';
+  return '<span class="user-initials op">' + initials + '</span>';
 }
 
 // Отображаемое имя (с поддержкой кастомных настроек)
 function operatorDisplayName(user) {
-  const custom = localStorage.getItem('ft_displayName');
-  if (custom) return custom;
-  return user;
+  const u = (user || '').toLowerCase();
+  const currentLogged = (getUser() || '').toLowerCase();
+  if (u === currentLogged) {
+    const custom = localStorage.getItem('ft_displayName');
+    if (custom) return custom;
+  }
+  const profile = remoteOperatorProfiles[u];
+  if (profile && profile.displayName) {
+    return profile.displayName;
+  }
+  const preset = OPERATOR_PRESETS[u];
+  if (preset && preset.name) {
+    return preset.name;
+  }
+  return user || 'Оператор';
 }
 
 // ── Акцентный цвет — глобальное применение ────────────────────────────────────
@@ -331,6 +398,7 @@ let chatOnlineOperators = [];
 let presencePollInterval = null;
 
 async function fetchOperatorPresence() {
+  fetchRemoteOperatorProfiles().catch(()=>{});
   try {
     const res = await apiFetch('/api/chat/presence');
     if (res.ok) {
@@ -744,7 +812,7 @@ function renderOperatorChatMessages() {
   for (const m of msgs) {
     const isMe = (m.user || '').toLowerCase() === currentUser;
     const currentDisplayName = operatorDisplayName(getUser() || '').toLowerCase();
-    const avatar = operatorAvatarHTML(m.user);
+    const avatar = operatorAvatarHTML(m.user, m.avatarImage, m.avatar);
     const roleBadge = getOperatorRoleBadge(m.user);
 
     const fullMsgText = ((m.text || '') + ' ' + (m.caption || '')).toLowerCase();
@@ -877,7 +945,7 @@ function renderOperatorChatMessages() {
         <div class="cmr-avatar">${avatar}</div>
         <div class="cmr-body">
           <div class="cmr-header">
-            <span class="cmr-user" onclick="insertChatMention('${escapeHtml(m.user || 'operator')}')" title="Нажмите, чтобы упомянуть @${escapeHtml(m.user || 'operator')}">${escapeHtml(m.user || 'operator')}</span>
+            <span class="cmr-user" onclick="insertChatMention('${escapeHtml(m.user || 'operator')}')" title="Нажмите, чтобы упомянуть @${escapeHtml(m.user || 'operator')}">${escapeHtml(m.displayName || operatorDisplayName(m.user))}</span>
             ${roleBadge}
             <span class="cmr-time">${escapeHtml(m.time || '')}</span>
           </div>

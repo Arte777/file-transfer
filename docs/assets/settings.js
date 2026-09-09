@@ -234,3 +234,313 @@ if (saveBtn) {
 }
 
 loadSettings();
+
+// ── Admin: Session Management & Telegram Configuration (Shonll) ─────────────
+function getOperatorAvatar(username) {
+  const map = {
+    'shonll': '🦊',
+    'dildman': '🐉',
+    'singer1isss': '🎤',
+    'svyaz': '🔗'
+  };
+  return map[(username || '').toLowerCase()] || '👤';
+}
+
+async function initAdminPanel() {
+  const currentUser = (getUser() || '').toLowerCase();
+  const adminSection = document.getElementById('adminPanelSection');
+  if (!adminSection) return;
+
+  if (currentUser !== 'shonll') {
+    adminSection.style.display = 'none';
+    return;
+  }
+
+  // Display admin section for Shonll
+  adminSection.style.display = 'block';
+
+  // Load operators for kick dropdown
+  loadAdminOperators();
+  // Load Telegram bot config
+  loadTelegramConfig();
+  // Load active sessions list
+  loadAdminSessions();
+
+  // Attach event listeners
+  document.getElementById('btnRefreshSessions')?.addEventListener('click', () => {
+    loadAdminSessions(true);
+  });
+
+  document.getElementById('btnSaveTelegram')?.addEventListener('click', saveTelegramConfig);
+  document.getElementById('btnTestTelegram')?.addEventListener('click', testTelegramConfig);
+  document.getElementById('btnKickOperator')?.addEventListener('click', kickSelectedOperator);
+}
+
+async function loadTelegramConfig() {
+  const badge = document.getElementById('tgStatusBadge');
+  try {
+    const r = await apiFetch('/api/admin/telegram-config');
+    if (!r.ok) return;
+    const data = await r.json();
+    const tokenInput = document.getElementById('tgBotToken');
+    const chatInput = document.getElementById('tgChatId');
+    if (chatInput && data.chatId) chatInput.value = data.chatId;
+    if (tokenInput && data.configured) {
+      tokenInput.placeholder = data.maskedToken ? `Уже настроен (${data.maskedToken})` : 'Бот настроен';
+    }
+    if (badge) {
+      if (data.configured) {
+        badge.innerHTML = '<span class="badge badge-valid"><span class="status-dot"></span>Бот подключен</span>';
+      } else {
+        badge.innerHTML = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">Не настроен</span>';
+      }
+    }
+  } catch (e) {
+    if (badge) badge.innerHTML = '<span class="badge badge-invalid">Ошибка</span>';
+  }
+}
+
+async function saveTelegramConfig() {
+  const btn = document.getElementById('btnSaveTelegram');
+  const token = document.getElementById('tgBotToken')?.value.trim();
+  const chat = document.getElementById('tgChatId')?.value.trim();
+
+  if (!token && !chat) {
+    toast('Введите Bot Token или Chat ID', 'err');
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+  try {
+    const payload = {};
+    if (token) payload.botToken = token;
+    if (chat) payload.chatId = chat;
+
+    const r = await apiFetch('/api/admin/telegram-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast('✅ Настройки Telegram бота сохранены');
+      if (token) document.getElementById('tgBotToken').value = '';
+      loadTelegramConfig();
+    } else {
+      toast(data.error || 'Ошибка сохранения', 'err');
+    }
+  } catch (e) {
+    toast('Ошибка сохранения настроек', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Сохранить бота'; }
+  }
+}
+
+async function testTelegramConfig() {
+  const btn = document.getElementById('btnTestTelegram');
+  const token = document.getElementById('tgBotToken')?.value.trim();
+  const chat = document.getElementById('tgChatId')?.value.trim();
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Отправка...'; }
+  try {
+    const payload = {};
+    if (token) payload.botToken = token;
+    if (chat) payload.chatId = chat;
+
+    const r = await apiFetch('/api/admin/telegram-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (data.success) {
+      toast('🔔 Тестовое оповещение отправлено в Telegram!');
+      loadTelegramConfig();
+    } else {
+      toast('❌ ' + (data.error || 'Ошибка отправки в Telegram'), 'err');
+    }
+  } catch (e) {
+    toast('Ошибка соединения с сервером', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔔 Отправить тест в Telegram'; }
+  }
+}
+
+async function loadAdminOperators() {
+  const select = document.getElementById('kickOperatorSelect');
+  if (!select) return;
+  try {
+    const r = await apiFetch('/api/operators');
+    if (!r.ok) return;
+    const list = await r.json();
+    if (Array.isArray(list) && list.length > 0) {
+      let html = '<option value="">Выберите оператора...</option>';
+      for (const op of list) {
+        const u = op.user;
+        const name = (op.displayName && op.displayName !== u) ? `${u} (${op.displayName})` : u;
+        html += `<option value="${escapeHtml(u)}">${escapeHtml(name)}</option>`;
+      }
+      select.innerHTML = html;
+    }
+  } catch (e) {}
+}
+
+async function loadAdminSessions(showToast = false) {
+  const tbody = document.getElementById('adminSessionsTbody');
+  if (!tbody) return;
+
+  if (showToast) toast('🔄 Обновление списка сессий...');
+
+  try {
+    const r = await apiFetch('/api/admin/sessions');
+    if (!r.ok) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 18px;">Ошибка доступа (требуются права Shonll)</td></tr>';
+      return;
+    }
+    const data = await r.json();
+    const sessions = data.sessions || [];
+
+    if (sessions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 22px;">Нет активных сессий</td></tr>';
+      return;
+    }
+
+    let html = '';
+    for (const s of sessions) {
+      const isCur = s.isCurrent;
+      const opName = escapeHtml(s.user || 'Неизвестно');
+      const ip = escapeHtml(s.ip || '—');
+      const device = escapeHtml(s.device || 'Неизвестно');
+      
+      let createdStr = '—';
+      if (s.createdAt) {
+        const d = new Date(s.createdAt);
+        createdStr = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      let activeStr = 'Только что';
+      if (s.lastActive) {
+        const diffMs = Date.now() - new Date(s.lastActive).getTime();
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) activeStr = 'Только что';
+        else if (diffMin < 60) activeStr = `${diffMin} мин назад`;
+        else {
+          const diffHours = Math.floor(diffMin / 60);
+          activeStr = `${diffHours} ч назад`;
+        }
+      }
+
+      html += `<tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">${escapeHtml(getOperatorAvatar(s.user))}</span>
+            <div>
+              <div style="font-weight: 600; color: #fff; font-size: 0.86rem;">${opName}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <code style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent);">${ip}</code>
+        </td>
+        <td>
+          <div style="font-size: 0.82rem; color: var(--text-primary); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(s.userAgent || '')}">
+            ${device}
+          </div>
+        </td>
+        <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
+          ${createdStr}
+        </td>
+        <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
+          ${activeStr}
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          ${isCur 
+            ? '<span class="badge badge-valid" style="padding: 4px 8px; font-size: 0.72rem;"><span class="status-dot"></span>Вы (Текущая)</span>' 
+            : `<button class="btn-secondary btn-revoke-session" data-sid="${escapeHtml(s.sessionId)}" data-user="${opName}" style="padding: 4px 10px; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.4); color: #f87171; background: rgba(239, 68, 68, 0.08); cursor: pointer;">Завершить</button>`}
+        </td>
+      </tr>`;
+    }
+
+    tbody.innerHTML = html;
+
+    // Attach click listeners to individual revoke buttons
+    tbody.querySelectorAll('.btn-revoke-session').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const sid = this.dataset.sid;
+        const u = this.dataset.user;
+        if (!sid) return;
+        if (!confirm(`Завершить эту сессию для оператора ${u}?`)) return;
+
+        this.disabled = true;
+        this.textContent = '...';
+        try {
+          const r = await apiFetch(`/api/admin/sessions/${encodeURIComponent(sid)}`, {
+            method: 'DELETE'
+          });
+          const res = await r.json();
+          if (res.success) {
+            toast('✅ Сессия успешно завершена');
+            loadAdminSessions();
+          } else {
+            toast(res.error || 'Ошибка завершения сессии', 'err');
+            this.disabled = false;
+            this.textContent = 'Завершить';
+          }
+        } catch (e) {
+          toast('Ошибка связи с сервером', 'err');
+          this.disabled = false;
+          this.textContent = 'Завершить';
+        }
+      });
+    });
+
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 18px;">Ошибка загрузки сессий</td></tr>';
+  }
+}
+
+async function kickSelectedOperator() {
+  const select = document.getElementById('kickOperatorSelect');
+  const user = select ? select.value.trim() : '';
+  if (!user) {
+    toast('Выберите оператора для кика', 'err');
+    return;
+  }
+
+  const isSelf = user.toLowerCase() === (getUser() || '').toLowerCase();
+  const warnMsg = isSelf 
+    ? `Вы уверены, что хотите завершить ВСЕ сессии для себя (${user})? Вы будете немедленно разлогинены!`
+    : `Завершить ВСЕ сессии оператора ${user}? Он будет немедленно отключен со всех устройств.`;
+
+  if (!confirm(warnMsg)) return;
+
+  const btn = document.getElementById('btnKickOperator');
+  if (btn) { btn.disabled = true; btn.textContent = 'Кикаем...'; }
+
+  try {
+    const r = await apiFetch('/api/admin/sessions/kick-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user })
+    });
+    const res = await r.json();
+    if (res.success) {
+      toast(`✅ ${res.message || 'Все сессии оператора завершены'}`);
+      loadAdminSessions();
+      if (isSelf) {
+        setTimeout(() => {
+          clearAuth();
+          location.href = 'login.html';
+        }, 1200);
+      }
+    } else {
+      toast(res.error || 'Ошибка', 'err');
+    }
+  } catch (e) {
+    toast('Ошибка сервера', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚫 Завершить все сессии'; }
+  }
+}
+
+initAdminPanel();
