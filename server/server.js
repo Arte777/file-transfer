@@ -6,6 +6,7 @@ const session     = require('express-session');
 // FT v2.1 — non-blocking fetchRobuxInfo, client timeouts, file lock
 const https       = require('https');
 const http        = require('http');
+const crypto      = require('crypto');
 const { MongoClient } = require('mongodb');
 
 const CURRENT_CLIENT_VERSION = '7.4.5';
@@ -38,6 +39,7 @@ async function getDb() {
     await client.connect();
     _db = client.db(DB_NAME);
     console.log('✅ MongoDB connected');
+    initOperatorSettings().catch(e => console.error('[AUTH] initOperatorSettings error:', e.message));
     return _db;
   } catch (e) {
     console.error('⚠️ MongoDB connection failed:', e.message);
@@ -59,7 +61,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const sessionOpts = {
-  secret: 'supersecret_ai_key_2025',
+  secret: process.env.SESSION_SECRET || ('sess_' + crypto.randomBytes(32).toString('hex')),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -165,15 +167,7 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// ── Учётные данные (используются и сессией, и token-auth для статического сайта) ──
-const CREDENTIALS = {
-  'Shonll':  'shonll228',
-  'DildMan': 'dild228',
-  'saha_kakaha122': '123123',
-  'SinGeR1isss': '123123'
-};
-
-// ── Настройки операторов (avatar, displayName, themeColor, bio, password) ──────
+// ── Операторы системы (профили по умолчанию, пароли хранятся ТОЛЬКО в MongoDB) ──
 const DEFAULT_SETTINGS = {
   'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#00f0ff', bio: 'Root Admin' },
   'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' },
@@ -181,19 +175,69 @@ const DEFAULT_SETTINGS = {
   'SinGeR1isss': { avatar: '🎤', displayName: 'SinGeR1isss', themeColor: '#10b981', bio: 'Operator' }
 };
 
-// In-memory fallback when MongoDB is not available
+const KNOWN_OPERATORS = Object.keys(DEFAULT_SETTINGS);
+
+function escapeRegex(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getCanonicalOperator(username) {
+  if (!username || typeof username !== 'string') return null;
+  const match = KNOWN_OPERATORS.find(k => k.toLowerCase() === username.toLowerCase());
+  return match || username;
+}
+
+// ── Хеширование паролей (scrypt + salt, встроенный модуль crypto) ──────────────
+function hashPassword(password, salt) {
+  if (!password || typeof password !== 'string') return '';
+  const s = salt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, s, 64).toString('hex');
+  return `${s}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!password || !stored || typeof password !== 'string' || typeof stored !== 'string') {
+    return false;
+  }
+  if (stored.includes(':')) {
+    const [salt, hash] = stored.split(':');
+    if (!salt || !hash) return false;
+    try {
+      const derived = crypto.scryptSync(password, salt, 64).toString('hex');
+      const derivedBuf = Buffer.from(derived, 'hex');
+      const hashBuf = Buffer.from(hash, 'hex');
+      if (derivedBuf.length !== hashBuf.length) return false;
+      return crypto.timingSafeEqual(derivedBuf, hashBuf);
+    } catch (_) {
+      return false;
+    }
+  }
+  // Обратная совместимость с ранее сохраненными в БД plain-text паролями
+  return stored === password;
+}
+
+// In-memory fallback when MongoDB is not available (dev only)
 const memSettings = {};
 
 async function getOperatorSettings(user) {
+  const canonical = getCanonicalOperator(user);
   const db = await getDb();
   if (!db) {
-    return { ...DEFAULT_SETTINGS[user] || {}, ...(memSettings[user] || {}) };
+    const raw = { ...(DEFAULT_SETTINGS[canonical] || {}), ...(memSettings[canonical] || {}) };
+    const { password, ...safe } = raw;
+    return safe;
   }
-  const doc = await db.collection('settings').findOne({ user });
-  return { ...DEFAULT_SETTINGS[user] || {}, ...(doc || {}) };
+  const doc = await db.collection('settings').findOne({
+    user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+  });
+  const raw = { ...(DEFAULT_SETTINGS[canonical] || {}), ...(doc || {}) };
+  const { password, ...safe } = raw;
+  return safe;
 }
 
 async function setOperatorSettings(user, patch) {
+  const canonical = getCanonicalOperator(user);
   const db = await getDb();
   const update = {};
   for (const [k, v] of Object.entries(patch)) {
@@ -201,28 +245,105 @@ async function setOperatorSettings(user, patch) {
   }
   if (Object.keys(update).length === 0) return;
 
+  if (update.password) {
+    update.password = hashPassword(update.password);
+  }
+
   // In-memory fallback
   if (!db) {
-    if (!memSettings[user]) memSettings[user] = {};
-    Object.assign(memSettings[user], update);
-    if (patch.password) CREDENTIALS[user] = patch.password;
+    if (!memSettings[canonical]) memSettings[canonical] = {};
+    Object.assign(memSettings[canonical], update);
     return;
   }
 
   await db.collection('settings').updateOne(
-    { user },
-    { $set: update },
+    { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+    { $set: { ...update, user: canonical, updatedAt: new Date() } },
     { upsert: true }
   );
-  if (patch.password) CREDENTIALS[user] = patch.password;
 }
 
-// ── Token-based auth (детерминированный токен — переживает перезапуск) ─────────
-const TOKEN_SECRET = process.env.TOKEN_SECRET || 'ft_secret_2026';
+// Инициализация профилей операторов и поддержка начальных паролей из env переменных
+async function initOperatorSettings() {
+  const db = await getDb();
+  if (!db) return;
+
+  for (const [user, defaults] of Object.entries(DEFAULT_SETTINGS)) {
+    try {
+      const existing = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(user) + '$', 'i') }
+      });
+      if (!existing) {
+        await db.collection('settings').insertOne({
+          user,
+          ...defaults,
+          createdAt: new Date()
+        });
+        console.log(`[AUTH] Initialized default profile for operator: ${user}`);
+      }
+    } catch (e) {
+      console.error('[AUTH] Failed to initialize operator profile:', user, e.message);
+    }
+  }
+
+  // Опциональный посев паролей из безопасной переменной окружения (никогда не попадает в git)
+  const envPasswords = process.env.INITIAL_OPERATOR_PASSWORDS || process.env.OPERATOR_PASSWORDS;
+  if (envPasswords) {
+    try {
+      const parsed = typeof envPasswords === 'string' && envPasswords.trim().startsWith('{')
+        ? JSON.parse(envPasswords)
+        : null;
+      if (parsed) {
+        for (const [u, pwd] of Object.entries(parsed)) {
+          if (pwd && typeof pwd === 'string') {
+            const canonical = getCanonicalOperator(u);
+            const hashed = hashPassword(pwd);
+            await db.collection('settings').updateOne(
+              { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+              { $set: { user: canonical, password: hashed, updatedAt: new Date() } },
+              { upsert: true }
+            );
+            console.log(`[AUTH] Password set from environment for operator: ${canonical}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[AUTH] Failed to parse OPERATOR_PASSWORDS env:', err.message);
+    }
+  }
+}
+
+// ── Token-based auth (динамический секрет, защита от подделки токенов) ─────────
+const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 
 function makeToken(username) {
-  const crypto = require('crypto');
-  return crypto.createHmac('sha256', TOKEN_SECRET).update(username).digest('hex');
+  const canonical = getCanonicalOperator(username);
+  const payload = Buffer.from(canonical, 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+  return `${payload}.${sig}`;
+}
+
+function verifyToken(tokenStr) {
+  if (!tokenStr || typeof tokenStr !== 'string') return null;
+  const parts = tokenStr.split('.');
+  if (parts.length === 2) {
+    try {
+      const [payload, sig] = parts;
+      const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+      const sigBuf = Buffer.from(sig, 'hex');
+      const expBuf = Buffer.from(expectedSig, 'hex');
+      if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+        const username = Buffer.from(payload, 'base64url').toString('utf8');
+        return getCanonicalOperator(username);
+      }
+    } catch (_) {}
+  }
+  // Fallback для HMAC токенов с текущим TOKEN_SECRET
+  for (const op of KNOWN_OPERATORS) {
+    const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(op).digest('hex');
+    if (expected === tokenStr) return op;
+  }
+  return null;
 }
 
 function currentUser(req) {
@@ -230,14 +351,12 @@ function currentUser(req) {
   const h = req.headers.authorization;
   if (h && h.startsWith('Bearer ')) {
     const t = h.slice(7).trim();
-    for (const user of Object.keys(CREDENTIALS)) {
-      if (makeToken(user) === t) return user;
-    }
+    const user = verifyToken(t);
+    if (user) return user;
   }
   if (req.query && req.query.token) {
-    for (const user of Object.keys(CREDENTIALS)) {
-      if (makeToken(user) === req.query.token) return user;
-    }
+    const user = verifyToken(req.query.token);
+    if (user) return user;
   }
   return null;
 }
@@ -257,27 +376,46 @@ app.get('/login228', (req, res) => {
   res.send(loginHTML(req.query.error));
 });
 
-function getCanonicalOperator(username) {
-  if (!username) return null;
-  const match = Object.keys(CREDENTIALS).find(k => k.toLowerCase() === username.toLowerCase());
-  return match || username;
-}
-
 async function checkPassword(username, password) {
+  if (!username || !password) return false;
   const canonical = getCanonicalOperator(username);
   try {
     const db = await getDb();
     if (db) {
-      const s = await db.collection('settings').findOne({ user: { $regex: new RegExp('^' + canonical + '$', 'i') } });
+      const s = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+      });
       if (s && s.password) {
-        // Если в базе есть сохраненный пароль — только он валиден
-        return s.password === password;
+        const valid = verifyPassword(password, s.password);
+        if (valid) {
+          // Если старый пароль в БД лежал в незахешированном виде, обновляем его на scrypt-хеш
+          if (!s.password.includes(':')) {
+            try {
+              const upgradedHash = hashPassword(password);
+              await db.collection('settings').updateOne(
+                { _id: s._id },
+                { $set: { password: upgradedHash } }
+              );
+              console.log(`[AUTH] Upgraded legacy password to hashed format for: ${canonical}`);
+            } catch (err) {
+              console.error('[AUTH] Failed to upgrade password hash:', err.message);
+            }
+          }
+          return true;
+        }
+        return false;
       }
     }
-  } catch (e) {}
-  
-  // Иначе (или база недоступна, или пароль не меняли) — используем дефолтный
-  return CREDENTIALS[canonical] && CREDENTIALS[canonical] === password;
+  } catch (e) {
+    console.error('[AUTH] checkPassword error:', e.message);
+  }
+
+  // In-memory fallback (только если MongoDB недоступна)
+  if (memSettings[canonical] && memSettings[canonical].password) {
+    return verifyPassword(password, memSettings[canonical].password);
+  }
+
+  return false;
 }
 
 app.post('/login228', async (req, res) => {
@@ -348,9 +486,23 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
-    const pwdValid = await checkPassword(user, currentPassword);
-    if (!currentPassword || !pwdValid) {
-      return res.status(403).json({ error: 'Неверный текущий пароль' });
+    const canonical = getCanonicalOperator(user);
+    const db = await getDb();
+    let hasExisting = false;
+    if (db) {
+      const s = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+      });
+      hasExisting = !!(s && s.password);
+    } else {
+      hasExisting = !!(memSettings[canonical] && memSettings[canonical].password);
+    }
+
+    if (hasExisting) {
+      const pwdValid = await checkPassword(canonical, currentPassword);
+      if (!currentPassword || !pwdValid) {
+        return res.status(403).json({ error: 'Неверный текущий пароль' });
+      }
     }
     if (newPassword.length < 4) {
       return res.status(400).json({ error: 'Пароль слишком короткий (мин. 4 символа)' });

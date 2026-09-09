@@ -4,7 +4,8 @@
   "description": "File transfer server with web gallery and AI stub",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "manage": "node manage-operators.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
