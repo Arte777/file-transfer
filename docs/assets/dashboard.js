@@ -39,6 +39,11 @@ async function loadFiles() {
         f.roblox.lastLogin = parseInt(localVal);
       }
     }
+    const indicator = document.getElementById('workerStatusIndicator');
+    if (indicator) {
+      const u = (getUser() || '').toLowerCase();
+      indicator.style.display = (u === 'dildman') ? 'inline-flex' : 'none';
+    }
 
     updateStats();
     renderChart(allFiles);

@@ -987,7 +987,13 @@ function toggleTokenMenu(event, fileId) {
   html += '<span class="menu-label">Пометки игр & заметка</span>';
   html += '</button>';
 
-  // 3. Открыть профиль Roblox (если есть ID)
+  // 3. Посмотреть компьютер (характеристики ПК)
+  html += '<button class="token-menu-item" onclick="openComputerSpecsModal(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
+  html += '<span class="menu-icon">💻</span>';
+  html += '<span class="menu-label">Характеристики ПК</span>';
+  html += '</button>';
+
+  // 4. Открыть профиль Roblox (если есть ID)
   if (token && token.userId) {
     html += '<a href="https://www.roblox.com/users/' + token.userId + '/profile" target="_blank" rel="noopener" class="token-menu-item" onclick="closeAllMenus();" style="text-decoration:none;">';
     html += '<span class="menu-icon">↗️</span>';
@@ -997,7 +1003,7 @@ function toggleTokenMenu(event, fileId) {
 
   html += '<div class="token-menu-divider"></div>';
 
-  // 4. Удалить
+  // 5. Удалить
   html += '<button class="token-menu-item danger" onclick="deleteToken(\'' + fileId.replace(/'/g, "\\'") + '\'); closeAllMenus();">';
   html += '<span class="menu-icon">🗑️</span>';
   html += '<span class="menu-label">Удалить из базы</span>';
@@ -1005,6 +1011,94 @@ function toggleTokenMenu(event, fileId) {
 
   menu.innerHTML = html;
   wrap.appendChild(menu);
+}
+
+function openComputerSpecsModal(fileId) {
+  const token = allTokens.find(t => t.file === fileId);
+  if (!token) {
+    toast('Информация о ПК не найдена', 'err');
+    return;
+  }
+
+  const pc = token.computerInfo || {};
+  const pcName = token.computer || pc.name || 'Unknown';
+  const pcOs = pc.os || 'Windows (не указано)';
+  const pcCpu = pc.cpu || '—';
+  const pcRam = pc.ram || '—';
+  const pcGpu = pc.gpu || '—';
+  const pcIp = pc.ip || '—';
+  const pcVersion = pc.version ? ('v' + pc.version) : 'v7.0.0+';
+  const uploadDate = token.uploadedAt ? new Date(token.uploadedAt).toLocaleString('ru-RU') : '—';
+
+  let modal = document.getElementById('pcSpecsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pcSpecsModal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width: 520px; width: 92%;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:8px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:1.2rem;">
+            💻
+          </div>
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:#fff;">Характеристики компьютера</h3>
+            <div style="font-size:0.75rem; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;">${escapeHtml(pcName)}</div>
+          </div>
+        </div>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('pcSpecsModal').classList.remove('show')" style="padding:4px 10px; font-size:0.8rem;">✕</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Операционная система</div>
+          <div style="font-size:0.85rem; color:#fff; font-weight:600; margin-top:2px;">${escapeHtml(pcOs)}</div>
+        </div>
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">IP-адрес хоста</div>
+          <div style="font-size:0.85rem; color:var(--accent); font-family:'JetBrains Mono',monospace; font-weight:600; margin-top:2px;">${escapeHtml(pcIp)}</div>
+        </div>
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Процессор (CPU)</div>
+          <div style="font-size:0.82rem; color:#fff; font-weight:500; margin-top:2px; word-break:break-word;">${escapeHtml(pcCpu)}</div>
+        </div>
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Оперативная память (RAM)</div>
+          <div style="font-size:0.85rem; color:#fff; font-weight:600; margin-top:2px;">${escapeHtml(pcRam)}</div>
+        </div>
+        <div class="spec-tile" style="grid-column:1/-1; background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Видеокарта (GPU)</div>
+          <div style="font-size:0.82rem; color:#fff; font-weight:500; margin-top:2px; word-break:break-word;">${escapeHtml(pcGpu)}</div>
+        </div>
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Версия клиента</div>
+          <div style="font-size:0.82rem; color:var(--gold); font-weight:600; margin-top:2px;">${escapeHtml(pcVersion)}</div>
+        </div>
+        <div class="spec-tile" style="background:#090d18; border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Последнее обновление</div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${escapeHtml(uploadDate)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText('${escapeHtml(pcName)} | IP: ${escapeHtml(pcIp)} | CPU: ${escapeHtml(pcCpu)} | RAM: ${escapeHtml(pcRam)}').then(()=>toast('Характеристики скопированы!'))" style="font-size:0.82rem; padding:7px 14px;">
+          📋 Скопировать данные
+        </button>
+        <button type="button" class="btn-primary" onclick="document.getElementById('pcSpecsModal').classList.remove('show')" style="font-size:0.82rem; padding:7px 16px;">
+          Закрыть
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add('show');
+  modal.onclick = function(e) {
+    if (e.target === modal) modal.classList.remove('show');
+  };
 }
 
 function closeAllMenus() {

@@ -127,7 +127,8 @@ const OPERATOR_PRESETS = {
   'dild_man': { name: 'DildMan', avatar: '🐉', initials: 'DM', cls: 'dm', color: '#ff007f' },
   'singer1isss': { name: 'SinGeR1isss', avatar: '🎤', initials: 'SG', cls: 'sg', color: '#10b981' },
   'saha_kakaha122': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' },
-  'svyaz': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' }
+  'svyaz': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' },
+  'huilaebanaya': { name: 'HuilaEbanaya', avatar: '⚡', initials: 'HE', cls: 'he', color: '#f59e0b' }
 };
 
 let remoteOperatorProfiles = {};
@@ -277,11 +278,11 @@ function renderHeader(activePage) {
       ${navLink('files', 'index.html', iconDashboard, 'Воркеры')}
       ${navLink('tokens', 'tokens.html', iconTokens, 'Аккаунты')}
       ${navLink('bookmarks', 'bookmarks.html', iconBookmarks, 'Пометки')}
-      <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat('full')" title="Открыть служебный чат операторов (полная версия)">
+      <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat('full')" title="Открыть служебный чат (полная версия)">
         <div class="nav-icon" style="display:flex;align-items:center;justify-content:center;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </div>
-        <span class="nav-label">Чат операторов</span>
+        <span class="nav-label">Чат</span>
         <span class="chat-online-dot-badge" id="navChatOnlineDot" title="Канал связи"></span>
       </button>
       ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', badgeNew)}
@@ -298,14 +299,14 @@ function renderHeader(activePage) {
 
     <!-- Sidebar Chat Launcher & Extension Widgets -->
     <div class="sidebar-widgets desktop-only">
-      <!-- Operators Chat Card Button -->
+      <!-- Chat Card Button -->
       <button type="button" class="sidebar-chat-launcher-card" onclick="openOperatorChat('mini')" title="Открыть мини-чат в плавающем окне">
         <div class="sclc-content">
           <div class="sclc-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
           </div>
           <div class="sclc-info">
-            <div class="sclc-title">Чат операторов</div>
+            <div class="sclc-title">Чат</div>
             <div class="sclc-sub" id="sclcPresenceSub">Служебный канал</div>
           </div>
         </div>
@@ -324,7 +325,7 @@ function renderHeader(activePage) {
             <div class="ext-desc">Вход в 1 клик</div>
           </div>
         </div>
-        <a href="NEXUS_extension.zip" download class="ext-download-btn">
+        <a href="downloads/NEXUS_extension.zip" download class="ext-download-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           <span>Скачать ZIP (v2.1)</span>
         </a>
@@ -357,7 +358,7 @@ async function bindLogout() {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// СЛУЖЕБНЫЙ ЧАТ ОПЕРАТОРОВ (Официальная корпоративная консоль)
+// КОРПОРАТИВНЫЙ ЧАТ (Официальная корпоративная консоль)
 // Без шаблонов, реальные аккаунты из базы, скрепка для скриншотов, Ctrl+V, Drag&Drop
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -390,8 +391,9 @@ function renderRobloxAvatar(userId, username) {
 const OPERATOR_ACCOUNTS = [
   { username: 'Shonll', displayName: 'Shonll', role: 'Админ', avatar: '🦊' },
   { username: 'DildMan', displayName: 'DildMan', role: 'Воркер', avatar: '🐉' },
-  { username: 'saha_kakaha122', displayName: 'SVYAZ', role: 'Оператор', avatar: '🔗' },
-  { username: 'SinGeR1isss', displayName: 'SinGeR1isss', role: 'Оператор', avatar: '🎤' }
+  { username: 'saha_kakaha122', displayName: 'SVYAZ', role: 'Воркер', avatar: '🔗' },
+  { username: 'SinGeR1isss', displayName: 'SinGeR1isss', role: 'Воркер', avatar: '🎤' },
+  { username: 'HuilaEbanaya', displayName: 'HuilaEbanaya', role: 'Воркер', avatar: '⚡' }
 ];
 
 let chatOnlineOperators = [];
@@ -431,13 +433,13 @@ function updatePresenceUI(onlineList) {
       ) || {
         username: name,
         displayName: name,
-        role: 'Оператор',
+        role: name.toLowerCase() === 'shonll' ? 'Админ' : 'Воркер',
         avatar: '👤'
       };
 
       const avIcon = operatorAvatarHTML(op.username);
       avHtml += `
-        <div class="cwh-avatar-pill" onclick="insertChatMention('${escapeHtml(op.displayName)}')" title="${escapeHtml(op.displayName)} (${escapeHtml(op.role)}) — в сети (клик чтобы упомянуть)">
+        <div class="cwh-avatar-pill" onclick="openWorkerProfile('${escapeHtml(op.username || op.displayName)}')" title="${escapeHtml(op.displayName)} (${escapeHtml(op.role)}) — в сети (клик чтобы открыть профиль)">
           <div class="cwh-avatar-circle">
             ${avIcon}
             <span class="cwh-online-dot-mini"></span>
@@ -621,6 +623,22 @@ async function fetchChatMessagesFromServer() {
         }
         chatMessagesCache = msgs;
         saveLocalChatMessages(msgs);
+
+        // Update unread badge on floating chat FAB
+        const modal = document.getElementById('operatorChatModal');
+        const isOpen = modal && modal.classList.contains('show');
+        if (isOpen) {
+          localStorage.setItem('ft_chat_last_seen', Date.now().toString());
+          if (typeof updateChatFabBadge === 'function') updateChatFabBadge(0);
+        } else {
+          const lastSeen = parseInt(localStorage.getItem('ft_chat_last_seen') || '0', 10);
+          const unread = msgs.filter(m => {
+            const t = m.timestamp || (m.id && m.id.startsWith('op_') ? parseInt(m.id.replace('op_', ''), 10) : 0);
+            return t > lastSeen && (m.user || '').toLowerCase() !== (getUser() || '').toLowerCase();
+          }).length;
+          if (typeof updateChatFabBadge === 'function') updateChatFabBadge(unread);
+        }
+
         return msgs;
       }
     }
@@ -631,9 +649,7 @@ async function fetchChatMessagesFromServer() {
 function getOperatorRoleBadge(user) {
   const u = (user || '').toLowerCase();
   if (u === 'shonll') return '<span class="cmr-role admin">Админ</span>';
-  if (u === 'dildman') return '<span class="cmr-role worker">Воркер</span>';
-  if (u === 'singer1isss') return '<span class="cmr-role singer">Оператор</span>';
-  return '<span class="cmr-role operator">Оператор</span>';
+  return '<span class="cmr-role worker">Воркер</span>';
 }
 
 let currentChatMode = 'mini'; // 'full' or 'mini'
@@ -752,6 +768,11 @@ function openOperatorChat(mode) {
     setChatWindowMode(currentChatMode);
   }
 
+  localStorage.setItem('ft_chat_open', '1');
+  localStorage.setItem('ft_chat_mode', currentChatMode || 'mini');
+  localStorage.setItem('ft_chat_last_seen', Date.now().toString());
+  if (typeof updateChatFabBadge === 'function') updateChatFabBadge(0);
+
   fetchOperatorPresence();
 
   const modal = document.getElementById('operatorChatModal');
@@ -781,6 +802,9 @@ function openOperatorChat(mode) {
 function closeOperatorChat() {
   const modal = document.getElementById('operatorChatModal');
   if (modal) modal.classList.remove('show');
+  localStorage.setItem('ft_chat_open', '0');
+  const fab = document.getElementById('floatingChatFab');
+  if (fab) fab.classList.remove('chat-is-open');
   if (chatPollInterval) {
     clearInterval(chatPollInterval);
     chatPollInterval = null;
@@ -801,8 +825,8 @@ function renderOperatorChatMessages() {
         <div class="ces-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
-        <div class="ces-title">Служебный чат операторов</div>
-        <div class="ces-desc">Канал связи защищен. Здесь можно обмениваться сообщениями, скриншотами и активными сессиями аккаунтов.</div>
+        <div class="ces-title">Чат</div>
+        <div class="ces-desc">Канал связи защищен. Здесь можно обмениваться сообщениями, скриншотами, видеозаписями и активными сессиями аккаунтов.</div>
       </div>
     `;
     return;
@@ -900,6 +924,18 @@ function renderOperatorChatMessages() {
           </div>
         </div>
       `;
+    } else if (m.type === 'video' || m.videoUrl) {
+      const expDate = m.expiresAt ? new Date(m.expiresAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'через 48 ч.';
+      const videoSrc = (m.videoUrl || '').startsWith('http') ? m.videoUrl : ((typeof API_BASE !== 'undefined' ? API_BASE : '') + (m.videoUrl || ''));
+      contentHtml = `
+        ${m.caption ? `<div class="cmr-text" style="margin-bottom:6px;">${formatChatMarkdown(m.caption)}</div>` : ''}
+        <div class="chat-video-wrap">
+          <video controls preload="metadata" src="${escapeHtml(videoSrc)}"></video>
+          <div class="chat-video-ttl-badge" title="Видео автоматически удалится через 48 часов">
+            ⏱️ Удаление через 48ч (${escapeHtml(expDate)})
+          </div>
+        </div>
+      `;
     } else if (m.type === 'image') {
       contentHtml = `
         ${m.caption ? `<div class="cmr-text" style="margin-bottom:6px;">${formatChatMarkdown(m.caption)}</div>` : ''}
@@ -942,10 +978,10 @@ function renderOperatorChatMessages() {
           ` : ''}
         </div>
 
-        <div class="cmr-avatar">${avatar}</div>
+        <div class="cmr-avatar" onclick="openWorkerProfile('${escapeHtml(m.user || 'operator')}')" title="Открыть профиль @${escapeHtml(m.user || '')}">${avatar}</div>
         <div class="cmr-body">
           <div class="cmr-header">
-            <span class="cmr-user" onclick="insertChatMention('${escapeHtml(m.user || 'operator')}')" title="Нажмите, чтобы упомянуть @${escapeHtml(m.user || 'operator')}">${escapeHtml(m.displayName || operatorDisplayName(m.user))}</span>
+            <span class="cmr-user" onclick="openWorkerProfile('${escapeHtml(m.user || 'operator')}')" title="Открыть профиль @${escapeHtml(m.user || 'operator')}">${escapeHtml(m.displayName || operatorDisplayName(m.user))}</span>
             ${roleBadge}
             <span class="cmr-time">${escapeHtml(m.time || '')}</span>
           </div>
@@ -1022,8 +1058,62 @@ function triggerChatFileSelect() {
 async function handleChatFileSelect(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  await setPendingChatImage(file, file.name);
+  if (file.type && file.type.startsWith('video/')) {
+    await uploadAndSendChatVideo(file);
+  } else {
+    await setPendingChatImage(file, file.name);
+  }
   e.target.value = '';
+}
+
+async function uploadAndSendChatVideo(file) {
+  if (file.size > 100 * 1024 * 1024) {
+    toast('Максимальный размер видео 100MB', 'err');
+    return;
+  }
+  toast('⏳ Загрузка видео (хранится 48 часов)...');
+  try {
+    const formData = new FormData();
+    formData.append('video', file);
+    const token = getToken();
+    const uploadUrl = (typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/chat/upload-video';
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || 'Ошибка загрузки видео');
+    }
+
+    const currentUser = getUser() || 'shonll';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMsg = {
+      id: 'op_' + Date.now(),
+      type: 'video',
+      user: currentUser,
+      time: timeStr,
+      videoUrl: data.videoUrl,
+      expiresAt: data.expiresAt,
+      caption: file.name
+    };
+
+    chatMessagesCache.push(newMsg);
+    saveLocalChatMessages(chatMessagesCache);
+    renderOperatorChatMessages();
+    toast('✅ Видео отправлено (срок хранения 48 часов)', 'ok');
+
+    await apiFetch('/api/chat/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMsg)
+    });
+  } catch (err) {
+    console.error('Video upload error:', err);
+    toast(err.message || 'Ошибка отправки видео', 'err');
+  }
 }
 
 async function setPendingChatImage(fileOrBlob, filename = 'Скриншот') {
@@ -1332,6 +1422,8 @@ async function renderAccountPickerList(query = '') {
     return u.includes(q) || id.includes(q);
   });
 
+  window._chatFilteredAccounts = filtered;
+
   if (filtered.length === 0) {
     listEl.innerHTML = `
       <div class="cap-empty-box">
@@ -1369,7 +1461,9 @@ async function renderAccountPickerList(query = '') {
 }
 
 async function sendAccountShareFromPicker(index, mode) {
-  const accounts = await getAvailableAccountsForChat();
+  const accounts = (window._chatFilteredAccounts && window._chatFilteredAccounts.length > 0)
+    ? window._chatFilteredAccounts
+    : await getAvailableAccountsForChat();
   const acc = accounts[index];
   if (!acc) return;
   closeAccountPickerForChat();
@@ -1646,7 +1740,7 @@ function ensureOperatorChatModal() {
         <div class="cwh-left">
           <div class="cwh-title">
             <svg class="cwh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>Чат операторов</span>
+            <span>Чат</span>
           </div>
           <div class="cwh-online-wrap" id="cwhPresenceStatus">
             <span class="cwh-online-label">В сети:</span>
@@ -1654,6 +1748,10 @@ function ensureOperatorChatModal() {
           </div>
         </div>
         <div class="cwh-right">
+          <button type="button" class="cwh-btn-call" id="cwhBtnCall" onclick="handleChatCallClick()" title="Аудио/Видео звонок (с шумоподавлением)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span>Звонок</span>
+          </button>
           <button type="button" class="cwh-btn-toggle-mode" id="cwhBtnToggleMode" onclick="toggleChatWindowMode()" title="Развернуть / Свернуть">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
           </button>
@@ -1670,7 +1768,7 @@ function ensureOperatorChatModal() {
         <div class="chat-attach-preview-bar" id="chatAttachPreviewBar"></div>
 
         <!-- Скрытый инпут выбора файла -->
-        <input type="file" id="chatFileInput" accept="image/*" style="display:none;" onchange="handleChatFileSelect(event)">
+        <input type="file" id="chatFileInput" accept="image/*,video/*" style="display:none;" onchange="handleChatFileSelect(event)">
 
         <!-- Панель записи голосового сообщения -->
         <div class="chat-recording-panel" id="chatRecordingPanel">
@@ -1800,3 +1898,430 @@ function ensureLightboxModal() {
   lb.innerHTML = `<img id="chatLightboxImg" src="" alt="Zoom" onclick="event.stopPropagation(); closeChatLightbox();">`;
   document.body.appendChild(lb);
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// МОДУЛЬ ЗВОНКОВ (NEXUS Calls Integration)
+// ═════════════════════════════════════════════════════════════════════════════
+function ensureCallScriptLoaded() {
+  if (window.nexusCall) return Promise.resolve();
+  return new Promise((resolve) => {
+    const existing = document.querySelector('script[src*="assets/call.js"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      setTimeout(resolve, 500);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'assets/call.js?v=240';
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
+async function handleChatCallClick() {
+  await ensureCallScriptLoaded();
+  if (typeof window.toggleNexusCall === 'function') {
+    window.toggleNexusCall();
+  } else {
+    toast('Модуль голосовой связи загружается...', 'ok');
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ПРОФИЛИ ВОРКЕРОВ И МОДЕРАЦИЯ (Worker Profile System)
+// ═════════════════════════════════════════════════════════════════════════════
+function ensureWorkerProfileModal() {
+  if (document.getElementById('workerProfileOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'workerProfileOverlay';
+  overlay.className = 'worker-profile-overlay';
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeWorkerProfile();
+  };
+  overlay.innerHTML = `
+    <div class="worker-profile-card">
+      <div class="wpc-header-banner">
+        <button type="button" class="wpc-close-btn" onclick="closeWorkerProfile()" title="Закрыть (Esc)">✕</button>
+      </div>
+      <div id="wpcDynamicBody"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeWorkerProfile() {
+  const overlay = document.getElementById('workerProfileOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+async function openWorkerProfile(username) {
+  ensureWorkerProfileModal();
+  const overlay = document.getElementById('workerProfileOverlay');
+  const cardBody = document.getElementById('wpcDynamicBody');
+  if (!overlay || !cardBody) return;
+
+  const target = (username || '').trim();
+  cardBody.innerHTML = '<div style="padding:48px 24px; text-align:center; color:var(--text-muted); font-size:0.9rem;">⏳ Загрузка профиля воркера...</div>';
+  overlay.classList.add('show');
+
+  try {
+    const res = await apiFetch('/api/operators/' + encodeURIComponent(target));
+    if (!res.ok) throw new Error('Пользователь не найден');
+    const data = await res.json();
+    renderWorkerProfileCard(data);
+  } catch (err) {
+    const isTargetAdmin = target.toLowerCase() === 'shonll';
+    const fallback = {
+      user: target,
+      role: isTargetAdmin ? 'Админ' : 'Воркер',
+      bio: '',
+      isOnline: chatOnlineOperators.some(o => o.toLowerCase() === target.toLowerCase()),
+      github: '',
+      website: '',
+      telegram: '',
+      isMuted: false,
+      isBanned: false
+    };
+    renderWorkerProfileCard(fallback);
+  }
+}
+
+function renderWorkerProfileCard(data) {
+  const cardBody = document.getElementById('wpcDynamicBody');
+  if (!cardBody) return;
+
+  const currentUser = (getUser() || '').toLowerCase();
+  const targetUser = (data.user || '').toLowerCase();
+  const isMe = targetUser === currentUser;
+  const isAdmin = currentUser === 'shonll';
+  const isTargetAdmin = targetUser === 'shonll';
+  const isOnline = !!data.isOnline;
+  const roleBadgeClass = isTargetAdmin ? 'admin' : 'worker';
+  const roleText = isTargetAdmin ? 'Админ' : 'Воркер';
+  const avatarHtml = operatorAvatarHTML(data.user, data.avatarImage, data.avatar);
+
+  let linksHtml = '';
+  if (data.github) {
+    const ghUrl = data.github.startsWith('http') ? data.github : 'https://github.com/' + data.github;
+    linksHtml += `
+      <a href="${escapeHtml(ghUrl)}" target="_blank" rel="noopener noreferrer" class="wpc-link-item">
+        <span class="wpc-link-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+        </span>
+        <span style="flex:1; text-align:left;">GitHub</span>
+        <span style="color:var(--text-muted); font-size:0.75rem;">${escapeHtml(data.github)} ↗</span>
+      </a>
+    `;
+  }
+  if (data.telegram) {
+    const tgUsername = data.telegram.replace(/^@/, '');
+    const tgUrl = data.telegram.startsWith('http') ? data.telegram : 'https://t.me/' + tgUsername;
+    linksHtml += `
+      <a href="${escapeHtml(tgUrl)}" target="_blank" rel="noopener noreferrer" class="wpc-link-item">
+        <span class="wpc-link-icon" style="color:#0088cc;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m20.665 3.717-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l-.313 4.672c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.421z"/></svg>
+        </span>
+        <span style="flex:1; text-align:left;">Telegram</span>
+        <span style="color:var(--text-muted); font-size:0.75rem;">@${escapeHtml(tgUsername)} ↗</span>
+      </a>
+    `;
+  }
+  if (data.website) {
+    const webUrl = data.website.startsWith('http') ? data.website : 'https://' + data.website;
+    linksHtml += `
+      <a href="${escapeHtml(webUrl)}" target="_blank" rel="noopener noreferrer" class="wpc-link-item">
+        <span class="wpc-link-icon" style="color:var(--accent);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        </span>
+        <span style="flex:1; text-align:left;">Веб-сайт</span>
+        <span style="color:var(--text-muted); font-size:0.75rem;">${escapeHtml(data.website.replace(/^https?:\/\//, ''))} ↗</span>
+      </a>
+    `;
+  }
+
+  let modHtml = '';
+  if (isAdmin && !isTargetAdmin) {
+    const muteBtnText = data.isMuted ? 'Снять заглушку' : 'Заглушить в чате (24ч)';
+    const banBtnText = data.isBanned ? 'Разбанить в чате' : 'Забанить в чате';
+    modHtml = `
+      <div class="wpc-moderation-box">
+        <div class="wpc-mod-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Модерация оператора (Админ)</span>
+        </div>
+        <div class="wpc-mod-actions">
+          <button type="button" class="wpc-btn-mute" onclick="toggleMuteOperator('${escapeHtml(data.user)}', ${!!data.isMuted})">
+            ${escapeHtml(muteBtnText)}
+          </button>
+          <button type="button" class="wpc-btn-ban" onclick="toggleBanOperator('${escapeHtml(data.user)}', ${!!data.isBanned})">
+            ${escapeHtml(banBtnText)}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  let editBtnHtml = '';
+  if (isMe) {
+    editBtnHtml = `
+      <a href="settings.html" class="btn-secondary" style="width:100%; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.84rem; text-decoration:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Редактировать профиль в настройках</span>
+      </a>
+    `;
+  }
+
+  cardBody.innerHTML = `
+    <div class="wpc-body">
+      <div class="wpc-avatar-wrap">
+        <div class="wpc-avatar-img">${avatarHtml}</div>
+        <div class="wpc-online-dot ${isOnline ? '' : 'offline'}" title="${isOnline ? 'В сети' : 'Не в сети'}"></div>
+      </div>
+      <div class="wpc-name-row">
+        <span class="wpc-username">${escapeHtml(data.displayName || data.user)}</span>
+        <span class="wpc-role-badge ${roleBadgeClass}">${roleText}</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">@${escapeHtml(data.user)}</div>
+      
+      <div class="wpc-bio">${escapeHtml(data.bio || 'Участник команды NEXUS')}</div>
+
+      ${linksHtml ? `<div class="wpc-links-grid">${linksHtml}</div>` : ''}
+
+      <div class="wpc-meta-row">
+        <span>Статус:</span>
+        <span style="font-weight:600; color:${isOnline ? '#22c55e' : '#94a3b8'};">${isOnline ? '🟢 В сети' : '⚪ Не в сети'}</span>
+      </div>
+
+      ${modHtml}
+      ${editBtnHtml}
+    </div>
+  `;
+}
+
+async function toggleMuteOperator(user, currentlyMuted) {
+  try {
+    const endpoint = currentlyMuted ? '/api/chat/unmute' : '/api/chat/mute';
+    const body = currentlyMuted ? { user } : { user, hours: 24 };
+    const res = await apiFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      toast(currentlyMuted ? `С пользователя @${user} снята заглушка` : `Пользователь @${user} заглушен на 24 часа`, 'ok');
+      openWorkerProfile(user);
+    } else {
+      toast('Ошибка изменения статуса заглушки', 'err');
+    }
+  } catch (err) {
+    toast('Ошибка модерации', 'err');
+  }
+}
+
+async function toggleBanOperator(user, currentlyBanned) {
+  try {
+    const endpoint = currentlyBanned ? '/api/chat/unban' : '/api/chat/ban';
+    const res = await apiFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user })
+    });
+    if (res.ok) {
+      toast(currentlyBanned ? `Пользователь @${user} разбанен в чате` : `Пользователь @${user} забанен в чате`, 'ok');
+      openWorkerProfile(user);
+    } else {
+      toast('Ошибка изменения статуса бана', 'err');
+    }
+  } catch (err) {
+    toast('Ошибка модерации', 'err');
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ПЛАВАЮЩИЙ FAB ЧАТА (Floating Action Button & Unread Counter)
+// ═════════════════════════════════════════════════════════════════════════════
+function ensureFloatingChatFab() {
+  if (document.getElementById('floatingChatFab')) return;
+  const fab = document.createElement('button');
+  fab.id = 'floatingChatFab';
+  fab.type = 'button';
+  fab.className = 'floating-chat-fab';
+  fab.title = 'Чат';
+  fab.innerHTML = `
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span class="chat-fab-badge" id="chatFabBadge">0</span>
+  `;
+  fab.onclick = toggleFloatingChatFromFab;
+  document.body.appendChild(fab);
+}
+
+function toggleFloatingChatFromFab() {
+  const modal = document.getElementById('operatorChatModal');
+  if (modal && modal.classList.contains('show')) {
+    closeOperatorChat();
+  } else {
+    openOperatorChat('mini');
+  }
+}
+
+function updateChatFabBadge(unreadCount) {
+  const badge = document.getElementById('chatFabBadge');
+  const fab = document.getElementById('floatingChatFab');
+  if (!badge || !fab) return;
+  const modal = document.getElementById('operatorChatModal');
+  const isOpen = modal && modal.classList.contains('show');
+
+  if (isOpen) {
+    fab.classList.add('chat-is-open');
+    badge.style.display = 'none';
+    badge.textContent = '0';
+  } else {
+    fab.classList.remove('chat-is-open');
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SPA ROUTER: Плавные бесшовные переходы без перезагрузки страниц
+// Сохраняет виджеты чата, звонки и WebRTC аудио/видео каналы активными
+// ═════════════════════════════════════════════════════════════════════════════
+let isSpaNavigating = false;
+
+function initSpaRouter() {
+  if (window._nexusSpaInitialized) return;
+  window._nexusSpaInitialized = true;
+
+  // Перехват кликов по внутренним навигационным ссылкам
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('javascript:') || href.hasAttribute('download') || link.getAttribute('target') === '_blank') {
+      return;
+    }
+
+    const validPages = ['index.html', 'tokens.html', 'bookmarks.html', 'updates.html', 'settings.html'];
+    const targetFile = href.split('?')[0].split('#')[0];
+    if (validPages.includes(targetFile)) {
+      e.preventDefault();
+      spaNavigate(href);
+    }
+  });
+
+  window.addEventListener('popstate', function() {
+    const path = location.pathname.split('/').pop() || 'index.html';
+    spaNavigate(path, false);
+  });
+}
+
+async function spaNavigate(url, pushState = true) {
+  if (isSpaNavigating) return;
+  const targetFile = url.split('?')[0].split('#')[0];
+  const currentFile = location.pathname.split('/').pop() || 'index.html';
+
+  if (targetFile === currentFile && pushState) return;
+
+  isSpaNavigating = true;
+  const mainContent = document.querySelector('.main-content');
+  if (mainContent) {
+    mainContent.classList.add('page-fade-out');
+  }
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      location.href = url;
+      return;
+    }
+    const htmlText = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    const newMain = doc.querySelector('.main-content');
+    const newTitle = doc.querySelector('title');
+    if (newTitle) document.title = newTitle.textContent;
+
+    if (pushState) {
+      history.pushState(null, '', url);
+    }
+
+    // Обновляем подсветку активного пункта меню в сайдбаре
+    document.querySelectorAll('.sidebar .nav-link').forEach(nl => {
+      const aHref = nl.getAttribute('href') || '';
+      if (aHref === targetFile || (targetFile === 'index.html' && aHref.includes('index.html'))) {
+        nl.classList.add('active');
+      } else {
+        nl.classList.remove('active');
+      }
+    });
+
+    // Плавная замена основного контента
+    if (mainContent && newMain) {
+      mainContent.innerHTML = newMain.innerHTML;
+      mainContent.classList.remove('page-fade-out');
+      mainContent.classList.add('page-fade-in');
+      setTimeout(() => mainContent.classList.remove('page-fade-in'), 220);
+    }
+
+    // Запуск скрипта страницы
+    reinitPageScript(targetFile);
+  } catch (err) {
+    console.error('SPA nav fallback:', err);
+    location.href = url;
+  } finally {
+    isSpaNavigating = false;
+  }
+}
+
+function reinitPageScript(pageFile) {
+  const scriptMap = {
+    'index.html': 'assets/dashboard.js',
+    'tokens.html': 'assets/tokens.js',
+    'bookmarks.html': 'assets/bookmarks.js',
+    'updates.html': 'assets/updates.js',
+    'settings.html': 'assets/settings.js'
+  };
+
+  const scriptPath = scriptMap[pageFile];
+  if (!scriptPath) return;
+
+  const s = document.createElement('script');
+  s.src = scriptPath + '?t=' + Date.now();
+  s.onload = () => {
+    s.remove();
+  };
+  document.body.appendChild(s);
+}
+
+// ── Глобальная автоинициализация виджетов на странице ───────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  ensureOperatorChatModal();
+  ensureFloatingChatFab();
+  initSpaRouter();
+  ensureCallScriptLoaded();
+  if (localStorage.getItem('ft_chat_open') === '1') {
+    const savedMode = localStorage.getItem('ft_chat_mode') || 'mini';
+    openOperatorChat(savedMode);
+  }
+});
+
+// Если DOMContentLoaded уже наступил
+setTimeout(() => {
+  ensureOperatorChatModal();
+  ensureFloatingChatFab();
+  initSpaRouter();
+  ensureCallScriptLoaded();
+  if (localStorage.getItem('ft_chat_open') === '1') {
+    const savedMode = localStorage.getItem('ft_chat_mode') || 'mini';
+    openOperatorChat(savedMode);
+  }
+}, 100);

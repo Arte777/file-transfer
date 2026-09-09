@@ -34,6 +34,9 @@ async function loadSettings() {
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
+    if (document.getElementById('githubProfile')) document.getElementById('githubProfile').value = s.github || '';
+    if (document.getElementById('websiteProfile')) document.getElementById('websiteProfile').value = s.website || '';
+    if (document.getElementById('telegramProfile')) document.getElementById('telegramProfile').value = s.telegram || '';
 
     const serverAvatarImage = s.avatarImage || null;
 
@@ -162,6 +165,9 @@ if (saveBtn) {
     
     const name = document.getElementById('displayName')?.value.trim() || '';
     const bio = document.getElementById('bio')?.value.trim() || '';
+    const github = document.getElementById('githubProfile')?.value.trim() || '';
+    const website = document.getElementById('websiteProfile')?.value.trim() || '';
+    const telegram = document.getElementById('telegramProfile')?.value.trim() || '';
     const currPwd = document.getElementById('currentPassword')?.value || '';
     const newPwd = document.getElementById('newPassword')?.value || '';
     
@@ -177,7 +183,10 @@ if (saveBtn) {
     const data = {
       displayName: name,
       themeColor: '#3b82f6',
-      bio: bio
+      bio: bio,
+      github: github,
+      website: website,
+      telegram: telegram
     };
 
     if (currentAvatarImageBase64) {
