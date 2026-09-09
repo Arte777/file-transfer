@@ -180,7 +180,7 @@ function supportsUpdate(ver) {
 function isOutdated(ver) {
   if (!ver) return true;
   ver = ver.replace(/^v/i, '').trim();
-  const CURRENT = '7.4.5';
+  const CURRENT = '8.0.0';
   try {
     return CURRENT.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
   } catch (e) {

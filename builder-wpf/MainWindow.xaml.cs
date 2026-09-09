@@ -599,6 +599,8 @@ namespace NexusBuilder
                 appTitleMain = appName,
                 appTitleVersion = "v" + AppVersion,
                 windowTitle = $"{appName} {AppVersion}",
+                clientVersion = AppVersion,
+                version = AppVersion,
                 buildMode = isStandalone ? "standalone" : "loader",
                 builtAt = DateTime.UtcNow.ToString("o")
             };
