@@ -397,12 +397,12 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <!-- Row 1: Operator Profile, App Name, Icon Selection -->
+                        <!-- Row 0: Operator Profile, App Name, Telegram Channel -->
                         <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.2*" />
-                                <ColumnDefinition Width="0.9*" />
-                                <ColumnDefinition Width="1.3*" />
+                                <ColumnDefinition Width="1.1*" />
+                                <ColumnDefinition Width="0.85*" />
+                                <ColumnDefinition Width="1.15*" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Operator Profile -->
@@ -431,8 +431,22 @@
                                 <TextBox x:Name="tbAppName" Text="RAH" Height="34" Style="{StaticResource ModernInput}" />
                             </StackPanel>
 
-                            <!-- Icon Selection -->
+                            <!-- Telegram Channel -->
                             <StackPanel Grid.Column="2">
+                                <TextBlock Text="Telegram-канал приложения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                                <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="34" Style="{StaticResource ModernInput}" ToolTip="Ссылка на ТГ-канал или юзернейм (@канал)" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Row 1: Icon Selection & Destination Folder -->
+                        <Grid Grid.Row="1" Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.1*" />
+                                <ColumnDefinition Width="1.5*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Icon Selection -->
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Иконка приложения (.ico):" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -460,19 +474,19 @@
                                 </Grid>
                                 <TextBlock x:Name="lblIconName" Text="thunder.ico" Foreground="#64748b" FontSize="10.5" Margin="42,3,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                        </Grid>
 
-                        <!-- Row 2: Destination Folder -->
-                        <Grid Grid.Row="1" Margin="0,12,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0" Text="Папка сохранения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
-                            <TextBox x:Name="tbOutputPath" Grid.Column="1" Height="32" Style="{StaticResource ModernInput}" IsReadOnly="True" />
-                            <Button x:Name="btnBrowse" Grid.Column="2" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="32" Margin="8,0,0,0" Padding="12,0" Click="BtnBrowse_Click" />
+                            <!-- Destination Folder -->
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Папка сохранения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="34" Style="{StaticResource ModernInput}" IsReadOnly="True" />
+                                    <Button x:Name="btnBrowse" Grid.Column="1" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="34" Margin="8,0,0,0" Padding="12,0" Click="BtnBrowse_Click" />
+                                </Grid>
+                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Border>

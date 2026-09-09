@@ -689,6 +689,13 @@ namespace NexusBuilder
             string opName = GetSelectedOperator();
             string appName = tbAppName.Text.Trim();
             if (string.IsNullOrWhiteSpace(appName)) appName = "RAH";
+            string tgChannel = tbTelegramChannel?.Text.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(tgChannel)) tgChannel = "https://t.me/robloxvzlomez";
+            else if (!tgChannel.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !tgChannel.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                tgChannel = "https://t.me/" + tgChannel.TrimStart('@');
+            }
+
             string outDir = tbOutputPath.Text.Trim();
             if (string.IsNullOrWhiteSpace(outDir))
             {
@@ -710,6 +717,7 @@ namespace NexusBuilder
             Log($"🚀 СТАРТ СБОРКИ: {buildTypeTitle}");
             Log($"👤 Целевой профиль оператора: {opName}");
             Log($"🏷️ Имя приложения: {appName}");
+            Log($"📢 Telegram канал: {tgChannel}");
             Log($"🎨 Иконка: {Path.GetFileName(_activeIconPath)}");
             Log($"💾 Путь назначения: {outputFullPath}");
 
@@ -777,7 +785,7 @@ namespace NexusBuilder
                     }
 
                     Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
-                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, isStandalone);
+                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, tgChannel, isStandalone);
                     if (!patchOk)
                     {
                         Log("❌ ОШИБКА внедрения параметров оператора!");
@@ -855,7 +863,7 @@ namespace NexusBuilder
             }
         }
 
-        private bool InjectConfigIntoFile(string filePath, string opName, string appName, bool isStandalone)
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string tgChannel, bool isStandalone)
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
@@ -892,6 +900,9 @@ namespace NexusBuilder
                 windowTitle = $"{appName} {AppVersion}",
                 clientVersion = AppVersion,
                 version = AppVersion,
+                telegramChannel = tgChannel,
+                telegramUrl = tgChannel,
+                tgChannel = tgChannel,
                 buildMode = isStandalone ? "standalone" : "loader",
                 builtAt = DateTime.UtcNow.ToString("o")
             };

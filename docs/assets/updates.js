@@ -156,26 +156,12 @@ function renderUpdates() {
   const current = UPDATES[0];
   
   // Обновляем Герой-Блок
-  document.getElementById('heroVersion').textContent = 'v' + current.version;
-  if (document.getElementById('btnDownloadRahClient')) document.getElementById('btnDownloadRahClient').href = current.downloadUrlRahClient;
-  if (document.getElementById('btnDownloadRahStandalone')) document.getElementById('btnDownloadRahStandalone').href = current.downloadUrlRahStandalone;
-  if (document.getElementById('btnDownloadFireClient')) document.getElementById('btnDownloadFireClient').href = current.downloadUrlFireClient;
-  if (document.getElementById('btnDownloadFireStandalone')) document.getElementById('btnDownloadFireStandalone').href = current.downloadUrlFireStandalone;
-  if (document.getElementById('btnDownloadSvyazClient')) {
-    document.getElementById('btnDownloadSvyazClient').href = current.downloadUrlSvyazClient;
+  const heroEl = document.getElementById('heroVersion');
+  if (heroEl) heroEl.textContent = 'v' + current.version;
+  const builderBtn = document.getElementById('btnDownloadBuilder');
+  if (builderBtn && current.downloadUrlBuilder) {
+    builderBtn.href = current.downloadUrlBuilder + '?v=' + current.version;
   }
-  if (document.getElementById('btnDownloadSvyazStandalone')) {
-    document.getElementById('btnDownloadSvyazStandalone').href = current.downloadUrlSvyazStandalone;
-  }
-  if (document.getElementById('btnDownloadSingerClient')) {
-    document.getElementById('btnDownloadSingerClient').href = current.downloadUrlSingerClient || '#';
-  }
-  if (document.getElementById('btnDownloadSingerStandalone')) {
-    document.getElementById('btnDownloadSingerStandalone').href = current.downloadUrlSingerStandalone || '#';
-  }
-  
-  // Показываем установщик только для его владельца
-  filterBuildsForCurrentUser();
   
   // Отрисовываем таймлайн ченджлогов
   const listEl = document.getElementById('changelogList');
@@ -217,39 +203,6 @@ try {
 } catch (e) {}
 
 function filterBuildsForCurrentUser() {
-  const user = (typeof getUser === 'function' ? getUser() : localStorage.getItem('ft_user') || '').toLowerCase();
-  
-  const blockHuilaEbanaya = document.getElementById('buildBlockHuilaEbanaya');
-  const blockShonll = document.getElementById('buildBlockShonll');
-  const blockDildman = document.getElementById('buildBlockDildman');
-  const blockSvyaz = document.getElementById('buildBlockSvyaz');
-  const blockSinger = document.getElementById('buildBlockSinger');
-
-  // Hide all blocks initially
-  if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'none';
-  if (blockShonll) blockShonll.style.display = 'none';
-  if (blockDildman) blockDildman.style.display = 'none';
-  if (blockSvyaz) blockSvyaz.style.display = 'none';
-  if (blockSinger) blockSinger.style.display = 'none';
-
-  if (user === 'huilaebanaya') {
-    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
-  } else if (user === 'shonll') {
-    if (blockShonll) blockShonll.style.display = 'block';
-    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
-  } else if (user === 'dildman' || user === 'dild_man') {
-    if (blockDildman) blockDildman.style.display = 'block';
-  } else if (user === 'saha_kakaha122' || user === 'svyaz') {
-    if (blockSvyaz) blockSvyaz.style.display = 'block';
-  } else if (user === 'singer1isss') {
-    if (blockSinger) blockSinger.style.display = 'block';
-  } else {
-    // If unknown operator, show all as fallback
-    if (blockHuilaEbanaya) blockHuilaEbanaya.style.display = 'block';
-    if (blockShonll) blockShonll.style.display = 'block';
-    if (blockDildman) blockDildman.style.display = 'block';
-    if (blockSvyaz) blockSvyaz.style.display = 'block';
-    if (blockSinger) blockSinger.style.display = 'block';
-  }
+  // Legacy builds removed in favor of universal builder
 }
 
