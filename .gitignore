@@ -72,4 +72,6 @@ conversation_context.txt
 builder-wpf/bin/
 builder-wpf/obj/
 builder-wpf/publish/
-templates/
+/templates/
+!docs/downloads/templates/**
+!server/docs/downloads/templates/**
