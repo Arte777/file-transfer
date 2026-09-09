@@ -4,20 +4,21 @@
 (function() {
   let callState = {
     active: false,
-    localStream: null,
-    screenStream: null,
+    localStream: null,     // Raw microphone stream
+    videoStream: null,     // Local webcam stream
+    screenStream: null,    // Local display media stream
     audioContext: null,
     audioAnalyser: null,
-    processedStream: null,
     isMuted: false,
     isVideoOn: false,
     isScreenSharing: false,
     noiseSuppressionEnabled: true,
-    peers: new Map(), // username -> { pc, remoteStream, isCam, isScreen, isMuted, analyser }
-    focusedUser: null, // username or 'local'
+    peers: new Map(),      // username.toLowerCase() -> peerObj
+    focusedUser: null,     // username or 'local'
     lastSignalTime: 0,
     pollInterval: null,
-    speakingInterval: null
+    speakingInterval: null,
+    processedSignalIds: new Set()
   };
 
   const RTC_CONFIG = {
@@ -28,54 +29,26 @@
     ]
   };
 
-  // ── Web Audio API: DSP Noise Suppression & EQ Chain ──────────────────────────
+  // ── Audio Context & Analyser (For Discord Speaking Ring & Voice DSP) ──────────
   function setupAudioDSP(rawStream) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return rawStream;
+      if (!AudioCtx) return;
 
-      callState.audioContext = new AudioCtx();
+      if (!callState.audioContext) {
+        callState.audioContext = new AudioCtx();
+      }
       const ctx = callState.audioContext;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(()=>{});
+      }
+
       const source = ctx.createMediaStreamSource(rawStream);
-
-      // 1. High-pass filter at 85Hz (eliminates desk rumble, low AC hum)
-      const highpass = ctx.createBiquadFilter();
-      highpass.type = 'highpass';
-      highpass.frequency.value = 85;
-      highpass.Q.value = 0.7;
-
-      // 2. Peaking filter at 3000Hz (speech clarity)
-      const speechClarity = ctx.createBiquadFilter();
-      speechClarity.type = 'peaking';
-      speechClarity.frequency.value = 3000;
-      speechClarity.gain.value = 2.5;
-
-      // 3. Dynamics Compressor (levels out whispering/shouting)
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-28, ctx.currentTime);
-      compressor.knee.setValueAtTime(14, ctx.currentTime);
-      compressor.ratio.setValueAtTime(4.5, ctx.currentTime);
-      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-      compressor.release.setValueAtTime(0.25, ctx.currentTime);
-
-      // 4. Analyser for Discord-style speaking ring
       callState.audioAnalyser = ctx.createAnalyser();
       callState.audioAnalyser.fftSize = 256;
-
-      // 5. Destination stream
-      const dest = ctx.createMediaStreamDestination();
-      source.connect(highpass);
-      highpass.connect(speechClarity);
-      speechClarity.connect(compressor);
-      compressor.connect(callState.audioAnalyser);
-      compressor.connect(dest);
-
-      const processedTracks = [...dest.stream.getAudioTracks(), ...rawStream.getVideoTracks()];
-      callState.processedStream = new MediaStream(processedTracks);
-      return callState.processedStream;
+      source.connect(callState.audioAnalyser);
     } catch (e) {
-      console.warn('Audio DSP init fallback:', e);
-      return rawStream;
+      console.warn('Audio analyser init fallback:', e);
     }
   }
 
@@ -241,27 +214,27 @@
         for (let i = 0; i < buf.length; i++) sum += buf[i];
         const avg = sum / buf.length;
         if (localTile) {
-          localTile.classList.toggle('speaking', avg > 18);
+          localTile.classList.toggle('speaking', avg > 16);
         }
       } else if (localTile) {
         localTile.classList.remove('speaking');
       }
 
       // Remote peers speaking check
-      callState.peers.forEach((peerObj, user) => {
-        const tile = document.getElementById('ncwParticipant_' + user);
+      callState.peers.forEach((peerObj, userKey) => {
+        const tile = document.getElementById('ncwParticipant_' + userKey);
         if (!tile) return;
         if (peerObj.analyser && !peerObj.isMuted) {
           peerObj.analyser.getByteFrequencyData(buf);
           let sum = 0;
           for (let i = 0; i < buf.length; i++) sum += buf[i];
           const avg = sum / buf.length;
-          tile.classList.toggle('speaking', avg > 18);
+          tile.classList.toggle('speaking', avg > 16);
         } else {
           tile.classList.remove('speaking');
         }
       });
-    }, 120);
+    }, 100);
   }
 
   // ── Multi-User WebRTC Peer Connection Factory ─────────────────────────────────
@@ -272,45 +245,92 @@
     }
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
+
+    // 1. Upfront video transceiver ensures video RTCRtpSender exists from the start
+    // This allows instant toggleCam() and toggleScreen() without SDP renegotiation!
+    let videoTransceiver = null;
+    try {
+      videoTransceiver = pc.addTransceiver('video', { direction: 'sendrecv' });
+    } catch (e) {
+      console.warn('addTransceiver error:', e);
+    }
+
+    // 2. Add local microphone audio track directly (preserves hardware echo cancellation & AGC)
+    if (callState.localStream) {
+      const audioTrack = callState.localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        try {
+          pc.addTrack(audioTrack, callState.localStream);
+        } catch (_) {}
+      }
+    }
+
+    // 3. If local video or screen is currently active, attach it to the transceiver sender
+    const activeVideoTrack = (callState.screenStream && callState.screenStream.getVideoTracks()[0]) ||
+                             (callState.videoStream && callState.videoStream.getVideoTracks()[0]);
+    if (activeVideoTrack && videoTransceiver && videoTransceiver.sender) {
+      try {
+        videoTransceiver.sender.replaceTrack(activeVideoTrack);
+      } catch (_) {}
+    }
+
     const peerObj = {
       user: remoteUser,
       pc,
+      videoTransceiver,
       remoteStream: new MediaStream(),
       isCam: false,
       isScreen: false,
       isMuted: false,
-      analyser: null
+      analyser: null,
+      pendingCandidates: []
     };
 
     callState.peers.set(uKey, peerObj);
 
-    // Add local tracks to peer
-    const activeStream = callState.processedStream || callState.localStream;
-    if (activeStream) {
-      activeStream.getTracks().forEach(track => {
-        pc.addTrack(track, activeStream);
-      });
-    }
-
-    // ICE Candidates
+    // ICE Candidate Exchange
     pc.onicecandidate = e => {
       if (e.candidate) {
         broadcastSignal('candidate', e.candidate, remoteUser);
       }
     };
 
-    // Remote Track Arrived
+    // Remote Track Handler
     pc.ontrack = e => {
-      if (e.streams && e.streams[0]) {
-        peerObj.remoteStream = e.streams[0];
-      } else {
-        peerObj.remoteStream.addTrack(e.track);
+      console.log(`[WebRTC] Received remote track (${e.track.kind}) from ${remoteUser}`);
+      ensureRemoteParticipantTile(remoteUser);
+
+      if (e.track.kind === 'audio') {
+        const audioEl = document.getElementById('ncwAudio_' + uKey);
+        if (audioEl) {
+          audioEl.srcObject = new MediaStream([e.track]);
+          audioEl.play().catch(() => {
+            const unlock = () => {
+              audioEl.play().catch(()=>{});
+              document.removeEventListener('click', unlock);
+            };
+            document.addEventListener('click', unlock);
+          });
+        }
+        setupRemoteAudioAnalyser(peerObj, e.track);
+      } else if (e.track.kind === 'video') {
+        const videoEl = document.getElementById('ncwVideo_' + uKey);
+        if (videoEl) {
+          videoEl.srcObject = new MediaStream([e.track]);
+          videoEl.muted = true;
+          videoEl.play().catch(()=>{});
+        }
+        peerObj.remoteStream = new MediaStream([e.track]);
+        updateRemoteParticipantUI(remoteUser);
       }
-      updateRemoteParticipantUI(remoteUser);
-      setupRemoteAudioAnalyser(peerObj);
+
+      e.track.onmute = () => updateRemoteParticipantUI(remoteUser);
+      e.track.onunmute = () => updateRemoteParticipantUI(remoteUser);
+      e.track.onended = () => updateRemoteParticipantUI(remoteUser);
     };
 
     pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Connection state with ${remoteUser}: ${pc.connectionState}`);
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         removeRemoteParticipantUI(remoteUser);
         callState.peers.delete(uKey);
@@ -318,28 +338,29 @@
     };
 
     if (isInitiator) {
-      pc.onnegotiationneeded = async () => {
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          broadcastSignal('offer', offer, remoteUser);
-        } catch (err) {
-          console.warn('Negotiation error:', err);
-        }
-      };
+      pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true }).then(async offer => {
+        await pc.setLocalDescription(offer);
+        broadcastSignal('offer', offer, remoteUser);
+      }).catch(err => {
+        console.warn('Initiate offer error:', err);
+      });
     }
 
     ensureRemoteParticipantTile(remoteUser);
     return pc;
   }
 
-  function setupRemoteAudioAnalyser(peerObj) {
+  function setupRemoteAudioAnalyser(peerObj, audioTrack) {
     try {
       if (!callState.audioContext) {
         callState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
-      if (peerObj.remoteStream && peerObj.remoteStream.getAudioTracks().length > 0) {
-        const src = callState.audioContext.createMediaStreamSource(peerObj.remoteStream);
+      if (callState.audioContext.state === 'suspended') {
+        callState.audioContext.resume().catch(()=>{});
+      }
+      if (audioTrack) {
+        const stream = new MediaStream([audioTrack]);
+        const src = callState.audioContext.createMediaStreamSource(stream);
         const an = callState.audioContext.createAnalyser();
         an.fftSize = 256;
         src.connect(an);
@@ -353,7 +374,8 @@
     const grid = document.getElementById('ncwVideoGrid');
     if (!grid) return;
 
-    const tileId = 'ncwParticipant_' + user.toLowerCase();
+    const uKey = user.toLowerCase();
+    const tileId = 'ncwParticipant_' + uKey;
     let tile = document.getElementById(tileId);
     if (!tile) {
       tile = document.createElement('div');
@@ -362,16 +384,16 @@
       tile.ondblclick = () => window.nexusCall.focusUser(user);
 
       tile.innerHTML = `
-        <video id="ncwVideo_${user.toLowerCase()}" autoplay playsinline></video>
-        <audio id="ncwAudio_${user.toLowerCase()}" autoplay></audio>
-        <div class="ncw-avatar-container" id="ncwAvatarContainer_${user.toLowerCase()}">
+        <video id="ncwVideo_${uKey}" autoplay playsinline muted></video>
+        <audio id="ncwAudio_${uKey}" autoplay playsinline></audio>
+        <div class="ncw-avatar-container" id="ncwAvatarContainer_${uKey}">
           <div class="ncw-avatar-wrap">
             ${getCallAvatarHTML(user)}
           </div>
         </div>
         <div class="ncw-user-label">
           <span>${escapeHtml(user)}</span>
-          <span id="ncwMicIcon_${user.toLowerCase()}">${SVG_ICONS.micOn}</span>
+          <span id="ncwMicIcon_${uKey}">${SVG_ICONS.micOn}</span>
         </div>
         <div class="ncw-tile-tools">
           <button type="button" class="ncw-tile-btn" onclick="window.nexusCall.focusUser('${escapeHtml(user)}'); event.stopPropagation();" title="Закрепить на сцене (Discord Focus)">
@@ -394,18 +416,18 @@
     if (!peerObj || !tile) return;
 
     const videoEl = document.getElementById('ncwVideo_' + uKey);
-    const audioEl = document.getElementById('ncwAudio_' + uKey);
+    const hasLiveVideoTrack = peerObj.remoteStream && peerObj.remoteStream.getVideoTracks().some(t => t.enabled && t.readyState === 'live' && !t.muted);
+    const showVideo = hasLiveVideoTrack || peerObj.isCam || peerObj.isScreen;
 
-    if (videoEl && peerObj.remoteStream) {
-      videoEl.srcObject = peerObj.remoteStream;
-    }
-    if (audioEl && peerObj.remoteStream) {
-      audioEl.srcObject = peerObj.remoteStream;
-    }
-
-    const hasVideo = peerObj.remoteStream && peerObj.remoteStream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
-    tile.classList.toggle('has-video', hasVideo || peerObj.isCam || peerObj.isScreen);
+    tile.classList.toggle('has-video', !!showVideo);
     tile.classList.toggle('has-screen', !!peerObj.isScreen);
+
+    if (videoEl && showVideo && peerObj.remoteStream && peerObj.remoteStream.getVideoTracks().length > 0) {
+      if (videoEl.srcObject !== peerObj.remoteStream) {
+        videoEl.srcObject = peerObj.remoteStream;
+        videoEl.play().catch(()=>{});
+      }
+    }
 
     const micIcon = document.getElementById('ncwMicIcon_' + uKey);
     if (micIcon) {
@@ -420,7 +442,7 @@
       tile.style.transform = 'scale(0.8)';
       setTimeout(() => tile.remove(), 250);
     }
-    if (callState.focusedUser === user) {
+    if (callState.focusedUser && callState.focusedUser.toLowerCase() === user.toLowerCase()) {
       resetTheaterMode();
     }
   }
@@ -431,7 +453,6 @@
     if (!grid) return;
 
     if (callState.focusedUser === username) {
-      // Toggle off
       resetTheaterMode();
       return;
     }
@@ -439,10 +460,8 @@
     callState.focusedUser = username;
     grid.classList.add('has-focused');
 
-    // Remove is-focused from all tiles
     grid.querySelectorAll('.ncw-participant').forEach(p => p.classList.remove('is-focused'));
 
-    // Create or find strip
     let strip = grid.querySelector('.ncw-strip');
     if (!strip) {
       strip = document.createElement('div');
@@ -450,7 +469,6 @@
       grid.appendChild(strip);
     }
 
-    // Move tiles: focused on top stage, others in strip
     const targetTileId = username === 'local' ? 'ncwParticipant_local' : 'ncwParticipant_' + username.toLowerCase();
     const targetTile = document.getElementById(targetTileId);
 
@@ -519,7 +537,7 @@
     }
 
     try {
-      toast('Подключение микрофона с шумоподавлением DSP...', 'ok');
+      toast('Подключение микрофона...', 'ok');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -534,12 +552,14 @@
       callState.localStream = stream;
       setupAudioDSP(stream);
       callState.active = true;
-      callState.lastSignalTime = Date.now();
+      // Look back 25s so we don't miss signals from peers who joined seconds before
+      callState.lastSignalTime = Date.now() - 25000;
+      callState.processedSignalIds.clear();
 
       const localVideo = document.getElementById('ncwLocalVideo');
       const localTile = document.getElementById('ncwParticipant_local');
       if (localVideo) localVideo.style.display = 'none';
-      if (localTile) localTile.classList.remove('has-video');
+      if (localTile) localTile.classList.remove('has-video', 'has-screen');
 
       // Start signaling poll & voice activity detection
       startSignalingPoll();
@@ -552,7 +572,7 @@
         isMuted: callState.isMuted
       });
 
-      // Discover existing users in call room
+      // Discover existing users in call room and initiate connections
       fetchExistingCallUsers();
       toast('✅ Вы вошли в голосовой канал связи', 'ok');
     } catch (err) {
@@ -605,19 +625,26 @@
 
     if (callState.isVideoOn) {
       // Turn off cam
-      if (callState.localStream) {
-        callState.localStream.getVideoTracks().forEach(t => {
-          t.stop();
-          callState.localStream.removeTrack(t);
-        });
+      if (callState.videoStream) {
+        callState.videoStream.getTracks().forEach(t => t.stop());
+        callState.videoStream = null;
       }
       callState.isVideoOn = false;
-      if (localVideo) { localVideo.srcObject = null; localVideo.style.display = 'none'; }
-      if (localTile) localTile.classList.remove('has-video');
       if (btn) btn.classList.remove('active');
 
-      replaceVideoTrackOnPeers(null);
-      broadcastSignal('state_update', { isCam: false, isScreen: false });
+      if (callState.isScreenSharing && callState.screenStream) {
+        // Fallback to screen share
+        const sTrack = callState.screenStream.getVideoTracks()[0];
+        if (localVideo) { localVideo.srcObject = callState.screenStream; localVideo.style.display = 'block'; }
+        if (localTile) { localTile.classList.add('has-video', 'has-screen'); }
+        replaceVideoTrackOnPeers(sTrack);
+        broadcastSignal('state_update', { isCam: false, isScreen: true });
+      } else {
+        if (localVideo) { localVideo.srcObject = null; localVideo.style.display = 'none'; }
+        if (localTile) { localTile.classList.remove('has-video', 'has-screen'); }
+        replaceVideoTrackOnPeers(null);
+        broadcastSignal('state_update', { isCam: false, isScreen: false });
+      }
       toast('Камера выключена');
     } else {
       // Turn on cam
@@ -625,12 +652,21 @@
         const vStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
         });
-        const vTrack = vStream.getVideoTracks()[0];
-        callState.localStream.addTrack(vTrack);
+        callState.videoStream = vStream;
         callState.isVideoOn = true;
 
+        // If screen sharing was active, stop screen sharing to focus on camera
+        if (callState.isScreenSharing && callState.screenStream) {
+          callState.screenStream.getTracks().forEach(t => t.stop());
+          callState.screenStream = null;
+          callState.isScreenSharing = false;
+          const sBtn = document.getElementById('ncwBtnScreen');
+          if (sBtn) sBtn.classList.remove('active');
+        }
+
+        const vTrack = vStream.getVideoTracks()[0];
         if (localVideo) {
-          localVideo.srcObject = new MediaStream([vTrack]);
+          localVideo.srcObject = vStream;
           localVideo.style.display = 'block';
         }
         if (localTile) {
@@ -663,18 +699,19 @@
       callState.isScreenSharing = false;
       if (btn) btn.classList.remove('active');
 
-      if (callState.isVideoOn && callState.localStream.getVideoTracks().length > 0) {
-        const vTrack = callState.localStream.getVideoTracks()[0];
-        if (localVideo) { localVideo.srcObject = new MediaStream([vTrack]); localVideo.style.display = 'block'; }
+      if (callState.isVideoOn && callState.videoStream && callState.videoStream.getVideoTracks().length > 0) {
+        const vTrack = callState.videoStream.getVideoTracks()[0];
+        if (localVideo) { localVideo.srcObject = callState.videoStream; localVideo.style.display = 'block'; }
         if (localTile) { localTile.classList.add('has-video'); localTile.classList.remove('has-screen'); }
         replaceVideoTrackOnPeers(vTrack);
+        broadcastSignal('state_update', { isCam: true, isScreen: false });
       } else {
-        if (localVideo) localVideo.style.display = 'none';
-        if (localTile) { localTile.classList.remove('has-video'); localTile.classList.remove('has-screen'); }
+        if (localVideo) { localVideo.srcObject = null; localVideo.style.display = 'none'; }
+        if (localTile) { localTile.classList.remove('has-video', 'has-screen'); }
         replaceVideoTrackOnPeers(null);
+        broadcastSignal('state_update', { isCam: false, isScreen: false });
       }
 
-      broadcastSignal('state_update', { isCam: callState.isVideoOn, isScreen: false });
       toast('Демонстрация экрана остановлена');
     } else {
       // Start screen share
@@ -687,15 +724,16 @@
         callState.isScreenSharing = true;
 
         const sTrack = sStream.getVideoTracks()[0];
-        sTrack.onended = () => toggleScreen();
+        sTrack.onended = () => {
+          if (callState.isScreenSharing) toggleScreen();
+        };
 
         if (localVideo) {
           localVideo.srcObject = sStream;
           localVideo.style.display = 'block';
         }
         if (localTile) {
-          localTile.classList.add('has-video');
-          localTile.classList.add('has-screen');
+          localTile.classList.add('has-video', 'has-screen');
         }
         if (btn) btn.classList.add('active');
 
@@ -703,29 +741,46 @@
         broadcastSignal('state_update', { isCam: false, isScreen: true });
         toast('Демонстрация экрана запущена (как в Discord)', 'ok');
       } catch (e) {
+        console.warn('Screen share cancelled:', e);
         toast('Демонстрация экрана отменена');
       }
     }
   }
 
+  // Instant track switching across all peers via RTCRtpSender.replaceTrack
   function replaceVideoTrackOnPeers(newTrack) {
-    callState.peers.forEach(({ pc }) => {
-      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-      if (sender) {
-        sender.replaceTrack(newTrack);
-      } else if (newTrack) {
-        const activeStream = callState.processedStream || callState.localStream;
-        pc.addTrack(newTrack, activeStream);
+    callState.peers.forEach(peerObj => {
+      let videoSender = peerObj.videoTransceiver ? peerObj.videoTransceiver.sender : null;
+      if (!videoSender) {
+        videoSender = peerObj.pc.getSenders().find(s => s.track && s.track.kind === 'video') ||
+                      peerObj.pc.getSenders().find(s => !s.track);
+      }
+      if (videoSender && typeof videoSender.replaceTrack === 'function') {
+        videoSender.replaceTrack(newTrack).catch(err => {
+          console.warn('Sender replaceTrack error:', err);
+        });
       }
     });
   }
 
-  function toggleDSP() {
+  async function toggleDSP() {
     callState.noiseSuppressionEnabled = !callState.noiseSuppressionEnabled;
     const badge = document.getElementById('ncwDspBadge');
     const btn = document.getElementById('ncwBtnDsp');
     if (badge) badge.style.display = callState.noiseSuppressionEnabled ? 'inline-block' : 'none';
     if (btn) btn.classList.toggle('active', callState.noiseSuppressionEnabled);
+
+    if (callState.localStream) {
+      const track = callState.localStream.getAudioTracks()[0];
+      if (track && typeof track.applyConstraints === 'function') {
+        try {
+          await track.applyConstraints({
+            noiseSuppression: callState.noiseSuppressionEnabled,
+            echoCancellation: true
+          });
+        } catch (_) {}
+      }
+    }
     toast(callState.noiseSuppressionEnabled ? 'Шумоподавление включено (DSP 85Hz)' : 'Шумоподавление выключено');
   }
 
@@ -770,6 +825,9 @@
     if (callState.localStream) {
       callState.localStream.getTracks().forEach(t => t.stop());
     }
+    if (callState.videoStream) {
+      callState.videoStream.getTracks().forEach(t => t.stop());
+    }
     if (callState.screenStream) {
       callState.screenStream.getTracks().forEach(t => t.stop());
     }
@@ -781,7 +839,9 @@
     callState.isVideoOn = false;
     callState.isScreenSharing = false;
     callState.localStream = null;
+    callState.videoStream = null;
     callState.screenStream = null;
+    callState.processedSignalIds.clear();
 
     const win = document.getElementById('nexusCallWindow');
     if (win) {
@@ -836,13 +896,23 @@
           }
         }
       } catch (_) {}
-    }, 1100);
+    }, 750); // Fast 750ms polling for instant call response
   }
 
   async function handleIncomingSignal(data) {
     if (!data || !data.from) return;
     const currentUser = (typeof getUser === 'function' ? getUser() : '').toLowerCase();
     if (data.from.toLowerCase() === currentUser) return;
+
+    // Deduplicate handled signals
+    if (data.id && callState.processedSignalIds.has(data.id)) return;
+    if (data.id) {
+      callState.processedSignalIds.add(data.id);
+      if (callState.processedSignalIds.size > 250) {
+        const first = callState.processedSignalIds.values().next().value;
+        callState.processedSignalIds.delete(first);
+      }
+    }
 
     const sender = data.from;
     const uKey = sender.toLowerCase();
@@ -852,8 +922,16 @@
       createPeerConnection(sender, true);
     } else if (data.type === 'offer' && data.signal) {
       const pc = createPeerConnection(sender, false);
+      const peerObj = callState.peers.get(uKey);
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(data.signal));
+        // Flush buffered ICE candidates
+        if (peerObj && peerObj.pendingCandidates && peerObj.pendingCandidates.length > 0) {
+          for (const cand of peerObj.pendingCandidates) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (_) {}
+          }
+          peerObj.pendingCandidates = [];
+        }
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         broadcastSignal('answer', answer, sender);
@@ -862,18 +940,33 @@
       }
     } else if (data.type === 'answer' && data.signal) {
       if (callState.peers.has(uKey)) {
-        const pc = callState.peers.get(uKey).pc;
+        const peerObj = callState.peers.get(uKey);
+        const pc = peerObj.pc;
         try {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.signal));
+          if (pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.signal));
+          }
+          // Flush buffered candidates
+          if (peerObj.pendingCandidates && peerObj.pendingCandidates.length > 0) {
+            for (const cand of peerObj.pendingCandidates) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (_) {}
+            }
+            peerObj.pendingCandidates = [];
+          }
         } catch (err) {
           console.warn('Answer handle error:', err);
         }
       }
     } else if (data.type === 'candidate' && data.signal) {
       if (callState.peers.has(uKey)) {
-        const pc = callState.peers.get(uKey).pc;
+        const peerObj = callState.peers.get(uKey);
+        const pc = peerObj.pc;
         try {
-          await pc.addIceCandidate(new RTCIceCandidate(data.signal));
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(data.signal));
+          } else {
+            peerObj.pendingCandidates.push(data.signal);
+          }
         } catch (_) {}
       }
     } else if (data.type === 'state_update') {

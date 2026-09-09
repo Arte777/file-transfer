@@ -579,7 +579,7 @@ function getLocalChatMessages() {
 
 function saveLocalChatMessages(msgs) {
   try {
-    localStorage.setItem('ft_operator_chat_v7', JSON.stringify(msgs.slice(-80)));
+    localStorage.setItem('ft_operator_chat_v7', JSON.stringify(msgs.slice(-150)));
   } catch (_) {}
 }
 
@@ -589,8 +589,10 @@ async function fetchChatMessagesFromServer() {
     if (res.ok) {
       const msgs = await res.json();
       if (Array.isArray(msgs)) {
-        if (chatMessagesCache.length > 0 && msgs.length > chatMessagesCache.length) {
-          const newMsgs = msgs.slice(chatMessagesCache.length);
+        const oldIds = new Set(chatMessagesCache.map(m => m.id));
+        const newMsgs = msgs.filter(m => !oldIds.has(m.id));
+
+        if (newMsgs.length > 0 && chatMessagesCache.length > 0) {
           const currentUser = (getUser() || '').toLowerCase();
           const currentDisplayName = operatorDisplayName(getUser() || '').toLowerCase();
           for (const nm of newMsgs) {
@@ -604,8 +606,13 @@ async function fetchChatMessagesFromServer() {
             }
           }
         }
-        chatMessagesCache = msgs;
-        saveLocalChatMessages(msgs);
+
+        // Retain any pending optimistic messages that haven't shown up on server yet (<15s old)
+        const serverIds = new Set(msgs.map(m => m.id));
+        const pendingOptimistic = chatMessagesCache.filter(m => !serverIds.has(m.id) && m.id && m.id.startsWith('op_') && (Date.now() - parseInt(m.id.replace('op_', ''), 10) < 15000));
+
+        chatMessagesCache = [...msgs, ...pendingOptimistic];
+        saveLocalChatMessages(chatMessagesCache);
 
         // Update unread badge on floating chat FAB
         const modal = document.getElementById('operatorChatModal');
@@ -622,7 +629,7 @@ async function fetchChatMessagesFromServer() {
           if (typeof updateChatFabBadge === 'function') updateChatFabBadge(unread);
         }
 
-        return msgs;
+        return chatMessagesCache;
       }
     }
   } catch (_) {}
@@ -769,13 +776,15 @@ function openOperatorChat(mode) {
     if (chatPollInterval) clearInterval(chatPollInterval);
     chatPollInterval = setInterval(async () => {
       if (modal.classList.contains('show')) {
+        const lastOldId = chatMessagesCache.length > 0 ? chatMessagesCache[chatMessagesCache.length - 1].id : null;
         const oldLen = chatMessagesCache.length;
         const msgs = await fetchChatMessagesFromServer();
-        if (msgs.length !== oldLen) {
+        const lastNewId = msgs.length > 0 ? msgs[msgs.length - 1].id : null;
+        if (msgs.length !== oldLen || lastNewId !== lastOldId) {
           renderOperatorChatMessages();
         }
       }
-    }, 3200);
+    }, 2200);
 
     const input = document.getElementById('chatTextInput');
     if (input) setTimeout(() => input.focus(), 100);

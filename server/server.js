@@ -2388,11 +2388,11 @@ app.get('/api/chat/messages', requireAuth, async (req, res) => {
     recordOperatorPresence(user);
     const db = await getDb();
     if (db) {
-      const msgs = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(150).toArray();
-      return res.json(msgs);
+      const msgs = await db.collection('chat_messages').find({}).sort({ createdAt: -1 }).limit(150).toArray();
+      return res.json(msgs.reverse());
     }
     if (!global.memChatMessages) global.memChatMessages = [];
-    return res.json(global.memChatMessages);
+    return res.json(global.memChatMessages.slice(-150));
   } catch (e) {
     console.error('Chat get error:', e.message);
     return res.json([]);
