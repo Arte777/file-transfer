@@ -3974,47 +3974,70 @@ tr.selected {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   WEBRTC CALL FLOATING WINDOW & DSP
+   WEBRTC CALL FLOATING WINDOW & DISCORD-STYLE THEATER MODE
    ══════════════════════════════════════════════════════════════════════════════ */
 .nexus-call-window {
   position: fixed;
   bottom: 84px;
-  right: 440px;
-  width: 360px;
-  height: 480px;
-  background: #090d18;
+  right: 84px;
+  width: 440px;
+  height: 520px;
+  background: #080b14;
   border: 1px solid rgba(0, 240, 255, 0.35);
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 30px rgba(0, 240, 255, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.9), 0 0 30px rgba(0, 240, 255, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 99999;
-  transition: width 0.2s ease, height 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
 }
 
 .nexus-call-window.expanded {
-  width: 780px;
-  height: 560px;
-  right: 50px;
-  bottom: 50px;
+  width: 920px;
+  height: 640px;
+  right: 40px;
+  bottom: 40px;
 }
 
-.nexus-call-window.minimized .ncw-body {
-  display: none;
+.nexus-call-window.is-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  z-index: 100000 !important;
 }
+
 .nexus-call-window.minimized {
-  height: auto;
+  height: 46px !important;
+  width: 320px !important;
+}
+
+.nexus-call-window.minimized .ncw-body,
+.nexus-call-window.minimized .ncw-controls {
+  display: none !important;
 }
 
 .ncw-header {
   padding: 10px 14px;
-  background: #0d1322;
+  background: #0e1322;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ncw-header:active {
+  cursor: grabbing;
 }
 
 .ncw-header-left {
@@ -4029,26 +4052,30 @@ tr.selected {
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
+  flex-shrink: 0;
 }
 
 .ncw-title {
   font-size: 0.85rem;
   font-weight: 700;
   color: #fff;
+  letter-spacing: -0.01em;
 }
 
 .ncw-badge-dsp {
   font-size: 0.68rem;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 10px;
   background: rgba(0, 240, 255, 0.12);
   color: #00f0ff;
   border: 1px solid rgba(0, 240, 255, 0.3);
   font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
 }
 
 .ncw-header-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -4057,13 +4084,14 @@ tr.selected {
   border: 1px solid rgba(255,255,255,0.1);
   color: #94a3b8;
   border-radius: 6px;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
 }
 
 .ncw-hbtn:hover {
@@ -4074,96 +4102,230 @@ tr.selected {
 .ncw-hbtn.close:hover {
   background: rgba(239, 68, 68, 0.3);
   color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 .ncw-body {
   flex: 1;
-  background: #06080f;
-  padding: 12px;
+  background: #05070e;
+  padding: 10px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 10px;
-  overflow-y: auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Discord Stage / Theatre Mode */
+.ncw-body.has-focused {
+  display: flex;
+  flex-direction: column;
+}
+
+.ncw-body.has-focused .ncw-participant.is-focused {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  z-index: 2;
+}
+
+.ncw-body.has-focused .ncw-strip {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 0 0;
+  overflow-x: auto;
+  max-height: 110px;
+  flex-shrink: 0;
+}
+
+.ncw-body.has-focused .ncw-participant:not(.is-focused) {
+  width: 140px;
+  height: 90px;
+  min-height: 90px;
+  flex-shrink: 0;
+}
+
+.ncw-body.has-focused .ncw-participant:not(.is-focused) .ncw-avatar-wrap {
+  width: 44px;
+  height: 44px;
 }
 
 .ncw-participant {
   position: relative;
-  background: #0f172a;
-  border-radius: 10px;
+  background: #0f1424;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.06);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  min-height: 160px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.ncw-participant:hover {
+  border-color: rgba(0, 240, 255, 0.35);
+}
+
+.ncw-participant.speaking {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.45);
 }
 
 .ncw-participant video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: none;
+  background: #000;
 }
 
-.ncw-avatar-fallback {
-  font-size: 3rem;
-  width: 72px;
-  height: 72px;
+.ncw-participant.has-screen video {
+  object-fit: contain !important;
+}
+
+.ncw-participant.has-video video {
+  display: block;
+}
+
+.ncw-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ncw-participant.has-video .ncw-avatar-container {
+  display: none;
+}
+
+.ncw-avatar-wrap {
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   background: rgba(255,255,255,0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ncw-avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.ncw-avatar-wrap .user-initials {
+  font-size: 1.5rem;
+  font-weight: 700;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
 }
 
 .ncw-user-label {
   position: absolute;
   bottom: 8px;
   left: 8px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.75);
   padding: 3px 8px;
   border-radius: 6px;
   font-size: 0.75rem;
+  font-weight: 600;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 4px;
-  backdrop-filter: blur(4px);
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ncw-tile-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 5px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 4;
+}
+
+.ncw-participant:hover .ncw-tile-tools {
+  opacity: 1;
+}
+
+.ncw-tile-btn {
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #cbd5e1;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.ncw-tile-btn:hover {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: #00f0ff;
+  color: #fff;
+  transform: scale(1.08);
 }
 
 .ncw-controls {
   padding: 10px 14px;
-  background: #0d1322;
+  background: #0a0e1c;
   border-top: 1px solid rgba(255,255,255,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .ncw-ctrl-btn {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: #fff;
+  background: rgba(255,255,255,0.06);
+  color: #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
+  outline: none;
 }
 
 .ncw-ctrl-btn:hover {
   background: rgba(255,255,255,0.15);
-  transform: translateY(-1px);
+  color: #fff;
+  transform: translateY(-2px);
 }
 
 .ncw-ctrl-btn.active {
   background: rgba(0, 240, 255, 0.2);
   border-color: #00f0ff;
   color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
 }
 
 .ncw-ctrl-btn.muted {
@@ -4176,10 +4338,14 @@ tr.selected {
   background: #ef4444;
   border-color: #dc2626;
   color: #fff;
+  width: 46px;
+  height: 46px;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
 }
 
 .ncw-ctrl-btn.end-call:hover {
   background: #dc2626;
+  transform: translateY(-2px) scale(1.05);
 }
 
 .cwh-btn-call {

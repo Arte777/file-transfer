@@ -2590,25 +2590,120 @@ setInterval(async () => {
 }, 30 * 60 * 1000);
 
 // ── WebRTC Звонки (Сигналинг голоса, видео и демонстрации экрана) ─────────────
+let callSignalsQueue = [];
+let activeCallParticipants = new Map(); // username -> { user, room, joinedAt, lastPing, isCam, isScreen, isMuted }
+
+// Очистка устаревших участников звонка и сигналов
+setInterval(() => {
+  const now = Date.now();
+  for (const [uKey, p] of activeCallParticipants.entries()) {
+    if (now - p.lastPing > 20000) {
+      activeCallParticipants.delete(uKey);
+      callSignalsQueue.push({
+        id: 'sig_' + now + '_' + Math.random().toString(36).slice(2, 7),
+        from: p.user,
+        type: 'leave',
+        room: p.room || 'main',
+        timestamp: now
+      });
+    }
+  }
+  callSignalsQueue = callSignalsQueue.filter(s => now - s.timestamp < 120000);
+}, 10000);
+
 app.post('/api/call/signal', requireAuth, (req, res) => {
   const from = req.authUser || req.session.user;
-  const { to, signal, type, room } = req.body || {};
-  const payload = JSON.stringify({
+  const { to, signal, type, room, isCam, isScreen, isMuted } = req.body || {};
+  const currentRoom = room || 'main';
+  const now = Date.now();
+
+  if (type === 'leave') {
+    activeCallParticipants.delete(from.toLowerCase());
+  } else {
+    activeCallParticipants.set(from.toLowerCase(), {
+      user: from,
+      room: currentRoom,
+      joinedAt: activeCallParticipants.get(from.toLowerCase())?.joinedAt || now,
+      lastPing: now,
+      isCam: !!isCam,
+      isScreen: !!isScreen,
+      isMuted: !!isMuted
+    });
+  }
+
+  const payloadObj = {
+    id: 'sig_' + now + '_' + Math.random().toString(36).slice(2, 7),
     event: 'call_signal',
     from,
-    to,
-    signal,
+    to: to || null,
+    signal: signal || null,
     type,
-    room: room || 'main',
-    timestamp: Date.now()
-  });
+    room: currentRoom,
+    isCam: !!isCam,
+    isScreen: !!isScreen,
+    isMuted: !!isMuted,
+    timestamp: now
+  };
 
+  callSignalsQueue.push(payloadObj);
+
+  const payloadStr = JSON.stringify(payloadObj);
   sseClients.forEach(client => {
     try {
-      client.write(`data: ${payload}\n\n`);
+      client.write(`data: ${payloadStr}\n\n`);
     } catch (_) {}
   });
 
+  return res.json({ success: true, signalId: payloadObj.id });
+});
+
+app.get('/api/call/signals', requireAuth, (req, res) => {
+  const user = (req.authUser || req.session.user || '').toLowerCase();
+  const since = parseInt(req.query.since || '0', 10);
+  const room = req.query.room || 'main';
+
+  if (activeCallParticipants.has(user)) {
+    activeCallParticipants.get(user).lastPing = Date.now();
+  }
+
+  const matching = callSignalsQueue.filter(s => {
+    if (s.room !== room) return false;
+    if (s.timestamp <= since) return false;
+    if (s.from && s.from.toLowerCase() === user) return false;
+    if (s.to && s.to.toLowerCase() !== user) return false;
+    return true;
+  });
+
+  return res.json({
+    signals: matching,
+    now: Date.now(),
+    participants: [...activeCallParticipants.values()].filter(p => p.room === room)
+  });
+});
+
+app.get('/api/call/room', requireAuth, (req, res) => {
+  const room = req.query.room || 'main';
+  const participants = [...activeCallParticipants.values()].filter(p => p.room === room);
+  return res.json({ participants, count: participants.length });
+});
+
+app.post('/api/call/leave', requireAuth, (req, res) => {
+  const user = req.authUser || req.session.user;
+  if (user) {
+    activeCallParticipants.delete(user.toLowerCase());
+    const now = Date.now();
+    const leaveSignal = {
+      id: 'sig_' + now + '_' + Math.random().toString(36).slice(2, 7),
+      from: user,
+      type: 'leave',
+      room: req.body?.room || 'main',
+      timestamp: now
+    };
+    callSignalsQueue.push(leaveSignal);
+    sseClients.forEach(c => {
+      try { c.write(`data: ${JSON.stringify({ event: 'call_signal', ...leaveSignal })}\n\n`); } catch (_) {}
+    });
+  }
   return res.json({ success: true });
 });
 

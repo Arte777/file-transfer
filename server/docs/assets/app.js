@@ -297,25 +297,8 @@ function renderHeader(activePage) {
     
     <div class="sidebar-spacer" style="flex: 1; min-height: 12px;"></div>
 
-    <!-- Sidebar Chat Launcher & Extension Widgets -->
+    <!-- Sidebar Widgets -->
     <div class="sidebar-widgets desktop-only">
-      <!-- Chat Card Button -->
-      <button type="button" class="sidebar-chat-launcher-card" onclick="openOperatorChat('mini')" title="Открыть мини-чат в плавающем окне">
-        <div class="sclc-content">
-          <div class="sclc-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          </div>
-          <div class="sclc-info">
-            <div class="sclc-title">Чат</div>
-            <div class="sclc-sub" id="sclcPresenceSub">Служебный канал</div>
-          </div>
-        </div>
-        <div class="sclc-open-btn">
-          <span>Открыть</span>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </button>
-
       <!-- Extension Card -->
       <div class="sidebar-widget-card extension-card">
         <div class="ext-card-content">
