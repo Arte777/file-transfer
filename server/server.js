@@ -427,10 +427,15 @@ async function setOperatorSettings(user, patch) {
   const canonical = getCanonicalOperator(user);
   const db = await getDb();
   const update = {};
+  const unset = {};
   for (const [k, v] of Object.entries(patch)) {
-    if (v !== undefined && v !== null) update[k] = v;
+    if (v === null || v === '') {
+      unset[k] = '';
+    } else if (v !== undefined) {
+      update[k] = v;
+    }
   }
-  if (Object.keys(update).length === 0) return;
+  if (Object.keys(update).length === 0 && Object.keys(unset).length === 0) return;
 
   if (update.password) {
     update.password = hashPassword(update.password);
@@ -442,6 +447,9 @@ async function setOperatorSettings(user, patch) {
   // In-memory fallback
   if (!db) {
     if (!memSettings[canonical]) memSettings[canonical] = {};
+    for (const k of Object.keys(unset)) {
+      delete memSettings[canonical][k];
+    }
     Object.assign(memSettings[canonical], update);
     return;
   }
@@ -451,11 +459,14 @@ async function setOperatorSettings(user, patch) {
     setObj.kickedAt = new Date();
   }
 
+  const mongoUpdate = {};
+  if (Object.keys(setObj).length > 0) mongoUpdate.$set = setObj;
+  if (Object.keys(unset).length > 0) mongoUpdate.$unset = unset;
+  if (update.password) mongoUpdate.$inc = { tokenVersion: 1 };
+
   await db.collection('settings').updateOne(
     { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
-    update.password 
-      ? { $set: setObj, $inc: { tokenVersion: 1 } }
-      : { $set: setObj },
+    mongoUpdate,
     { upsert: true }
   );
   if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
@@ -1237,7 +1248,15 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   const patch = {};
   if (typeof displayName === 'string' && displayName.trim()) patch.displayName = displayName.trim().substring(0, 32);
   if (typeof avatar === 'string' && avatar.trim()) patch.avatar = avatar.trim().substring(0, 8);
-  if (typeof avatarImage === 'string') patch.avatarImage = avatarImage.substring(0, 300000); // Allow up to ~300KB Base64
+  
+  if (avatarImage === null || avatarImage === '') {
+    patch.avatarImage = null;
+  } else if (typeof avatarImage === 'string' && (avatarImage.startsWith('data:image/') || avatarImage.startsWith('http'))) {
+    if (avatarImage.length <= 3000000) {
+      patch.avatarImage = avatarImage;
+    }
+  }
+
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;
   if (typeof bio === 'string') patch.bio = bio.substring(0, 120);
   if (typeof github === 'string') patch.github = github.trim().substring(0, 100);

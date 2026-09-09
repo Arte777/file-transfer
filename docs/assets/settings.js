@@ -27,33 +27,27 @@ async function loadSettings() {
     const s = await r.json();
     currentSettings = s;
 
-    const localAvatar = localStorage.getItem('ft_avatar');
-    const localAvatarImage = localStorage.getItem('ft_avatarImage');
-    const localName = localStorage.getItem('ft_displayName');
-    const localBio = localStorage.getItem('ft_bio');
-
-    document.getElementById('displayName').value = localName || s.displayName || '';
-    document.getElementById('bio').value = localBio || s.bio || '';
+    document.getElementById('displayName').value = s.displayName || localStorage.getItem('ft_displayName') || '';
+    document.getElementById('bio').value = s.bio || localStorage.getItem('ft_bio') || '';
     if (document.getElementById('githubProfile')) document.getElementById('githubProfile').value = s.github || '';
     if (document.getElementById('websiteProfile')) document.getElementById('websiteProfile').value = s.website || '';
     if (document.getElementById('telegramProfile')) document.getElementById('telegramProfile').value = s.telegram || '';
 
-    const serverAvatarImage = s.avatarImage || null;
-
-    if (localAvatarImage) {
-      currentAvatarImageBase64 = localAvatarImage;
-      document.getElementById('avatarInput').value = '';
-    } else if (serverAvatarImage) {
-      currentAvatarImageBase64 = serverAvatarImage;
-      localStorage.setItem('ft_avatarImage', serverAvatarImage);
+    if (s.avatarImage) {
+      currentAvatarImageBase64 = s.avatarImage;
+      localStorage.setItem('ft_avatarImage', s.avatarImage);
+      localStorage.removeItem('ft_avatar');
       document.getElementById('avatarInput').value = '';
     } else {
-      document.getElementById('avatarInput').value = localAvatar || s.avatar || '';
       currentAvatarImageBase64 = null;
+      localStorage.removeItem('ft_avatarImage');
+      const av = s.avatar || localStorage.getItem('ft_avatar') || '🦊';
+      document.getElementById('avatarInput').value = av;
+      localStorage.setItem('ft_avatar', av);
     }
 
     updatePreview();
-    highlightSelectedEmoji(localAvatar || s.avatar);
+    highlightSelectedEmoji(s.avatar || '');
   } catch (e) {
     if (e.message !== 'auth') {
       const localAvatar = localStorage.getItem('ft_avatar');
@@ -72,8 +66,8 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
   const file = e.target.files[0];
   if (!file) return;
 
-  if (file.size > 5 * 1024 * 1024) {
-    toast('Файл слишком большой. Максимум 5 МБ.', 'err');
+  if (file.size > 10 * 1024 * 1024) {
+    toast('Файл слишком большой. Максимум 10 МБ.', 'err');
     return;
   }
 
@@ -82,7 +76,7 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const maxW = 300, maxH = 300;
+      const maxW = 320, maxH = 320;
       let w = img.width, h = img.height;
       if (w > maxW || h > maxH) {
         if (w > h) { h = Math.round((h * maxW) / w); w = maxW; }
@@ -91,11 +85,15 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
-      currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      currentAvatarImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
       
       document.getElementById('avatarInput').value = '';
       highlightSelectedEmoji('');
       updatePreview();
+      toast('📷 Фото выбрано! Нажмите «Сохранить настройки».');
+    };
+    img.onerror = () => {
+      toast('Ошибка загрузки изображения', 'err');
     };
     img.src = e.target.result;
   };
@@ -104,10 +102,12 @@ document.getElementById('avatarFileInput')?.addEventListener('change', function(
 
 document.getElementById('btnResetAvatar')?.addEventListener('click', function() {
   currentAvatarImageBase64 = null;
+  localStorage.removeItem('ft_avatarImage');
   document.getElementById('avatarFileInput').value = '';
   document.getElementById('avatarInput').value = '🦊';
   highlightSelectedEmoji('🦊');
   updatePreview();
+  toast('Фото сброшено на эмодзи. Нажмите «Сохранить настройки».');
 });
 
 // ── Эмодзи пикер ─────────────────────────────────────────────────────────────
@@ -180,20 +180,17 @@ if (saveBtn) {
     localStorage.setItem('ft_autoRefresh', autoRefresh);
     localStorage.setItem('ft_soundChime', soundChime);
 
+    const avatarVal = document.getElementById('avatarInput')?.value.trim() || '🦊';
     const data = {
       displayName: name,
       themeColor: '#3b82f6',
       bio: bio,
       github: github,
       website: website,
-      telegram: telegram
+      telegram: telegram,
+      avatar: avatarVal,
+      avatarImage: currentAvatarImageBase64 || null
     };
-
-    if (currentAvatarImageBase64) {
-      data.avatarImage = currentAvatarImageBase64;
-    } else {
-      data.avatar = document.getElementById('avatarInput')?.value.trim() || '👤';
-    }
 
     if (newPwd) {
       data.newPassword = newPwd;
@@ -220,12 +217,17 @@ if (saveBtn) {
         if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
         if (data.bio) localStorage.setItem('ft_bio', data.bio);
 
-        if (data.avatarImage) {
-          localStorage.setItem('ft_avatarImage', data.avatarImage);
+        if (currentSettings.avatarImage) {
+          localStorage.setItem('ft_avatarImage', currentSettings.avatarImage);
           localStorage.removeItem('ft_avatar');
-        } else if (data.avatar) {
-          localStorage.setItem('ft_avatar', data.avatar);
+        } else {
           localStorage.removeItem('ft_avatarImage');
+          localStorage.setItem('ft_avatar', currentSettings.avatar || avatarVal);
+        }
+        
+        if (typeof remoteOperatorProfiles !== 'undefined' && currentSettings) {
+          const curUser = (getUser() || '').toLowerCase();
+          remoteOperatorProfiles[curUser] = { ...(remoteOperatorProfiles[curUser] || {}), ...currentSettings };
         }
         
         document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');

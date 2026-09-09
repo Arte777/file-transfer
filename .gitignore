@@ -68,5 +68,7 @@ UCompilers/
 full_conversation_history.txt
 conversation_context.txt
 
-builder-wpf/
+builder-wpf/bin/
+builder-wpf/obj/
+builder-wpf/publish/
 templates/
