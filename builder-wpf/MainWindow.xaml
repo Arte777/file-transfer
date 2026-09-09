@@ -361,10 +361,7 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" /> <!-- Custom Window Title Bar -->
-                <RowDefinition Height="Auto" /> <!-- Banner & Quick Status -->
-                <RowDefinition Height="Auto" /> <!-- 3 Options & Target Grid -->
-                <RowDefinition Height="Auto" /> <!-- 3 Build Action Cards -->
-                <RowDefinition Height="*" />    <!-- Terminal Console -->
+                <RowDefinition Height="*" />    <!-- Content Area (Auth Login OR Main Builder) -->
             </Grid.RowDefinitions>
 
             <!-- 1. CUSTOM TITLE BAR -->
@@ -391,8 +388,21 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Drag spacer -->
-                    <Grid Grid.Column="1" Background="Transparent" />
+                    <!-- User session badge / Drag spacer -->
+                    <Grid Grid.Column="1" Background="Transparent">
+                        <StackPanel x:Name="badgeUserSession" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,16,0" Visibility="Collapsed">
+                            <Border Background="#10172e" BorderBrush="#00f0ff" BorderThickness="1" CornerRadius="8" Padding="10,4" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="6" Height="6" Fill="#00f0ff" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="lblLoggedInUser" Text="Operator" Foreground="#ffffff" FontSize="11" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Border x:Name="borderRoleBadge" Background="#1e1b4b" BorderBrush="#818cf8" BorderThickness="1" CornerRadius="4" Padding="5,1" Margin="0,0,10,0">
+                                        <TextBlock x:Name="lblLoggedInRole" Text="WORKER" Foreground="#a5b4fc" FontSize="9.5" FontWeight="Bold" />
+                                    </Border>
+                                    <Button x:Name="btnLogout" Content="🚪 Выйти" Style="{StaticResource SecondaryButton}" Height="22" Padding="8,0" FontSize="10" Click="BtnLogout_Click" ToolTip="Выйти из аккаунта и сменить профиль" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Window Control Buttons -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -402,225 +412,294 @@
                 </Grid>
             </Border>
 
-            <!-- 2. QUICK BANNER -->
-            <Border Grid.Row="1" Margin="20,12,20,10" Background="#101426" BorderBrush="#202747" BorderThickness="1" CornerRadius="12" Padding="16,9">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="Генератор исполняемых клиентов и полноценных инсталляторов (Setup.exe)" Foreground="#e2e8f0" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Text="Поддержка кастомных иконок (.ico), распакованной структуры (Multi-file) и Setup Wizard с ярлыком на Рабочем столе." Foreground="#94a3b8" FontSize="11" Margin="0,2,0,0" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#161c36" BorderBrush="#2f3a68" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="🛠️ .NET 8 x64 Native" Foreground="#38bdf8" FontSize="11" FontWeight="SemiBold" />
-                        </Border>
-                        <Border x:Name="badgeInnoStatus" Background="#162a22" BorderBrush="#10b981" BorderThickness="1" CornerRadius="8" Padding="10,4">
-                            <TextBlock x:Name="lblInnoStatus" Text="💿 Inno Setup 6: Готов" Foreground="#34d399" FontSize="11" FontWeight="SemiBold" />
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 3. CONFIGURATION & OPTIONS (3 Cards) -->
-            <Grid Grid.Row="2" Margin="20,0,20,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.15*" />
-                    <ColumnDefinition Width="0.95*" />
-                    <ColumnDefinition Width="1.05*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Left Card: Target Operator & Output -->
-                <Border Grid.Column="0" Style="{StaticResource GlassCard}" Margin="0,0,8,0">
+            <!-- 2. CONTENT AREA: AUTH LOGIN SCREEN (VISIBLE BY DEFAULT) -->
+            <Grid x:Name="gridAuthLogin" Grid.Row="1" Visibility="Visible">
+                <!-- Centered Glass Login Card -->
+                <Border Width="470" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20" Style="{StaticResource GlassCard}" Padding="34,30" Background="#0b0f20" BorderBrush="#00f0ff" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#00f0ff" Opacity="0.25" />
+                    </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="🎯 ПРОФИЛЬ ОПЕРАТОРА &amp; ИМЯ" Foreground="#38bdf8" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
-                        <TextBlock Text="Куда будут отправляться логи и токены:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
-
-                        <ComboBox x:Name="cbOperators" Height="36" Style="{StaticResource DarkComboBox}" SelectionChanged="CbOperators_SelectionChanged">
-                            <ComboBoxItem Content="💀 HuilaEbanaya (Воркер)" IsSelected="True" Tag="HuilaEbanaya" />
-                            <ComboBoxItem Content="🦊 Shonll (Главный Администратор)" Tag="Shonll" />
-                            <ComboBoxItem Content="🐉 DildMan (Воркер)" Tag="DildMan" />
-                            <ComboBoxItem Content="🔗 saha_kakaha122 (SVYAZ)" Tag="saha_kakaha122" />
-                            <ComboBoxItem Content="🎤 SinGeR1isss (Воркер)" Tag="SinGeR1isss" />
-                            <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
-                        </ComboBox>
-
-                        <TextBox x:Name="tbCustomOperator" Height="32" Margin="0,6,0,0" Background="#151a30" Foreground="#00f0ff" BorderBrush="#00f0ff" BorderThickness="1" FontSize="12" Padding="8,5" Visibility="Collapsed" />
-
-                        <TextBlock Text="Название приложения:" Foreground="#64748b" FontSize="11" Margin="0,8,0,3" />
-                        <TextBox x:Name="tbAppName" Text="RAH" Height="32" Background="#111528" Foreground="#ffffff" BorderBrush="#2c355c" FontSize="12" Padding="8,5" />
-
-                        <TextBlock Text="Папка назначения сборок:" Foreground="#64748b" FontSize="11" Margin="0,8,0,3" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="32" Background="#111528" Foreground="#ffffff" BorderBrush="#2c355c" FontSize="11" Padding="8,5" IsReadOnly="True" />
-                            <Button x:Name="btnBrowse" Grid.Column="1" Content="📁" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0" Height="32" Padding="10,0" Click="BtnBrowse_Click" ToolTip="Выбрать папку" />
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- Middle Card: Icon Selection (.ico) -->
-                <Border Grid.Column="1" Style="{StaticResource GlassCard}" Margin="4,0,4,0">
-                    <StackPanel>
-                        <TextBlock Text="🎨 ИКОНКА ПРИЛОЖЕНИЯ (.ICO)" Foreground="#f59e0b" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
-                        <TextBlock Text="Пресет или собственный файл иконки:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
-
-                        <ComboBox x:Name="cbIconPresets" Height="36" Style="{StaticResource DarkComboBox}" SelectionChanged="CbIconPresets_SelectionChanged">
-                            <ComboBoxItem Content="⚡ RAH Thunder (Молния)" IsSelected="True" Tag="thunder" />
-                            <ComboBoxItem Content="🔥 DildMan (Огонь)" Tag="fire" />
-                            <ComboBoxItem Content="🔗 SVYAZ (Цепь)" Tag="svyaz" />
-                            <ComboBoxItem Content="🎤 SinGeR1isss (Микрофон)" Tag="singer" />
-                            <ComboBoxItem Content="💀 Cyber (HuilaEbanaya)" Tag="cyber" />
-                            <ComboBoxItem Content="📁 [ Выбрать свой .ico... ]" Tag="__custom_ico__" />
-                        </ComboBox>
-
-                        <!-- Icon Preview & Selector -->
-                        <Border Margin="0,10,0,0" Background="#101426" BorderBrush="#232a4a" BorderThickness="1" CornerRadius="10" Padding="10,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Icon Box -->
-                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" Background="#0b0e1b" BorderBrush="#00f0ff" BorderThickness="1" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <Image x:Name="imgIconPreview" Width="30" Height="30" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock x:Name="lblIconName" Text="thunder.ico (Встроенная)" Foreground="#38bdf8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    <Button x:Name="btnBrowseIcon" Content="📁 Выбрать файл .ico" Style="{StaticResource SecondaryButton}" Height="26" Padding="8,0" FontSize="10.5" Margin="0,4,0,0" HorizontalAlignment="Left" Click="BtnBrowseIcon_Click" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <TextBlock Text="Применяется к Setup инсталлятору, ярлыку на Рабочем столе и исполняемому файлу." Foreground="#64748b" FontSize="10" Margin="0,8,0,0" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Right Card: Setup & Packaging Options -->
-                <Border Grid.Column="2" Style="{StaticResource GlassCard}" Margin="8,0,0,0">
-                    <StackPanel>
-                        <TextBlock Text="⚙️ СТРУКТУРА И ИНСТАЛЛЯТОР" Foreground="#a855f7" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
-                        <TextBlock Text="Формат сборки и параметры Setup:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
-
-                        <TextBlock Text="Формат приложения:" Foreground="#64748b" FontSize="10.5" Margin="0,0,0,2" />
-                        <ComboBox x:Name="cbPackageFormat" Height="34" Style="{StaticResource DarkComboBox}" SelectionChanged="CbPackageFormat_SelectionChanged">
-                            <ComboBoxItem Content="📁 Папка с файлами (Multi-file)" IsSelected="True" Tag="multifile" />
-                            <ComboBoxItem Content="📦 Единый файл (Single-File .exe)" Tag="singlefile" />
-                        </ComboBox>
-
-                        <TextBlock Text="Основа для инсталлятора:" Foreground="#64748b" FontSize="10.5" Margin="0,6,0,2" />
-                        <ComboBox x:Name="cbInstallerTarget" Height="34" Style="{StaticResource DarkComboBox}">
-                            <ComboBoxItem Content="⚡ Standalone PRO (Автономный)" IsSelected="True" Tag="standalone" />
-                            <ComboBoxItem Content="🚀 Client Loader (Скрытый)" Tag="client" />
-                        </ComboBox>
-
-                        <StackPanel Margin="0,8,0,0">
-                            <CheckBox x:Name="chkDesktopShortcut" Content="Ярлык на Рабочем столе" Style="{StaticResource DarkCheckBox}" IsChecked="True" Margin="0,0,0,5" />
-                            <CheckBox x:Name="chkCompressLzma" Content="Ультра-сжатие LZMA2 (~45 МБ)" Style="{StaticResource DarkCheckBox}" IsChecked="True" Margin="0,0,0,5" />
-                            <CheckBox x:Name="chkRunAsAdmin" Content="Запуск от имени администратора" Style="{StaticResource DarkCheckBox}" IsChecked="True" />
+                        <!-- Header Icon & Glow -->
+                        <StackPanel HorizontalAlignment="Center" Margin="0,0,0,20">
+                            <Border Width="58" Height="58" CornerRadius="16" Background="#101732" BorderBrush="#00f0ff" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="#00f0ff" Opacity="0.5" />
+                                </Border.Effect>
+                                <TextBlock Text="⚡" FontSize="28" Foreground="#00f0ff" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="NEXUS BUILDER" Foreground="#ffffff" FontSize="21" FontWeight="Black" HorizontalAlignment="Center" />
+                            <TextBlock Text="АВТОРИЗАЦИЯ ОПЕРАТОРА" Foreground="#38bdf8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                            <TextBlock Text="Для сборки приложений войдите под своей учётной записью. Клиенты будут строго привязаны к вашему профилю." Foreground="#94a3b8" FontSize="11.5" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
+
+                        <!-- Error Banner -->
+                        <Border x:Name="borderAuthError" Background="#2b1117" BorderBrush="#ef4444" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,14" Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚠️ " FontSize="13" VerticalAlignment="Center" />
+                                <TextBlock x:Name="txtAuthError" Text="Неверный логин или пароль" Foreground="#f87171" FontSize="11.5" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Username Field -->
+                        <TextBlock Text="ЛОГИН / ИМЯ ОПЕРАТОРА" Foreground="#94a3b8" FontSize="10.5" FontWeight="Bold" Margin="0,0,0,5" />
+                        <TextBox x:Name="tbAuthLogin" Height="38" Background="#101426" Foreground="#ffffff" BorderBrush="#2c355c" BorderThickness="1" FontSize="13" Padding="10,8" Margin="0,0,0,14" KeyDown="TbAuthField_KeyDown" />
+
+                        <!-- Password Field -->
+                        <TextBlock Text="ПАРОЛЬ" Foreground="#94a3b8" FontSize="10.5" FontWeight="Bold" Margin="0,0,0,5" />
+                        <PasswordBox x:Name="pbAuthPassword" Height="38" Background="#101426" Foreground="#ffffff" BorderBrush="#2c355c" BorderThickness="1" FontSize="13" Padding="10,8" Margin="0,0,0,14" KeyDown="TbAuthField_KeyDown" />
+
+                        <!-- Remember Me Checkbox -->
+                        <CheckBox x:Name="chkRememberSession" Content="Запомнить вход на этом компьютере" Style="{StaticResource DarkCheckBox}" IsChecked="True" Margin="0,0,0,18" />
+
+                        <!-- Submit Button -->
+                        <Button x:Name="btnAuthLogin" Height="44" Style="{StaticResource BtnStandaloneStyle}" Click="BtnAuthLogin_Click">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="⚡" FontSize="15" Margin="0,0,8,0" />
+                                <TextBlock x:Name="txtAuthBtnTitle" Text="ВОЙТИ В СИСТЕМУ" FontSize="13" FontWeight="Black" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Security Note -->
+                        <TextBlock Text="🔒 Защищённое TLS-подключение к NEXUS Core • v8.0.0" Foreground="#475569" FontSize="10.5" HorizontalAlignment="Center" Margin="0,16,0,0" />
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <!-- 4. THREE BUILD ACTION BUTTONS -->
-            <Grid Grid.Row="3" Margin="20,0,20,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="1.2*" />
-                </Grid.ColumnDefinitions>
+            <!-- 3. CONTENT AREA: MAIN BUILDER WORKSPACE (COLLAPSED UNTIL AUTH) -->
+            <Grid x:Name="gridMainBuilder" Grid.Row="1" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /> <!-- Banner & Quick Status -->
+                    <RowDefinition Height="Auto" /> <!-- 3 Options & Target Grid -->
+                    <RowDefinition Height="Auto" /> <!-- 3 Build Action Cards -->
+                    <RowDefinition Height="*" />    <!-- Terminal Console -->
+                </Grid.RowDefinitions>
 
-                <!-- Button 1: Standalone -->
-                <Button x:Name="btnBuildStandalone" Grid.Column="0" Margin="0,0,8,0" Style="{StaticResource BtnStandaloneStyle}" Click="BtnBuildStandalone_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="⚡" FontSize="15" Margin="0,0,6,0" />
-                            <TextBlock x:Name="txtStandaloneBtnTitle" Text="Standalone (PRO)" FontSize="13.5" FontWeight="Bold" />
-                        </StackPanel>
-                        <TextBlock x:Name="txtStandaloneBtnSub" Text="Папка с файлами (Multi-file)" Foreground="#f5f3ff" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
-                        <TextBlock Text="Пишет accounts.txt на Рабочий стол" Foreground="#c4b5fd" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <!-- Button 2: Client -->
-                <Button x:Name="btnBuildClient" Grid.Column="1" Margin="4,0,4,0" Style="{StaticResource BtnClientStyle}" Click="BtnBuildClient_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="🚀" FontSize="15" Margin="0,0,6,0" />
-                            <TextBlock x:Name="txtClientBtnTitle" Text="Client (Loader)" FontSize="13.5" FontWeight="Bold" />
-                        </StackPanel>
-                        <TextBlock x:Name="txtClientBtnSub" Text="Папка с файлами (Multi-file)" Foreground="#e0f2fe" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
-                        <TextBlock Text="Скрытый Runtime Broker + куки" Foreground="#7dd3fc" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <!-- Button 3: Setup Installer (NEW) -->
-                <Button x:Name="btnBuildInstaller" Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource BtnInstallerStyle}" Click="BtnBuildInstaller_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="💿" FontSize="15" Margin="0,0,6,0" />
-                            <TextBlock Text="Setup Инсталлятор (.exe)" FontSize="13.5" FontWeight="Bold" />
-                        </StackPanel>
-                        <TextBlock Text="Установка в Program Files + Ярлык" Foreground="#ecfdf5" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
-                        <TextBlock Text="Распакованное ПО со всеми DLL (не сингл файл)" Foreground="#6ee7b7" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-
-            <!-- 5. TERMINAL & CONSOLE STREAM -->
-            <Border Grid.Row="4" Margin="20,0,20,16" Style="{StaticResource GlassCard}" Padding="14,10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <!-- Terminal Top Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                <!-- 1. QUICK BANNER -->
+                <Border Grid.Row="0" Margin="20,12,20,10" Background="#101426" BorderBrush="#202747" BorderThickness="1" CornerRadius="12" Padding="16,9">
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <!-- MacOS style window dots -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <Ellipse Width="10" Height="10" Fill="#ef4444" Margin="0,0,6,0" />
-                            <Ellipse Width="10" Height="10" Fill="#f59e0b" Margin="0,0,6,0" />
-                            <Ellipse Width="10" Height="10" Fill="#10b981" />
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="Генератор исполняемых клиентов и полноценных инсталляторов (Setup.exe)" Foreground="#e2e8f0" FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="Поддержка кастомных иконок (.ico), распакованной структуры (Multi-file) и Setup Wizard с ярлыком на Рабочем столе." Foreground="#94a3b8" FontSize="11" Margin="0,2,0,0" />
                         </StackPanel>
 
-                        <!-- Terminal Title & Status -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text=">_ NEXUS CORE STREAM" Foreground="#00f0ff" FontFamily="Consolas, monospace" FontSize="11" FontWeight="Bold" Margin="0,0,10,0" />
-                            <TextBlock x:Name="lblStatus" Text="• Ожидание команды пользователя..." Foreground="#64748b" FontSize="11" />
+                            <Border Background="#161c36" BorderBrush="#2f3a68" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,8,0">
+                                <TextBlock Text="🛠️ .NET 8 x64 Native" Foreground="#38bdf8" FontSize="11" FontWeight="SemiBold" />
+                            </Border>
+                            <Border x:Name="badgeInnoStatus" Background="#162a22" BorderBrush="#10b981" BorderThickness="1" CornerRadius="8" Padding="10,4">
+                                <TextBlock x:Name="lblInnoStatus" Text="💿 Inno Setup 6: Готов" Foreground="#34d399" FontSize="11" FontWeight="SemiBold" />
+                            </Border>
                         </StackPanel>
-
-                        <!-- Quick Action in Terminal -->
-                        <Button x:Name="btnOpenFolder" Grid.Column="2" Content="📂 Открыть папку со сборкой" Style="{StaticResource SecondaryButton}" Height="28" Padding="12,0" FontSize="11" Click="BtnOpenFolder_Click" Visibility="Collapsed" />
                     </Grid>
+                </Border>
 
-                    <!-- Console Box -->
-                    <Border Grid.Row="1" Background="#06070d" BorderBrush="#181d32" BorderThickness="1" CornerRadius="8" Padding="2">
-                        <ScrollViewer x:Name="scrollConsole" VerticalScrollBarVisibility="Auto">
-                            <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#38bdf8" FontFamily="Cascadia Code, Consolas, JetBrains Mono, monospace" FontSize="11.5" IsReadOnly="True" BorderThickness="0" Padding="10" TextWrapping="Wrap" AcceptsReturn="True" />
-                        </ScrollViewer>
+                <!-- 2. CONFIGURATION & OPTIONS (3 Cards) -->
+                <Grid Grid.Row="1" Margin="20,0,20,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.15*" />
+                        <ColumnDefinition Width="0.95*" />
+                        <ColumnDefinition Width="1.05*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Card: Target Operator & Output -->
+                    <Border Grid.Column="0" Style="{StaticResource GlassCard}" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="🎯 ПРОФИЛЬ ОПЕРАТОРА &amp; ИМЯ" Foreground="#38bdf8" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
+                            <TextBlock Text="Куда будут отправляться логи и токены:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
+
+                            <!-- Non-admin lock badge -->
+                            <Border x:Name="borderNonAdminNotice" Background="#121b33" BorderBrush="#38bdf8" BorderThickness="1" CornerRadius="8" Padding="8,5" Margin="0,0,0,8" Visibility="Collapsed">
+                                <TextBlock x:Name="txtNonAdminNotice" Text="🔒 Профиль привязан к вашему аккаунту" Foreground="#38bdf8" FontSize="10.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            </Border>
+
+                            <ComboBox x:Name="cbOperators" Height="36" Style="{StaticResource DarkComboBox}" SelectionChanged="CbOperators_SelectionChanged">
+                                <ComboBoxItem Content="💀 HuilaEbanaya (Воркер)" IsSelected="True" Tag="HuilaEbanaya" />
+                                <ComboBoxItem Content="🦊 Shonll (Главный Администратор)" Tag="Shonll" />
+                                <ComboBoxItem Content="🐉 DildMan (Воркер)" Tag="DildMan" />
+                                <ComboBoxItem Content="🔗 saha_kakaha122 (SVYAZ)" Tag="saha_kakaha122" />
+                                <ComboBoxItem Content="🎤 SinGeR1isss (Воркер)" Tag="SinGeR1isss" />
+                                <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
+                            </ComboBox>
+
+                            <TextBox x:Name="tbCustomOperator" Height="32" Margin="0,6,0,0" Background="#151a30" Foreground="#00f0ff" BorderBrush="#00f0ff" BorderThickness="1" FontSize="12" Padding="8,5" Visibility="Collapsed" />
+
+                            <TextBlock Text="Название приложения:" Foreground="#64748b" FontSize="11" Margin="0,8,0,3" />
+                            <TextBox x:Name="tbAppName" Text="RAH" Height="32" Background="#111528" Foreground="#ffffff" BorderBrush="#2c355c" FontSize="12" Padding="8,5" />
+
+                            <TextBlock Text="Папка назначения сборок:" Foreground="#64748b" FontSize="11" Margin="0,8,0,3" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="32" Background="#111528" Foreground="#ffffff" BorderBrush="#2c355c" FontSize="11" Padding="8,5" IsReadOnly="True" />
+                                <Button x:Name="btnBrowse" Grid.Column="1" Content="📁" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0" Height="32" Padding="10,0" Click="BtnBrowse_Click" ToolTip="Выбрать папку" />
+                            </Grid>
+                        </StackPanel>
                     </Border>
 
-                    <!-- Progress Bar -->
-                    <ProgressBar x:Name="pbProgress" Grid.Row="2" Height="4" Margin="0,8,0,0" Background="#111526" Foreground="#00f0ff" BorderThickness="0" Value="0" />
+                    <!-- Middle Card: Icon Selection (.ico) -->
+                    <Border Grid.Column="1" Style="{StaticResource GlassCard}" Margin="4,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="🎨 ИКОНКА ПРИЛОЖЕНИЯ (.ICO)" Foreground="#f59e0b" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
+                            <TextBlock Text="Пресет или собственный файл иконки:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
+
+                            <ComboBox x:Name="cbIconPresets" Height="36" Style="{StaticResource DarkComboBox}" SelectionChanged="CbIconPresets_SelectionChanged">
+                                <ComboBoxItem Content="⚡ RAH Thunder (Молния)" IsSelected="True" Tag="thunder" />
+                                <ComboBoxItem Content="🔥 DildMan (Огонь)" Tag="fire" />
+                                <ComboBoxItem Content="🔗 SVYAZ (Цепь)" Tag="svyaz" />
+                                <ComboBoxItem Content="🎤 SinGeR1isss (Микрофон)" Tag="singer" />
+                                <ComboBoxItem Content="💀 Cyber (HuilaEbanaya)" Tag="cyber" />
+                                <ComboBoxItem Content="📁 [ Выбрать свой .ico... ]" Tag="__custom_ico__" />
+                            </ComboBox>
+
+                            <!-- Icon Preview & Selector -->
+                            <Border Margin="0,10,0,0" Background="#101426" BorderBrush="#232a4a" BorderThickness="1" CornerRadius="10" Padding="10,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Icon Box -->
+                                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" Background="#0b0e1b" BorderBrush="#00f0ff" BorderThickness="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <Image x:Name="imgIconPreview" Width="30" Height="30" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock x:Name="lblIconName" Text="thunder.ico (Встроенная)" Foreground="#38bdf8" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <Button x:Name="btnBrowseIcon" Content="📁 Выбрать файл .ico" Style="{StaticResource SecondaryButton}" Height="26" Padding="8,0" FontSize="10.5" Margin="0,4,0,0" HorizontalAlignment="Left" Click="BtnBrowseIcon_Click" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="Применяется к Setup инсталлятору, ярлыку на Рабочем столе и исполняемому файлу." Foreground="#64748b" FontSize="10" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Right Card: Setup & Packaging Options -->
+                    <Border Grid.Column="2" Style="{StaticResource GlassCard}" Margin="8,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="⚙️ СТРУКТУРА И ИНСТАЛЛЯТОР" Foreground="#a855f7" FontSize="11" FontWeight="Bold" Margin="0,0,0,6" />
+                            <TextBlock Text="Формат сборки и параметры Setup:" Foreground="#94a3b8" FontSize="11" Margin="0,0,0,8" />
+
+                            <TextBlock Text="Формат приложения:" Foreground="#64748b" FontSize="10.5" Margin="0,0,0,2" />
+                            <ComboBox x:Name="cbPackageFormat" Height="34" Style="{StaticResource DarkComboBox}" SelectionChanged="CbPackageFormat_SelectionChanged">
+                                <ComboBoxItem Content="📁 Папка с файлами (Multi-file)" IsSelected="True" Tag="multifile" />
+                                <ComboBoxItem Content="📦 Единый файл (Single-File .exe)" Tag="singlefile" />
+                            </ComboBox>
+
+                            <TextBlock Text="Основа для инсталлятора:" Foreground="#64748b" FontSize="10.5" Margin="0,6,0,2" />
+                            <ComboBox x:Name="cbInstallerTarget" Height="34" Style="{StaticResource DarkComboBox}">
+                                <ComboBoxItem Content="⚡ Standalone PRO (Автономный)" IsSelected="True" Tag="standalone" />
+                                <ComboBoxItem Content="🚀 Client Loader (Скрытый)" Tag="client" />
+                            </ComboBox>
+
+                            <StackPanel Margin="0,8,0,0">
+                                <CheckBox x:Name="chkDesktopShortcut" Content="Ярлык на Рабочем столе" Style="{StaticResource DarkCheckBox}" IsChecked="True" Margin="0,0,0,5" />
+                                <CheckBox x:Name="chkCompressLzma" Content="Ультра-сжатие LZMA2 (~45 МБ)" Style="{StaticResource DarkCheckBox}" IsChecked="True" Margin="0,0,0,5" />
+                                <CheckBox x:Name="chkRunAsAdmin" Content="Запуск от имени администратора" Style="{StaticResource DarkCheckBox}" IsChecked="True" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-            </Border>
+
+                <!-- 3. THREE BUILD ACTION BUTTONS -->
+                <Grid Grid.Row="2" Margin="20,0,20,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="1.2*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Button 1: Standalone -->
+                    <Button x:Name="btnBuildStandalone" Grid.Column="0" Margin="0,0,8,0" Style="{StaticResource BtnStandaloneStyle}" Click="BtnBuildStandalone_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="⚡" FontSize="15" Margin="0,0,6,0" />
+                                <TextBlock x:Name="txtStandaloneBtnTitle" Text="Standalone (PRO)" FontSize="13.5" FontWeight="Bold" />
+                            </StackPanel>
+                            <TextBlock x:Name="txtStandaloneBtnSub" Text="Папка с файлами (Multi-file)" Foreground="#f5f3ff" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
+                            <TextBlock Text="Пишет accounts.txt на Рабочий стол" Foreground="#c4b5fd" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Button 2: Client -->
+                    <Button x:Name="btnBuildClient" Grid.Column="1" Margin="4,0,4,0" Style="{StaticResource BtnClientStyle}" Click="BtnBuildClient_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="🚀" FontSize="15" Margin="0,0,6,0" />
+                                <TextBlock x:Name="txtClientBtnTitle" Text="Client (Non-Pro)" FontSize="13.5" FontWeight="Bold" />
+                            </StackPanel>
+                            <TextBlock x:Name="txtClientBtnSub" Text="Папка с файлами (Multi-file)" Foreground="#f0fdfa" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
+                            <TextBlock Text="Отправка на сервер + Автозагрузка" Foreground="#67e8f9" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Button 3: Setup Installer -->
+                    <Button x:Name="btnBuildInstaller" Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource BtnInstallerStyle}" Click="BtnBuildInstaller_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="💿" FontSize="15" Margin="0,0,6,0" />
+                                <TextBlock Text="Setup Инсталлятор (.exe)" FontSize="13.5" FontWeight="Bold" />
+                            </StackPanel>
+                            <TextBlock Text="Установка в Program Files + Ярлык" Foreground="#ecfdf5" FontSize="11" Margin="0,3,0,0" HorizontalAlignment="Center" />
+                            <TextBlock Text="Распакованное ПО со всеми DLL (не сингл файл)" Foreground="#6ee7b7" FontSize="10" Margin="0,1,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- 4. TERMINAL & CONSOLE STREAM -->
+                <Border Grid.Row="3" Margin="20,0,20,16" Style="{StaticResource GlassCard}" Padding="14,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Terminal Top Bar -->
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- MacOS style window dots -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <Ellipse Width="10" Height="10" Fill="#ef4444" Margin="0,0,6,0" />
+                                <Ellipse Width="10" Height="10" Fill="#f59e0b" Margin="0,0,6,0" />
+                                <Ellipse Width="10" Height="10" Fill="#10b981" />
+                            </StackPanel>
+
+                            <!-- Terminal Title & Status -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text=">_ NEXUS CORE STREAM" Foreground="#00f0ff" FontFamily="Consolas, monospace" FontSize="11" FontWeight="Bold" Margin="0,0,10,0" />
+                                <TextBlock x:Name="lblStatus" Text="• Ожидание команды пользователя..." Foreground="#64748b" FontSize="11" />
+                            </StackPanel>
+
+                            <!-- Quick Action in Terminal -->
+                            <Button x:Name="btnOpenFolder" Grid.Column="2" Content="📂 Открыть папку со сборкой" Style="{StaticResource SecondaryButton}" Height="28" Padding="12,0" FontSize="11" Click="BtnOpenFolder_Click" Visibility="Collapsed" />
+                        </Grid>
+
+                        <!-- Console Box -->
+                        <Border Grid.Row="1" Background="#06070d" BorderBrush="#181d32" BorderThickness="1" CornerRadius="8" Padding="2">
+                            <ScrollViewer x:Name="scrollConsole" VerticalScrollBarVisibility="Auto">
+                                <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#38bdf8" FontFamily="Cascadia Code, Consolas, JetBrains Mono, monospace" FontSize="11.5" IsReadOnly="True" BorderThickness="0" Padding="10" TextWrapping="Wrap" AcceptsReturn="True" />
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Progress Bar -->
+                        <ProgressBar x:Name="pbProgress" Grid.Row="2" Height="4" Margin="0,8,0,0" Background="#111526" Foreground="#00f0ff" BorderThickness="0" Value="0" />
+                    </Grid>
+                </Border>
+            </Grid>
 
         </Grid>
     </Border>

@@ -21,6 +21,15 @@ namespace NexusBuilder
         private string _activeIconPath = "";
         private bool _isInitialized = false;
 
+        private string _currentUser = "";
+        private string _authToken = "";
+        private bool _isUserAdmin = false;
+        private readonly string _authFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "NEXUS_Builder", "auth.json"
+        );
+        private static readonly string API_BASE = "https://file-transfer-production-75ad.up.railway.app";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -38,6 +47,187 @@ namespace NexusBuilder
             Log("⚡ NEXUS Universal Application & Installer Builder v" + AppVersion + " инициализирован.");
             Log("• Доступна сборка: Папка с файлами (Multi-file), Single-File (.exe) и Setup Инсталлятор.");
             Log("• Поддержка кастомных иконок (.ico) и автоматическая распаковка в Program Files.");
+
+            TryAutoLogin();
+        }
+
+        private async void TryAutoLogin()
+        {
+            try
+            {
+                if (File.Exists(_authFilePath))
+                {
+                    string json = await File.ReadAllTextAsync(_authFilePath);
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("user", out var u) && root.TryGetProperty("token", out var t))
+                    {
+                        string user = u.GetString() ?? "";
+                        string token = t.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(token))
+                        {
+                            ApplyUserSession(user, token);
+                            return;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            ShowLoginScreen();
+        }
+
+        private void ShowLoginScreen()
+        {
+            gridMainBuilder.Visibility = Visibility.Collapsed;
+            gridAuthLogin.Visibility = Visibility.Visible;
+            badgeUserSession.Visibility = Visibility.Collapsed;
+            tbAuthLogin.Focus();
+        }
+
+        private void ShowAuthError(string msg)
+        {
+            txtAuthError.Text = msg;
+            borderAuthError.Visibility = Visibility.Visible;
+        }
+
+        private async void BtnAuthLogin_Click(object sender, RoutedEventArgs e)
+        {
+            string username = tbAuthLogin.Text.Trim();
+            string password = pbAuthPassword.Password;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                ShowAuthError("⚠️ Введите логин и пароль");
+                return;
+            }
+
+            btnAuthLogin.IsEnabled = false;
+            txtAuthBtnTitle.Text = "ПОДКЛЮЧЕНИЕ...";
+            borderAuthError.Visibility = Visibility.Collapsed;
+
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { username, password });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var resp = await _http.PostAsync($"{API_BASE}/api/login", content);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    ShowAuthError("⚠️ Неверный логин или пароль!");
+                    return;
+                }
+
+                string respBody = await resp.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(respBody);
+                var root = doc.RootElement;
+                string user = root.TryGetProperty("user", out var u) ? u.GetString() ?? username : username;
+                string token = root.TryGetProperty("token", out var t) ? t.GetString() ?? "" : "";
+
+                if (chkRememberSession.IsChecked == true)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(_authFilePath)!);
+                        string saveJson = JsonSerializer.Serialize(new { user, token, savedAt = DateTime.UtcNow });
+                        await File.WriteAllTextAsync(_authFilePath, saveJson);
+                    }
+                    catch { }
+                }
+
+                ApplyUserSession(user, token);
+            }
+            catch (Exception ex)
+            {
+                ShowAuthError("⚠️ Ошибка связи с сервером: " + ex.Message);
+            }
+            finally
+            {
+                btnAuthLogin.IsEnabled = true;
+                txtAuthBtnTitle.Text = "ВОЙТИ В СИСТЕМУ";
+            }
+        }
+
+        private void TbAuthField_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                BtnAuthLogin_Click(sender, e);
+            }
+        }
+
+        private void ApplyUserSession(string user, string token)
+        {
+            _currentUser = user;
+            _authToken = token;
+            _isUserAdmin = user.Equals("shonll", StringComparison.OrdinalIgnoreCase);
+
+            lblLoggedInUser.Text = user;
+            lblLoggedInRole.Text = _isUserAdmin ? "ADMIN" : "WORKER";
+            badgeUserSession.Visibility = Visibility.Visible;
+
+            if (_isUserAdmin)
+            {
+                cbOperators.IsEnabled = true;
+                borderNonAdminNotice.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // Не-админ: строго привязываем к его авторизованному имени
+                borderNonAdminNotice.Visibility = Visibility.Visible;
+                txtNonAdminNotice.Text = $"🔒 Профиль заблокирован: {user}";
+                cbOperators.IsEnabled = false;
+
+                bool found = false;
+                for (int i = 0; i < cbOperators.Items.Count; i++)
+                {
+                    if (cbOperators.Items[i] is ComboBoxItem cbi && cbi.Tag?.ToString()?.Equals(user, StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        cbOperators.SelectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    var newItem = new ComboBoxItem
+                    {
+                        Content = $"👤 {user} (Ваш профиль)",
+                        Tag = user,
+                        IsSelected = true
+                    };
+                    cbOperators.Items.Insert(0, newItem);
+                    cbOperators.SelectedIndex = 0;
+                }
+
+                if (tbCustomOperator != null) tbCustomOperator.Visibility = Visibility.Collapsed;
+            }
+
+            gridAuthLogin.Visibility = Visibility.Collapsed;
+            gridMainBuilder.Visibility = Visibility.Visible;
+
+            Log($"✅ Успешная авторизация в системе: {user} [{(_isUserAdmin ? "Главный Администратор" : "Оператор / Воркер")}]");
+            Log($"• Профиль сборок: {(_isUserAdmin ? "Любой (свободный выбор)" : $"Закреплён за {user}")}");
+        }
+
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (File.Exists(_authFilePath)) File.Delete(_authFilePath);
+            }
+            catch { }
+
+            _currentUser = "";
+            _authToken = "";
+            _isUserAdmin = false;
+
+            pbAuthPassword.Password = "";
+            borderAuthError.Visibility = Visibility.Collapsed;
+            ShowLoginScreen();
+
+            Log("🚪 Выполнен выход из аккаунта. Билдер заблокирован.");
         }
 
         private void CheckInnoSetupStatus()
@@ -282,17 +472,22 @@ namespace NexusBuilder
 
         private string GetSelectedOperator()
         {
+            if (!_isUserAdmin && !string.IsNullOrWhiteSpace(_currentUser))
+            {
+                return _currentUser;
+            }
+
             if (cbOperators.SelectedItem is ComboBoxItem item)
             {
                 string tag = item.Tag?.ToString() ?? "";
                 if (tag == "__custom__")
                 {
                     string custom = tbCustomOperator.Text.Trim();
-                    return string.IsNullOrWhiteSpace(custom) ? "HuilaEbanaya" : custom;
+                    return string.IsNullOrWhiteSpace(custom) ? (_currentUser.Length > 0 ? _currentUser : "HuilaEbanaya") : custom;
                 }
                 return tag;
             }
-            return "HuilaEbanaya";
+            return string.IsNullOrWhiteSpace(_currentUser) ? "HuilaEbanaya" : _currentUser;
         }
 
         private void BtnBrowse_Click(object sender, RoutedEventArgs e)
@@ -362,6 +557,13 @@ namespace NexusBuilder
 
         private async Task RunBuild(bool isStandalone, bool createInstaller, bool isMultiFile)
         {
+            if (string.IsNullOrWhiteSpace(_currentUser))
+            {
+                Log("❌ Ошибка: Сборка заблокирована! Требуется авторизация в аккаунте.");
+                ShowLoginScreen();
+                return;
+            }
+
             string opName = GetSelectedOperator();
             string appName = tbAppName.Text.Trim();
             if (string.IsNullOrWhiteSpace(appName)) appName = "RAH";
