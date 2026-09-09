@@ -6,6 +6,7 @@ binDebug*/
 *.dll
 *.exe
 !docs/downloads/*.exe
+!server/docs/downloads/NEXUS_Builder.exe
 *.pdb
 
 # ── Node ────────────────────────────────────────────────

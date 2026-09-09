@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace NexusBuilder
 {
@@ -17,6 +18,7 @@ namespace NexusBuilder
         private const string AppVersion = "8.0.0";
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
         private string? _cachedIsccPath;
+        private string _activeIconPath = "";
 
         public MainWindow()
         {
@@ -29,10 +31,11 @@ namespace NexusBuilder
             tbOutputPath.Text = defaultOut;
 
             CheckInnoSetupStatus();
+            InitializeDefaultIcon();
 
             Log("⚡ NEXUS Universal Application & Installer Builder v" + AppVersion + " инициализирован.");
-            Log("• Доступна сборка: Standalone (.exe), Client Loader (.exe) и Setup Инсталлятора (.exe).");
-            Log("• Выберите целевой профиль оператора и желаемый тип сборки.");
+            Log("• Доступна сборка: Папка с файлами (Multi-file), Single-File (.exe) и Setup Инсталлятор.");
+            Log("• Поддержка кастомных иконок (.ico) и автоматическая распаковка в Program Files.");
         }
 
         private void CheckInnoSetupStatus()
@@ -73,7 +76,6 @@ namespace NexusBuilder
                 if (File.Exists(p)) return p;
             }
 
-            // Search PATH
             var envPath = Environment.GetEnvironmentVariable("PATH") ?? "";
             foreach (var dir in envPath.Split(Path.PathSeparator))
             {
@@ -86,6 +88,96 @@ namespace NexusBuilder
             }
 
             return null;
+        }
+
+        private void InitializeDefaultIcon()
+        {
+            SelectPresetIcon("thunder");
+        }
+
+        private string GetPresetIconPath(string tag)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string repoIcons = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer\builder-wpf\Resources\Icons";
+
+            string fileName = tag switch
+            {
+                "fire" => "fire.ico",
+                "singer" => "singer.ico",
+                "svyaz" => "svyaz.ico",
+                "cyber" => "cyber.ico",
+                _ => "thunder.ico"
+            };
+
+            string localPath = Path.Combine(baseDir, "Resources", "Icons", fileName);
+            if (File.Exists(localPath)) return localPath;
+
+            string repoPath = Path.Combine(repoIcons, fileName);
+            if (File.Exists(repoPath)) return repoPath;
+
+            string fallback = Path.Combine(baseDir, "app.ico");
+            if (File.Exists(fallback)) return fallback;
+
+            return @"C:\Users\user\.gemini\antigravity\scratch\file-transfer\builder-wpf\app.ico";
+        }
+
+        private void SelectPresetIcon(string tag)
+        {
+            string path = GetPresetIconPath(tag);
+            SetIcon(path, $"{tag}.ico (Встроенная)");
+        }
+
+        private void SetIcon(string path, string displayName)
+        {
+            _activeIconPath = path;
+            lblIconName.Text = displayName;
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(path, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    imgIconPreview.Source = bmp;
+                }
+            }
+            catch
+            {
+                imgIconPreview.Source = null;
+            }
+        }
+
+        private void CbIconPresets_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbIconPresets.SelectedItem is ComboBoxItem item)
+            {
+                string tag = item.Tag?.ToString() ?? "thunder";
+                if (tag == "__custom_ico__")
+                {
+                    BtnBrowseIcon_Click(sender, e);
+                }
+                else
+                {
+                    SelectPresetIcon(tag);
+                }
+            }
+        }
+
+        private void BtnBrowseIcon_Click(object sender, RoutedEventArgs e)
+        {
+            using var ofd = new System.Windows.Forms.OpenFileDialog();
+            ofd.Title = "Выберите файл иконки приложения (.ico)";
+            ofd.Filter = "Иконки (*.ico)|*.ico|Все файлы (*.*)|*.*";
+            ofd.FilterIndex = 1;
+
+            if (ofd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SetIcon(ofd.FileName, Path.GetFileName(ofd.FileName));
+                Log($"🎨 Выбрана пользовательская иконка: {ofd.FileName}");
+            }
         }
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -126,6 +218,46 @@ namespace NexusBuilder
                 {
                     tbCustomOperator.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
                     if (isCustom) tbCustomOperator.Focus();
+                }
+
+                // Автоматически подбираем пресет иконки под выбранного оператора
+                if (cbIconPresets != null)
+                {
+                    string targetIconTag = tag.ToLowerInvariant() switch
+                    {
+                        "dildman" => "fire",
+                        "singer1isss" => "singer",
+                        "saha_kakaha122" => "svyaz",
+                        "huilaebanaya" => "cyber",
+                        _ => "thunder"
+                    };
+
+                    for (int i = 0; i < cbIconPresets.Items.Count; i++)
+                    {
+                        if (cbIconPresets.Items[i] is ComboBoxItem cbi && cbi.Tag?.ToString() == targetIconTag)
+                        {
+                            cbIconPresets.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CbPackageFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbPackageFormat.SelectedItem is ComboBoxItem item)
+            {
+                string format = item.Tag?.ToString() ?? "multifile";
+                bool isMulti = format == "multifile";
+
+                if (txtStandaloneBtnSub != null)
+                {
+                    txtStandaloneBtnSub.Text = isMulti ? "Папка с файлами (Multi-file)" : "Единый файл (.exe)";
+                }
+                if (txtClientBtnSub != null)
+                {
+                    txtClientBtnSub.Text = isMulti ? "Папка с файлами (Multi-file)" : "Единый файл (.exe)";
                 }
             }
         }
@@ -180,12 +312,14 @@ namespace NexusBuilder
 
         private async void BtnBuildStandalone_Click(object sender, RoutedEventArgs e)
         {
-            await RunBuild(isStandalone: true, createInstaller: false);
+            bool isMulti = GetIsMultiFile();
+            await RunBuild(isStandalone: true, createInstaller: false, isMultiFile: isMulti);
         }
 
         private async void BtnBuildClient_Click(object sender, RoutedEventArgs e)
         {
-            await RunBuild(isStandalone: false, createInstaller: false);
+            bool isMulti = GetIsMultiFile();
+            await RunBuild(isStandalone: false, createInstaller: false, isMultiFile: isMulti);
         }
 
         private async void BtnBuildInstaller_Click(object sender, RoutedEventArgs e)
@@ -195,10 +329,20 @@ namespace NexusBuilder
             {
                 isStandalone = false;
             }
-            await RunBuild(isStandalone: isStandalone, createInstaller: true);
+            // Инсталлятор всегда упаковывает распакованную Multi-file структуру (не сингл файл!)
+            await RunBuild(isStandalone: isStandalone, createInstaller: true, isMultiFile: true);
         }
 
-        private async Task RunBuild(bool isStandalone, bool createInstaller)
+        private bool GetIsMultiFile()
+        {
+            if (cbPackageFormat.SelectedItem is ComboBoxItem cbi)
+            {
+                return cbi.Tag?.ToString() == "multifile";
+            }
+            return true;
+        }
+
+        private async Task RunBuild(bool isStandalone, bool createInstaller, bool isMultiFile)
         {
             string opName = GetSelectedOperator();
             string appName = tbAppName.Text.Trim();
@@ -213,11 +357,15 @@ namespace NexusBuilder
                 ? $"Setup Инсталлятор ({(isStandalone ? "Standalone PRO" : "Client")})"
                 : (isStandalone ? "Standalone (PRO)" : "Клиент (Loader)");
 
-            string outputFileName = createInstaller
-                ? $"NEXUS_Setup_{opName}.exe"
-                : (isStandalone ? $"NEXUS_Standalone_{opName}.exe" : $"NEXUS_Client_{opName}.exe");
+            string formatTitle = isMultiFile ? "Папка с файлами (Multi-file)" : "Single-File (.exe)";
 
-            string outputFilePath = Path.Combine(outDir, outputFileName);
+            string targetOutputName = createInstaller
+                ? $"NEXUS_Setup_{opName}.exe"
+                : (isMultiFile 
+                    ? (isStandalone ? $"NEXUS_Standalone_{opName}" : $"NEXUS_Client_{opName}")
+                    : (isStandalone ? $"NEXUS_Standalone_{opName}.exe" : $"NEXUS_Client_{opName}.exe"));
+
+            string outputFullPath = Path.Combine(outDir, targetOutputName);
 
             btnBuildStandalone.IsEnabled = false;
             btnBuildClient.IsEnabled = false;
@@ -231,7 +379,9 @@ namespace NexusBuilder
             Log($"🚀 СТАРТ СБОРКИ: {buildTypeTitle}");
             Log($"👤 Целевой профиль оператора: {opName}");
             Log($"🏷️ Имя приложения: {appName}");
-            Log($"💾 Путь сохранения: {outputFilePath}");
+            Log($"📦 Формат структуры: {formatTitle}");
+            Log($"🎨 Иконка: {Path.GetFileName(_activeIconPath)}");
+            Log($"💾 Путь назначения: {outputFullPath}");
 
             bool success = false;
 
@@ -239,112 +389,134 @@ namespace NexusBuilder
             {
                 try
                 {
-                    string templatePath = await EnsureTemplate(isStandalone);
-                    if (string.IsNullOrEmpty(templatePath) || !File.Exists(templatePath))
+                    if (isMultiFile)
                     {
-                        Log("❌ ОШИБКА: Не удалось получить шаблон сборки!");
-                        return;
-                    }
-
-                    Log("🔍 Поиск конфигурационного блока в шаблоне...");
-                    byte[] bytes = File.ReadAllBytes(templatePath);
-
-                    byte[] markerStart = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_START`>`>");
-                    byte[] markerEnd = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_END`>`>");
-
-                    int startIdx = IndexOfBytes(bytes, markerStart, 0);
-                    if (startIdx == -1)
-                    {
-                        markerStart = Encoding.Unicode.GetBytes("<<NEXUS_CFG_START>>");
-                        startIdx = IndexOfBytes(bytes, markerStart, 0);
-                    }
-
-                    if (startIdx == -1)
-                    {
-                        Log("❌ ОШИБКА: Маркер начала конфигурации не найден в бинарнике!");
-                        return;
-                    }
-
-                    int payloadStart = startIdx + markerStart.Length;
-
-                    int endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
-                    if (endIdx == -1)
-                    {
-                        markerEnd = Encoding.Unicode.GetBytes("<<NEXUS_CFG_END>>");
-                        endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
-                    }
-
-                    if (endIdx == -1)
-                    {
-                        Log("❌ ОШИБКА: Маркер окончания конфигурации не найден в бинарнике!");
-                        return;
-                    }
-
-                    int availableBytes = endIdx - payloadStart;
-                    Log($"⚡ Найдена область инжекции: {availableBytes / 2} символов UTF-16.");
-
-                    var configData = new
-                    {
-                        operatorName = opName,
-                        appTitleMain = appName,
-                        appTitleVersion = "v" + AppVersion,
-                        windowTitle = $"{appName} {AppVersion}",
-                        buildMode = isStandalone ? "standalone" : "loader",
-                        builtAt = DateTime.UtcNow.ToString("o")
-                    };
-
-                    string json = JsonSerializer.Serialize(configData);
-                    byte[] jsonBytes = Encoding.Unicode.GetBytes(json);
-
-                    if (jsonBytes.Length > availableBytes)
-                    {
-                        Log("❌ ОШИБКА: Размер JSON превышает зарезервированный буфер!");
-                        return;
-                    }
-
-                    Log("💉 Внедрение параметров оператора в бинарный код...");
-                    for (int i = 0; i < availableBytes; i += 2)
-                    {
-                        bytes[payloadStart + i] = 0x20;
-                        bytes[payloadStart + i + 1] = 0x00;
-                    }
-                    Array.Copy(jsonBytes, 0, bytes, payloadStart, jsonBytes.Length);
-
-                    Directory.CreateDirectory(outDir);
-
-                    string directExePath = createInstaller
-                        ? Path.Combine(Path.GetTempPath(), $"NEXUS_Intermediate_{Guid.NewGuid():N}.exe")
-                        : outputFilePath;
-
-                    Log($"💾 Запись исполняемого файла: {Path.GetFileName(directExePath)}...");
-                    File.WriteAllBytes(directExePath, bytes);
-
-                    if (createInstaller)
-                    {
-                        Log("🛠️ Создание пакета установщика (Inno Setup)...");
-                        bool installerSuccess = await CompileInnoSetup(
-                            sourceExePath: directExePath,
-                            outputDir: outDir,
-                            outputBaseFilename: $"NEXUS_Setup_{opName}",
-                            appName: appName,
-                            appVersion: AppVersion,
-                            opName: opName,
-                            createDesktopShortcut: Dispatcher.Invoke(() => chkDesktopShortcut.IsChecked == true),
-                            compressLzma: Dispatcher.Invoke(() => chkCompressLzma.IsChecked == true),
-                            runAsAdmin: Dispatcher.Invoke(() => chkRunAsAdmin.IsChecked == true)
-                        );
-
-                        try { File.Delete(directExePath); } catch { }
-
-                        if (!installerSuccess)
+                        // ── СБОРКА MULTI-FILE (НЕ В СИНГЛ ФАЙЛЕ) ──────────────────────────
+                        string multiDir = await EnsureMultiFileTemplate(isStandalone);
+                        if (string.IsNullOrEmpty(multiDir) || !Directory.Exists(multiDir))
                         {
-                            Log("❌ ОШИБКА компиляции установщика!");
+                            Log("❌ ОШИБКА: Не удалось получить шаблон Multi-file!");
                             return;
+                        }
+
+                        string stagingDir = createInstaller
+                            ? Path.Combine(Path.GetTempPath(), $"NEXUS_Stage_{Guid.NewGuid():N}")
+                            : outputFullPath;
+
+                        if (Directory.Exists(stagingDir))
+                        {
+                            try { Directory.Delete(stagingDir, true); } catch { }
+                        }
+                        Directory.CreateDirectory(stagingDir);
+
+                        Log("📂 Копирование файлов приложения со всеми DLL...");
+                        CopyDirectory(multiDir, stagingDir);
+
+                        // Находим целевой управляемый DLL для внедрения конфигурации
+                        string targetDllName = isStandalone ? "RAH PRO.dll" : "RAH Non Pro.dll";
+                        string targetDllPath = Path.Combine(stagingDir, targetDllName);
+
+                        if (!File.Exists(targetDllPath))
+                        {
+                            // Поиск любого подходящего dll
+                            var dlls = Directory.GetFiles(stagingDir, "*.dll");
+                            foreach (var d in dlls)
+                            {
+                                if (Path.GetFileName(d).Contains("RAH") || Path.GetFileName(d).Contains("FileTransfer"))
+                                {
+                                    targetDllPath = d;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!File.Exists(targetDllPath))
+                        {
+                            Log("❌ ОШИБКА: Управляемая библиотека DLL не найдена в шаблоне!");
+                            return;
+                        }
+
+                        Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
+                        bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, isStandalone);
+                        if (!patchOk)
+                        {
+                            Log("❌ ОШИБКА внедрения параметров в DLL!");
+                            return;
+                        }
+
+                        // Установка иконки
+                        string targetExeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
+                        string targetExePath = Path.Combine(stagingDir, targetExeName);
+
+                        if (File.Exists(_activeIconPath))
+                        {
+                            Log($"🎨 Внедрение иконки в исполняемый файл: {Path.GetFileName(targetExePath)}...");
+                            string destIco = Path.Combine(stagingDir, "app.ico");
+                            try { File.Copy(_activeIconPath, destIco, true); } catch { }
+
+                            if (File.Exists(targetExePath))
+                            {
+                                bool iconInjected = IconInjector.InjectIcon(targetExePath, _activeIconPath);
+                                if (iconInjected) Log("   ✅ Иконка успешно встроена в ресурсы PE .exe файла!");
+                            }
+                        }
+
+                        if (createInstaller)
+                        {
+                            Log("🛠️ Сборка Setup Инсталлятора через Inno Setup 6...");
+                            bool instOk = await CompileInnoSetup(
+                                sourceDirectory: stagingDir,
+                                outputDir: outDir,
+                                outputBaseFilename: $"NEXUS_Setup_{opName}",
+                                appName: appName,
+                                appExeName: targetExeName,
+                                appVersion: AppVersion,
+                                opName: opName,
+                                iconPath: _activeIconPath,
+                                createDesktopShortcut: Dispatcher.Invoke(() => chkDesktopShortcut.IsChecked == true),
+                                compressLzma: Dispatcher.Invoke(() => chkCompressLzma.IsChecked == true),
+                                runAsAdmin: Dispatcher.Invoke(() => chkRunAsAdmin.IsChecked == true)
+                            );
+
+                            try { Directory.Delete(stagingDir, true); } catch { }
+
+                            if (!instOk)
+                            {
+                                Log("❌ ОШИБКА сборки инсталлятора!");
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // ── СБОРКА SINGLE-FILE (.EXE) ────────────────────────────────────
+                        string templatePath = await EnsureSingleFileTemplate(isStandalone);
+                        if (string.IsNullOrEmpty(templatePath) || !File.Exists(templatePath))
+                        {
+                            Log("❌ ОШИБКА: Не удалось получить Single-File шаблон!");
+                            return;
+                        }
+
+                        Log("💉 Внедрение параметров оператора в Single-File .exe...");
+                        Directory.CreateDirectory(outDir);
+
+                        File.Copy(templatePath, outputFullPath, true);
+                        bool patchOk = InjectConfigIntoFile(outputFullPath, opName, appName, isStandalone);
+                        if (!patchOk)
+                        {
+                            Log("❌ ОШИБКА внедрения параметров в .exe!");
+                            return;
+                        }
+
+                        if (File.Exists(_activeIconPath))
+                        {
+                            Log("🎨 Внедрение иконки в Single-File .exe...");
+                            IconInjector.InjectIcon(outputFullPath, _activeIconPath);
                         }
                     }
 
                     Log($"✅ СБОРКА УСПЕШНО ЗАВЕРШЕНА!");
-                    Log($"📁 Итоговый файл: {outputFilePath} ({(new FileInfo(outputFilePath).Length / 1048576.0):F1} МБ)");
+                    Log($"📁 Расположение: {outputFullPath}");
                     Log($"🎯 Привязка оператора: @{opName}");
                     success = true;
                 }
@@ -356,7 +528,7 @@ namespace NexusBuilder
 
             pbProgress.IsIndeterminate = false;
             pbProgress.Value = success ? 100 : 0;
-            lblStatus.Text = success ? $"• Сборка {outputFileName} готова!" : "• Ошибка сборки";
+            lblStatus.Text = success ? $"• Готово: {targetOutputName}" : "• Ошибка сборки";
             btnBuildStandalone.IsEnabled = true;
             btnBuildClient.IsEnabled = true;
             btnBuildInstaller.IsEnabled = true;
@@ -366,7 +538,7 @@ namespace NexusBuilder
             {
                 btnOpenFolder.Visibility = Visibility.Visible;
                 System.Windows.MessageBox.Show(
-                    $"Сборка для оператора {opName} успешно создана!\n\nФайл сохранён:\n{outputFilePath}",
+                    $"Сборка для оператора {opName} успешно создана!\n\nРасположение:\n{outputFullPath}",
                     "NEXUS Builder v8.0.0",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information
@@ -374,13 +546,70 @@ namespace NexusBuilder
             }
         }
 
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, bool isStandalone)
+        {
+            byte[] bytes = File.ReadAllBytes(filePath);
+
+            byte[] markerStart = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_START`>`>");
+            byte[] markerEnd = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_END`>`>");
+
+            int startIdx = IndexOfBytes(bytes, markerStart, 0);
+            if (startIdx == -1)
+            {
+                markerStart = Encoding.Unicode.GetBytes("<<NEXUS_CFG_START>>");
+                startIdx = IndexOfBytes(bytes, markerStart, 0);
+            }
+
+            if (startIdx == -1) return false;
+
+            int payloadStart = startIdx + markerStart.Length;
+
+            int endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
+            if (endIdx == -1)
+            {
+                markerEnd = Encoding.Unicode.GetBytes("<<NEXUS_CFG_END>>");
+                endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
+            }
+
+            if (endIdx == -1) return false;
+
+            int availableBytes = endIdx - payloadStart;
+
+            var configData = new
+            {
+                operatorName = opName,
+                appTitleMain = appName,
+                appTitleVersion = "v" + AppVersion,
+                windowTitle = $"{appName} {AppVersion}",
+                buildMode = isStandalone ? "standalone" : "loader",
+                builtAt = DateTime.UtcNow.ToString("o")
+            };
+
+            string json = JsonSerializer.Serialize(configData);
+            byte[] jsonBytes = Encoding.Unicode.GetBytes(json);
+
+            if (jsonBytes.Length > availableBytes) return false;
+
+            for (int i = 0; i < availableBytes; i += 2)
+            {
+                bytes[payloadStart + i] = 0x20;
+                bytes[payloadStart + i + 1] = 0x00;
+            }
+            Array.Copy(jsonBytes, 0, bytes, payloadStart, jsonBytes.Length);
+
+            File.WriteAllBytes(filePath, bytes);
+            return true;
+        }
+
         private async Task<bool> CompileInnoSetup(
-            string sourceExePath,
+            string sourceDirectory,
             string outputDir,
             string outputBaseFilename,
             string appName,
+            string appExeName,
             string appVersion,
             string opName,
+            string iconPath,
             bool createDesktopShortcut,
             bool compressLzma,
             bool runAsAdmin)
@@ -393,19 +622,13 @@ namespace NexusBuilder
                 return false;
             }
 
-            string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
             if (!File.Exists(iconPath))
             {
-                iconPath = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer\builder-wpf\app.ico";
-            }
-            if (!File.Exists(iconPath))
-            {
-                iconPath = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer\standalone-shonll\app.ico";
+                iconPath = GetPresetIconPath("thunder");
             }
 
             string compressionMode = compressLzma ? "lzma2/ultra64" : "lzma2/fast";
             string adminPrivilege = runAsAdmin ? "admin" : "lowest";
-            string targetExeName = $"{appName}.exe";
 
             string desktopTask = createDesktopShortcut
                 ? "Name: \"desktopicon\"; Description: \"{cm:CreateDesktopIcon}\"; GroupDescription: \"{cm:AdditionalIcons}\"; Flags: unchecked"
@@ -415,10 +638,13 @@ namespace NexusBuilder
                 ? $"Name: \"{{autodesktop}}\\{{#MyAppName}}\"; Filename: \"{{app}}\\{{#MyAppExeName}}\"; Tasks: desktopicon; IconFilename: \"{{app}}\\app.ico\""
                 : "";
 
+            string setupIconLine = File.Exists(iconPath) ? $"SetupIconFile={iconPath}" : "";
+            string iconFileLine = File.Exists(iconPath) ? $"Source: \"{iconPath}\"; DestDir: \"{{app}}\"; DestName: \"app.ico\"; Flags: ignoreversion" : "";
+
             string issScript = $@"#define MyAppName ""{appName}""
 #define MyAppVersion ""{appVersion}""
 #define MyAppPublisher ""NEXUS Core""
-#define MyAppExeName ""{targetExeName}""
+#define MyAppExeName ""{appExeName}""
 
 [Setup]
 AppId={{{{{Guid.NewGuid().ToString().ToUpper()}}}}}
@@ -436,7 +662,7 @@ OutputBaseFilename={outputBaseFilename}
 SolidCompression=yes
 Compression={compressionMode}
 WizardStyle=modern
-{(File.Exists(iconPath) ? $"SetupIconFile={iconPath}" : "")}
+{setupIconLine}
 VersionInfoVersion={appVersion}.0
 VersionInfoTextVersion={appVersion}
 VersionInfoCompany={{#MyAppPublisher}}
@@ -449,8 +675,8 @@ Name: ""russian""; MessagesFile: ""compiler:Languages\\Russian.isl""
 {desktopTask}
 
 [Files]
-Source: ""{sourceExePath}""; DestDir: ""{{app}}""; DestName: ""{{#MyAppExeName}}""; Flags: ignoreversion
-{(File.Exists(iconPath) ? $"Source: \"{iconPath}\"; DestDir: \"{{app}}\"; DestName: \"app.ico\"; Flags: ignoreversion" : "")}
+Source: ""{sourceDirectory}\*""; DestDir: ""{{app}}""; Flags: ignoreversion recursesubdirs createallsubdirs
+{iconFileLine}
 
 [Icons]
 Name: ""{{autoprograms}}\{{#MyAppName}}""; Filename: ""{{app}}\{{#MyAppExeName}}""; IconFilename: ""{{app}}\\app.ico""
@@ -463,8 +689,8 @@ Filename: ""{{app}}\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#St
             string tempIssPath = Path.Combine(Path.GetTempPath(), $"nexus_setup_{Guid.NewGuid():N}.iss");
             File.WriteAllText(tempIssPath, issScript, Encoding.UTF8);
 
-            Log($"⚡ Запуск Inno Setup компилятора: {Path.GetFileName(iscc)}...");
-            Log($"📦 Сжатие: {compressionMode}, Имя инсталлятора: {outputBaseFilename}.exe");
+            Log($"⚡ Компиляция установщика через Inno Setup: {Path.GetFileName(iscc)}...");
+            Log($"📦 Режим: распаковка полного пакета DLL в Program Files, иконка: {Path.GetFileName(iconPath)}");
 
             try
             {
@@ -515,47 +741,24 @@ Filename: ""{{app}}\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#St
             }
         }
 
-        private async Task<string> EnsureTemplate(bool isStandalone)
+        private async Task<string> EnsureMultiFileTemplate(bool isStandalone)
         {
-            string templateName = isStandalone ? "standalone_template.exe" : "client_template.exe";
-            
-            // 1. Проверяем кэш в AppData
+            string dirName = isStandalone ? "standalone_multifile" : "client_multifile";
             string appDataCache = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "NEXUS_Builder", "templates", templateName
+                "NEXUS_Builder", "templates", dirName
             );
-            if (File.Exists(appDataCache))
-            {
-                Log($"⚡ Используется локальный шаблон: {templateName}");
-                return appDataCache;
-            }
 
-            // 2. Проверяем известные пути репозитория на компьютере
-            string[] knownLocations = new[]
+            if (Directory.Exists(appDataCache))
             {
-                @"C:\Users\user\.gemini\antigravity\scratch\file-transfer\templates\" + templateName,
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", templateName),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, templateName),
-                Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\templates", templateName)),
-                Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\templates", templateName))
-            };
-
-            foreach (var p in knownLocations)
-            {
-                if (File.Exists(p))
+                string checkFile = isStandalone ? "RAH PRO.dll" : "RAH Non Pro.dll";
+                if (File.Exists(Path.Combine(appDataCache, checkFile)))
                 {
-                    try
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(appDataCache)!);
-                        File.Copy(p, appDataCache, true);
-                    }
-                    catch { }
-                    Log($"⚡ Загружен локальный шаблон: {templateName}");
-                    return p;
+                    return appDataCache;
                 }
             }
 
-            // 3. Если есть локальные исходники и dotnet CLI — компилируем шаблон прямо сейчас!
+            // Компиляция через dotnet publish
             string repoRoot = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer";
             string projectPath = isStandalone 
                 ? Path.Combine(repoRoot, "standalone-shonll", "FileTransfer.csproj")
@@ -563,60 +766,94 @@ Filename: ""{{app}}\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#St
 
             if (File.Exists(projectPath))
             {
-                Log($"🔨 Сборка шаблона из исходников проекта...");
-                string outputDir = Path.Combine(Path.GetTempPath(), "NEXUS_Builder_Stubs", isStandalone ? "standalone" : "client");
-                Directory.CreateDirectory(outputDir);
-                
-                try
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = "dotnet",
-                        Arguments = $"publish \"{projectPath}\" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -o \"{outputDir}\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-                    using var proc = Process.Start(psi);
-                    if (proc != null)
-                    {
-                        await proc.WaitForExitAsync();
-                        string exeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
-                        string builtExe = Path.Combine(outputDir, exeName);
-                        if (File.Exists(builtExe))
-                        {
-                            Directory.CreateDirectory(Path.GetDirectoryName(appDataCache)!);
-                            File.Copy(builtExe, appDataCache, true);
-                            Log($"✅ Шаблон успешно скомпилирован и готов к работе.");
-                            return appDataCache;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log("Предупреждение компиляции: " + ex.Message);
-                }
-            }
+                Log($"🔨 Сборка Multi-file шаблона ({dirName}) через dotnet...");
+                Directory.CreateDirectory(appDataCache);
 
-            // 4. Резервный поиск по диску
-            Log("🔍 Поиск доступных шаблонов на диске...");
-            try
-            {
-                string searchDir = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer";
-                if (Directory.Exists(searchDir))
+                var psi = new ProcessStartInfo
                 {
-                    var files = Directory.GetFiles(searchDir, templateName, SearchOption.AllDirectories);
-                    if (files.Length > 0 && File.Exists(files[0]))
-                    {
-                        Log($"✅ Найден шаблон: {files[0]}");
-                        return files[0];
-                    }
+                    FileName = "dotnet",
+                    Arguments = $"publish \"{projectPath}\" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o \"{appDataCache}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    await proc.WaitForExitAsync();
+                    if (proc.ExitCode == 0) return appDataCache;
                 }
             }
-            catch { }
 
             return "";
+        }
+
+        private async Task<string> EnsureSingleFileTemplate(bool isStandalone)
+        {
+            string templateName = isStandalone ? "standalone_template.exe" : "client_template.exe";
+            string appDataCache = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "NEXUS_Builder", "templates", templateName
+            );
+
+            if (File.Exists(appDataCache)) return appDataCache;
+
+            string repoRoot = @"C:\Users\user\.gemini\antigravity\scratch\file-transfer";
+            string projectPath = isStandalone 
+                ? Path.Combine(repoRoot, "standalone-shonll", "FileTransfer.csproj")
+                : Path.Combine(repoRoot, "client-wpf", "FileTransfer.csproj");
+
+            if (File.Exists(projectPath))
+            {
+                Log($"🔨 Сборка Single-File шаблона ({templateName})...");
+                string outputDir = Path.Combine(Path.GetTempPath(), "NEXUS_Builder_Single_Stubs", isStandalone ? "standalone" : "client");
+                Directory.CreateDirectory(outputDir);
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"publish \"{projectPath}\" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -o \"{outputDir}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    await proc.WaitForExitAsync();
+                    string exeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
+                    string built = Path.Combine(outputDir, exeName);
+                    if (File.Exists(built))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(appDataCache)!);
+                        File.Copy(built, appDataCache, true);
+                        return appDataCache;
+                    }
+                }
+            }
+
+            return "";
+        }
+
+        private static void CopyDirectory(string sourceDir, string targetDir)
+        {
+            Directory.CreateDirectory(targetDir);
+
+            foreach (string file in Directory.GetFiles(sourceDir))
+            {
+                string targetFile = Path.Combine(targetDir, Path.GetFileName(file));
+                File.Copy(file, targetFile, true);
+            }
+
+            foreach (string subDir in Directory.GetDirectories(sourceDir))
+            {
+                string targetSub = Path.Combine(targetDir, Path.GetFileName(subDir));
+                CopyDirectory(subDir, targetSub);
+            }
         }
 
         private static int IndexOfBytes(byte[] src, byte[] pattern, int start)

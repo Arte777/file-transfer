@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -21,5 +21,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="app.ico" />
+    <Resource Include="Resources\Icons\*.ico" />
   </ItemGroup>
 </Project>
