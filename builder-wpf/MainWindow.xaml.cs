@@ -19,10 +19,12 @@ namespace NexusBuilder
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
         private string? _cachedIsccPath;
         private string _activeIconPath = "";
+        private bool _isInitialized = false;
 
         public MainWindow()
         {
             InitializeComponent();
+            _isInitialized = true;
             
             string defaultOut = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
@@ -130,28 +132,40 @@ namespace NexusBuilder
         private void SetIcon(string path, string displayName)
         {
             _activeIconPath = path;
-            lblIconName.Text = displayName;
-
-            try
+            if (lblIconName != null)
             {
-                if (File.Exists(path))
-                {
-                    var bmp = new BitmapImage();
-                    bmp.BeginInit();
-                    bmp.UriSource = new Uri(path, UriKind.Absolute);
-                    bmp.CacheOption = BitmapCacheOption.OnLoad;
-                    bmp.EndInit();
-                    imgIconPreview.Source = bmp;
-                }
+                lblIconName.Text = displayName;
             }
-            catch
+
+            if (imgIconPreview != null)
             {
-                imgIconPreview.Source = null;
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new Uri(path, UriKind.Absolute);
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.EndInit();
+                        imgIconPreview.Source = bmp;
+                    }
+                    else
+                    {
+                        imgIconPreview.Source = null;
+                    }
+                }
+                catch
+                {
+                    imgIconPreview.Source = null;
+                }
             }
         }
 
         private void CbIconPresets_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized || cbIconPresets == null) return;
+
             if (cbIconPresets.SelectedItem is ComboBoxItem item)
             {
                 string tag = item.Tag?.ToString() ?? "thunder";
@@ -210,6 +224,8 @@ namespace NexusBuilder
 
         private void CbOperators_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized || cbOperators == null) return;
+
             if (cbOperators.SelectedItem is ComboBoxItem item)
             {
                 string tag = item.Tag?.ToString() ?? "";
@@ -246,6 +262,8 @@ namespace NexusBuilder
 
         private void CbPackageFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!_isInitialized || cbPackageFormat == null) return;
+
             if (cbPackageFormat.SelectedItem is ComboBoxItem item)
             {
                 string format = item.Tag?.ToString() ?? "multifile";
