@@ -14,6 +14,7 @@ npm-debug.log*
 
 # ── Server data & logs ──────────────────────────────────
 server/uploads/
+server/downloads/
 server/server.log
 server/certs/
 **/*.log
@@ -29,7 +30,40 @@ Desktop.ini
 .idea/
 *.user
 *.suo
+.agents/
 
-# ── Misc ────────────────────────────────────────────────
+# ── Misc / cleanup ──────────────────────────────────────
 nul
+opencode
 opencode.json
+*.rar
+
+# ── Sensitive / secrets ─────────────────────────────────
+*ANTHROPIC*
+*API_KEY*
+cert.pem
+cert_key.pem
+*.pem
+cookies.txt
+
+# ── Old / deprecated folders ────────────────────────────
+docs_old/
+scratch/
+
+# ── Scripts (local dev only) ────────────────────────────
+*.ps1
+
+# ── Client / build tools (local only) ───────────────────
+client-wpf/
+client-wpf-*/
+standalone-*/
+setup/
+compiled_clients/
+SilentCryptoMiner-main/
+UCompilers/
+
+# ── Conversation logs / debug ───────────────────────────
+*conversation*.txt
+*history*.txt
+full_conversation_history.txt
+conversation_context.txt
