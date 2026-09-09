@@ -182,6 +182,11 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function getCanonicalOperator(username) {
   if (!username || typeof username !== 'string') return null;
   const match = KNOWN_OPERATORS.find(k => k.toLowerCase() === username.toLowerCase());

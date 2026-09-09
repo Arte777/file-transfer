@@ -66,7 +66,7 @@ async function apiFetch(path, opts = {}) {
   try {
     const resp = await fetch(API_BASE + path, opts);
 
-    if (resp.status === 401 || resp.status === 403) {
+    if (resp.status === 401) {
       clearAuth();
       location.href = 'login.html';
       throw new Error('auth');
