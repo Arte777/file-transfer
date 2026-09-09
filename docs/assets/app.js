@@ -1958,7 +1958,8 @@ function ensureWorkerProfileModal() {
   };
   overlay.innerHTML = `
     <div class="worker-profile-card">
-      <div class="wpc-header-banner">
+      <div class="wpc-header-banner" id="wpcBanner">
+        <div class="wpc-effect-overlay" id="wpcEffectOverlay"></div>
         <button type="button" class="wpc-close-btn" onclick="closeWorkerProfile()" title="Закрыть (Esc)">✕</button>
       </div>
       <div id="wpcDynamicBody"></div>
@@ -2017,6 +2018,47 @@ function renderWorkerProfileCard(data) {
   const roleBadgeClass = isTargetAdmin ? 'admin' : 'worker';
   const roleText = isTargetAdmin ? 'Админ' : 'Воркер';
   const avatarHtml = operatorAvatarHTML(data.user, data.avatarImage, data.avatar);
+
+  // ── Apply banner ──
+  const banner = document.getElementById('wpcBanner');
+  if (banner) {
+    // remove all preset classes
+    banner.className = 'wpc-header-banner';
+    // remove old banner img
+    const oldImg = banner.querySelector('.wpc-banner-img');
+    if (oldImg) oldImg.remove();
+
+    const bi = data.bannerImage || '';
+    if (bi.startsWith('preset:')) {
+      banner.classList.add(bi); // e.g. 'preset:aurora' → class 'preset-aurora'
+      banner.classList.add(bi.replace('preset:', 'preset-'));
+    } else if (bi.startsWith('data:image/') || bi.startsWith('http')) {
+      const img = document.createElement('img');
+      img.className = 'wpc-banner-img';
+      img.src = bi;
+      banner.insertBefore(img, banner.firstChild);
+    } else if (bi.startsWith('#')) {
+      // solid color
+      banner.style.background = bi;
+    } else {
+      // default gradient — already set via class, no-op
+    }
+  }
+
+  // ── Apply particle effect ──
+  const effectOverlay = document.getElementById('wpcEffectOverlay');
+  if (effectOverlay) {
+    effectOverlay.innerHTML = '';
+    const effect = data.profileEffect || '';
+    if (effect && effect !== 'none') {
+      spawnProfileEffect(effectOverlay, effect);
+    }
+  }
+
+  // ── Avatar decoration class ──
+  const decoClass = data.avatarDecoration && data.avatarDecoration !== 'none'
+    ? 'deco-' + data.avatarDecoration
+    : '';
 
   let linksHtml = '';
   if (data.github) {
@@ -2091,7 +2133,7 @@ function renderWorkerProfileCard(data) {
 
   cardBody.innerHTML = `
     <div class="wpc-body">
-      <div class="wpc-avatar-wrap">
+      <div class="wpc-avatar-wrap ${decoClass}">
         <div class="wpc-avatar-img">${avatarHtml}</div>
         <div class="wpc-online-dot ${isOnline ? '' : 'offline'}" title="${isOnline ? 'В сети' : 'Не в сети'}"></div>
       </div>
@@ -2115,6 +2157,36 @@ function renderWorkerProfileCard(data) {
     </div>
   `;
 }
+
+function spawnProfileEffect(container, effect) {
+  const EFFECT_MAP = {
+    snow:    { cls: 'snow-particle',   emoji: ['❄️','❅','❆'], count: 14 },
+    leaves:  { cls: 'leaf-particle',   emoji: ['🍂','🍁','🌿','🍃'], count: 12 },
+    stars:   { cls: 'star-particle',   emoji: ['✨','⭐','🌟','💫'], count: 16 },
+    fire:    { cls: 'ember-particle',  emoji: null, count: 18 },
+    bubbles: { cls: 'bubble-particle', emoji: null, count: 12 },
+    sakura:  { cls: 'cherry-particle', emoji: ['🌸','🌺','💮'], count: 14 },
+  };
+  const cfg = EFFECT_MAP[effect];
+  if (!cfg) return;
+  for (let i = 0; i < cfg.count; i++) {
+    const el = document.createElement('div');
+    el.className = cfg.cls;
+    el.style.left = (Math.random() * 95) + '%';
+    el.style.animationDuration = (2 + Math.random() * 4) + 's';
+    el.style.animationDelay = (Math.random() * 5) + 's';
+    if (cfg.emoji) {
+      el.textContent = cfg.emoji[Math.floor(Math.random() * cfg.emoji.length)];
+    } else if (effect === 'bubbles') {
+      const sz = (6 + Math.random() * 14) + 'px';
+      el.style.width = sz;
+      el.style.height = sz;
+      el.style.left = (Math.random() * 95) + '%';
+    }
+    container.appendChild(el);
+  }
+}
+
 
 async function toggleMuteOperator(user, currentlyMuted) {
   try {

@@ -1069,6 +1069,9 @@ app.get('/api/operators', requireAuth, async (req, res) => {
         displayName: s.displayName || op,
         avatar: s.avatar || (DEFAULT_SETTINGS[op] && DEFAULT_SETTINGS[op].avatar) || '👤',
         avatarImage: s.avatarImage || null,
+        bannerImage: s.bannerImage || null,
+        profileEffect: s.profileEffect || null,
+        avatarDecoration: s.avatarDecoration || null,
         themeColor: s.themeColor || '#00f0ff',
         bio: s.bio || '',
         role: getOperatorRole(op),
@@ -1101,6 +1104,9 @@ app.get('/api/operators/:user', requireAuth, async (req, res) => {
       displayName: s.displayName || op,
       avatar: s.avatar || (DEFAULT_SETTINGS[op] && DEFAULT_SETTINGS[op].avatar) || '👤',
       avatarImage: s.avatarImage || null,
+      bannerImage: s.bannerImage || null,
+      profileEffect: s.profileEffect || null,
+      avatarDecoration: s.avatarDecoration || null,
       themeColor: s.themeColor || '#00f0ff',
       bio: s.bio || '',
       role: getOperatorRole(op),
@@ -1219,7 +1225,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
 
 app.post('/api/settings', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
-  const { displayName, avatar, avatarImage, themeColor, bio, github, website, telegram, newPassword, currentPassword } = req.body || {};
+  const { displayName, avatar, avatarImage, bannerImage, profileEffect, avatarDecoration, themeColor, bio, github, website, telegram, newPassword, currentPassword } = req.body || {};
 
   if (newPassword) {
     const canonical = getCanonicalOperator(user);
@@ -1255,6 +1261,28 @@ app.post('/api/settings', requireAuth, async (req, res) => {
     if (avatarImage.length <= 3000000) {
       patch.avatarImage = avatarImage;
     }
+  }
+
+  if (bannerImage === null || bannerImage === '') {
+    patch.bannerImage = null;
+  } else if (typeof bannerImage === 'string') {
+    if (bannerImage.startsWith('data:image/') || bannerImage.startsWith('http://') || bannerImage.startsWith('https://') || bannerImage.startsWith('preset:')) {
+      if (bannerImage.length <= 3500000) {
+        patch.bannerImage = bannerImage;
+      }
+    }
+  }
+
+  if (profileEffect === null || profileEffect === '' || profileEffect === 'none') {
+    patch.profileEffect = null;
+  } else if (typeof profileEffect === 'string' && profileEffect.length <= 32) {
+    patch.profileEffect = profileEffect;
+  }
+
+  if (avatarDecoration === null || avatarDecoration === '' || avatarDecoration === 'none') {
+    patch.avatarDecoration = null;
+  } else if (typeof avatarDecoration === 'string' && avatarDecoration.length <= 32) {
+    patch.avatarDecoration = avatarDecoration;
   }
 
   if (typeof themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(themeColor)) patch.themeColor = themeColor;

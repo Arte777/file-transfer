@@ -46,6 +46,28 @@ async function loadSettings() {
       localStorage.setItem('ft_avatar', av);
     }
 
+    // Load banner
+    if (s.bannerImage) {
+      setBannerValue(s.bannerImage);
+    }
+
+    // Load effect
+    const eff = s.profileEffect || 'none';
+    const effInput = document.getElementById('profileEffectValue');
+    if (effInput) effInput.value = eff;
+    document.querySelectorAll('.effect-btn').forEach(btn => {
+      btn.style.borderColor = btn.dataset.effect === eff ? 'var(--accent)' : 'var(--border)';
+      btn.style.color = btn.dataset.effect === eff ? '#fff' : 'var(--text-muted)';
+    });
+
+    // Load decoration
+    const deco = s.avatarDecoration || 'none';
+    const decoInput = document.getElementById('avatarDecorationValue');
+    if (decoInput) decoInput.value = deco;
+    document.querySelectorAll('.deco-btn').forEach(btn => {
+      btn.style.outline = btn.dataset.deco === deco ? '3px solid var(--accent)' : 'none';
+    });
+
     updatePreview();
     highlightSelectedEmoji(s.avatar || '');
   } catch (e) {
@@ -157,6 +179,99 @@ function updatePreview() {
   });
 });
 
+// ── Banner helpers ─────────────────────────────────────────────────────────────
+const BANNER_PRESETS = {
+  aurora: 'linear-gradient(135deg,#0b3954,#20dfb0)',
+  fire:   'linear-gradient(135deg,#7a1200,#ffb347)',
+  neon:   'linear-gradient(135deg,#2d0066,#cc00ff)',
+  forest: 'linear-gradient(135deg,#143314,#55c355)',
+  ocean:  'linear-gradient(135deg,#001a4f,#0098ff)',
+  sunset: 'linear-gradient(135deg,#4b0066,#ff9800)',
+  cyber:  'linear-gradient(135deg,#001a30,#00f0ff)',
+  rose:   'linear-gradient(135deg,#4a003a,#ff6b9e)',
+};
+
+function setBannerValue(val) {
+  const hidden = document.getElementById('bannerValue');
+  const inner = document.getElementById('bannerPreviewInner');
+  if (!hidden || !inner) return;
+  hidden.value = val;
+  if (val.startsWith('preset:')) {
+    const key = val.replace('preset:', '');
+    inner.style.background = BANNER_PRESETS[key] || 'linear-gradient(135deg,rgba(0,240,255,0.18),rgba(168,85,247,0.18))';
+    inner.innerHTML = '';
+  } else if (val.startsWith('data:image/') || val.startsWith('http')) {
+    inner.style.background = 'none';
+    inner.innerHTML = `<img src="${val}" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    inner.style.background = 'linear-gradient(135deg,rgba(0,240,255,0.18),rgba(168,85,247,0.18))';
+    inner.innerHTML = '';
+    hidden.value = '';
+  }
+  // highlight active swatch
+  document.querySelectorAll('.banner-swatch').forEach(sw => {
+    sw.style.borderColor = ('preset:' + sw.dataset.preset === val) ? 'var(--accent)' : 'transparent';
+    sw.style.transform = ('preset:' + sw.dataset.preset === val) ? 'scale(1.06)' : '';
+  });
+}
+
+// Banner preset swatches
+document.querySelectorAll('.banner-swatch').forEach(sw => {
+  sw.addEventListener('click', () => setBannerValue('preset:' + sw.dataset.preset));
+});
+
+// Banner clear
+document.getElementById('btnClearBanner')?.addEventListener('click', () => setBannerValue(''));
+
+// Banner file upload
+document.getElementById('bannerFileInput')?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('Файл слишком большой. Максимум 10 МБ.', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 800, maxH = 280;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      setBannerValue(canvas.toDataURL('image/jpeg', 0.82));
+      toast('🖼️ Баннер загружен! Нажмите «Сохранить настройки».');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Effect buttons ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.effect-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const eff = btn.dataset.effect;
+    const inp = document.getElementById('profileEffectValue');
+    if (inp) inp.value = eff;
+    document.querySelectorAll('.effect-btn').forEach(b => {
+      b.style.borderColor = b.dataset.effect === eff ? 'var(--accent)' : 'var(--border)';
+      b.style.color = b.dataset.effect === eff ? '#fff' : 'var(--text-muted)';
+    });
+  });
+});
+
+// ── Decoration buttons ─────────────────────────────────────────────────────────
+document.querySelectorAll('.deco-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const deco = btn.dataset.deco;
+    const inp = document.getElementById('avatarDecorationValue');
+    if (inp) inp.value = deco;
+    document.querySelectorAll('.deco-btn').forEach(b => {
+      b.style.outline = b.dataset.deco === deco ? '3px solid var(--accent)' : 'none';
+    });
+  });
+});
+
 // ── Сохранение ────────────────────────────────────────────────────────────────
 const saveBtn = document.getElementById('btnSaveSettings') || document.getElementById('btnSave');
 if (saveBtn) {
@@ -181,6 +296,10 @@ if (saveBtn) {
     localStorage.setItem('ft_soundChime', soundChime);
 
     const avatarVal = document.getElementById('avatarInput')?.value.trim() || '🦊';
+    const bannerVal = document.getElementById('bannerValue')?.value || null;
+    const effectVal = document.getElementById('profileEffectValue')?.value || 'none';
+    const decoVal = document.getElementById('avatarDecorationValue')?.value || 'none';
+
     const data = {
       displayName: name,
       themeColor: '#3b82f6',
@@ -189,7 +308,10 @@ if (saveBtn) {
       website: website,
       telegram: telegram,
       avatar: avatarVal,
-      avatarImage: currentAvatarImageBase64 || null
+      avatarImage: currentAvatarImageBase64 || null,
+      bannerImage: bannerVal || null,
+      profileEffect: effectVal || null,
+      avatarDecoration: decoVal || null,
     };
 
     if (newPwd) {

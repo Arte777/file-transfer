@@ -4488,12 +4488,138 @@ tr.selected {
 }
 
 .wpc-header-banner {
-  height: 90px;
+  height: 120px;
   background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(168, 85, 247, 0.18));
   position: relative;
   display: flex;
   justify-content: flex-end;
   padding: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.wpc-header-banner img.wpc-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.wpc-close-btn { position: relative; z-index: 2; }
+
+/* Banner presets */
+.wpc-header-banner.preset-aurora { background: linear-gradient(135deg, #0d1b2a 0%, #0b3954 40%, #1b6ca8 70%, #20dfb0 100%); }
+.wpc-header-banner.preset-fire   { background: linear-gradient(135deg, #1a0000 0%, #7a1200 40%, #e04000 70%, #ffb347 100%); }
+.wpc-header-banner.preset-neon   { background: linear-gradient(135deg, #060016 0%, #2d0066 40%, #6600cc 70%, #cc00ff 100%); }
+.wpc-header-banner.preset-forest { background: linear-gradient(135deg, #0a1a0a 0%, #143314 40%, #22652a 70%, #55c355 100%); }
+.wpc-header-banner.preset-ocean  { background: linear-gradient(135deg, #000820 0%, #001a4f 40%, #003b9e 70%, #0098ff 100%); }
+.wpc-header-banner.preset-sunset { background: linear-gradient(135deg, #1a0030 0%, #4b0066 30%, #c2185b 60%, #ff9800 100%); }
+.wpc-header-banner.preset-cyber  { background: linear-gradient(135deg, #000a12 0%, #001a30 40%, #003060 70%, #00f0ff 100%); }
+.wpc-header-banner.preset-rose   { background: linear-gradient(135deg, #1a0010 0%, #4a003a 40%, #9e005d 70%, #ff6b9e 100%); }
+
+/* ── Profile particle effects ── */
+.wpc-effect-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+@keyframes snowFall {
+  0%   { transform: translateY(-10%) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(130%) rotate(360deg); opacity: 0; }
+}
+.snow-particle {
+  position: absolute;
+  top: -10%;
+  font-size: 1rem;
+  animation: snowFall linear infinite;
+  opacity: 0;
+}
+
+@keyframes leafFall {
+  0%   { transform: translateY(-10%) rotate(0deg) translateX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(60%) rotate(180deg) translateX(20px); }
+  90%  { opacity: 0.8; }
+  100% { transform: translateY(130%) rotate(360deg) translateX(-15px); opacity: 0; }
+}
+.leaf-particle {
+  position: absolute;
+  top: -10%;
+  font-size: 1.1rem;
+  animation: leafFall ease-in-out infinite;
+  opacity: 0;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  50%       { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+.star-particle {
+  position: absolute;
+  font-size: 0.8rem;
+  animation: sparkle ease-in-out infinite;
+  opacity: 0;
+}
+
+@keyframes emberRise {
+  0%   { transform: translateY(0) scale(1); opacity: 0.9; }
+  100% { transform: translateY(-110%) scale(0.2); opacity: 0; }
+}
+.ember-particle {
+  position: absolute;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff6000;
+  box-shadow: 0 0 6px #ff3000;
+  animation: emberRise ease-out infinite;
+}
+
+@keyframes bubbleRise {
+  0%   { transform: translateY(0) scale(1); opacity: 0.7; }
+  100% { transform: translateY(-130%) scale(1.4); opacity: 0; }
+}
+.bubble-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(0,240,255,0.6);
+  background: rgba(0,240,255,0.08);
+  animation: bubbleRise ease-in infinite;
+}
+
+@keyframes cherryFall {
+  0%   { transform: translateY(-10%) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(130%) rotate(-270deg) translateX(10px); opacity: 0; }
+}
+.cherry-particle {
+  position: absolute;
+  top: -10%;
+  font-size: 0.9rem;
+  animation: cherryFall ease-in infinite;
+  opacity: 0;
+}
+
+/* ── Avatar decoration ring ── */
+.wpc-avatar-wrap.deco-rainbow { background: conic-gradient(#ff0000,#ff7700,#ffff00,#00ff00,#0000ff,#8b00ff,#ff0000); }
+.wpc-avatar-wrap.deco-fire    { background: conic-gradient(#ff0000,#ff6600,#ffcc00,#ff6600,#ff0000); }
+.wpc-avatar-wrap.deco-ice     { background: linear-gradient(135deg,#00cfff,#a0e8ff,#00cfff); }
+.wpc-avatar-wrap.deco-gold    { background: conic-gradient(#b8860b,#ffd700,#daa520,#ffd700,#b8860b); }
+.wpc-avatar-wrap.deco-neon    { background: conic-gradient(#ff00ff,#00f0ff,#a855f7,#ff00ff); }
+.wpc-avatar-wrap.deco-matrix  { background: conic-gradient(#00ff00,#006600,#00ff00); }
+.wpc-avatar-wrap.deco-pulse   { background: linear-gradient(135deg,#00f0ff,#a855f7); animation: pulseRing 1.4s ease-in-out infinite; }
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,240,255,0.5), 0 8px 24px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 0 8px rgba(0,240,255,0), 0 8px 24px rgba(0,0,0,0.5); }
 }
 
 .wpc-close-btn {
