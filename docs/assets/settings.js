@@ -9,6 +9,19 @@ let currentAvatarImageBase64 = null;
 
 // ── Загрузка текущих настроек ─────────────────────────────────────────────────
 async function loadSettings() {
+  // Загружаем локальные предпочтения интерфейса
+  const localViewMode = localStorage.getItem('ft_viewMode') || 'grid';
+  const localRefresh = localStorage.getItem('ft_autoRefresh') || '5000';
+  const localChime = localStorage.getItem('ft_soundChime') !== '0';
+
+  const selView = document.getElementById('prefDefaultView');
+  const selRefresh = document.getElementById('prefAutoRefresh');
+  const chkChime = document.getElementById('prefChime');
+
+  if (selView) selView.value = localViewMode;
+  if (selRefresh) selRefresh.value = localRefresh;
+  if (chkChime) chkChime.checked = localChime;
+
   try {
     const r = await apiFetch('/api/settings');
     const s = await r.json();
@@ -17,12 +30,10 @@ async function loadSettings() {
     const localAvatar = localStorage.getItem('ft_avatar');
     const localAvatarImage = localStorage.getItem('ft_avatarImage');
     const localName = localStorage.getItem('ft_displayName');
-    const localColor = localStorage.getItem('ft_themeColor');
     const localBio = localStorage.getItem('ft_bio');
 
     document.getElementById('displayName').value = localName || s.displayName || '';
     document.getElementById('bio').value = localBio || s.bio || '';
-    document.getElementById('themeColor').value = localColor || s.themeColor || '#00f0ff';
 
     const serverAvatarImage = s.avatarImage || null;
 
@@ -40,17 +51,13 @@ async function loadSettings() {
 
     updatePreview();
     highlightSelectedEmoji(localAvatar || s.avatar);
-    highlightSelectedColor(localColor || s.themeColor);
-    applyAccentColor(localColor || s.themeColor);
   } catch (e) {
     if (e.message !== 'auth') {
       const localAvatar = localStorage.getItem('ft_avatar');
       const localName = localStorage.getItem('ft_displayName');
-      const localColor = localStorage.getItem('ft_themeColor');
       const localBio = localStorage.getItem('ft_bio');
       document.getElementById('displayName').value = localName || '';
       document.getElementById('bio').value = localBio || '';
-      document.getElementById('themeColor').value = localColor || '#00f0ff';
       document.getElementById('avatarInput').value = localAvatar || '🦊';
       updatePreview();
     }
@@ -58,7 +65,7 @@ async function loadSettings() {
 }
 
 // ── Обработка загрузки фото ───────────────────────────────────────────────────
-document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+document.getElementById('avatarFileInput')?.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -92,7 +99,7 @@ document.getElementById('avatarFileInput').addEventListener('change', function(e
   reader.readAsDataURL(file);
 });
 
-document.getElementById('btnResetAvatar').addEventListener('click', function() {
+document.getElementById('btnResetAvatar')?.addEventListener('click', function() {
   currentAvatarImageBase64 = null;
   document.getElementById('avatarFileInput').value = '';
   document.getElementById('avatarInput').value = '🦊';
@@ -100,67 +107,46 @@ document.getElementById('btnResetAvatar').addEventListener('click', function() {
   updatePreview();
 });
 
-// ── Обновление превью ─────────────────────────────────────────────────────────
-function updatePreview() {
-  const name = document.getElementById('displayName').value || getUser();
-  const bio = document.getElementById('bio').value || '...';
-  
-  document.getElementById('previewName').textContent = name;
-  document.getElementById('previewBio').textContent = bio;
-
-  const previewEl = document.getElementById('previewAvatar');
-
-  if (currentAvatarImageBase64) {
-    previewEl.innerHTML = '<img src="' + currentAvatarImageBase64 + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-  } else {
-    const emoji = document.getElementById('avatarInput').value || '🤖';
-    previewEl.innerHTML = escapeHtml(emoji);
-  }
-}
-
-// ── Подсветка выбранного эмодзи ───────────────────────────────────────────────
-function highlightSelectedEmoji(emoji) {
-  document.querySelectorAll('.emoji-btn').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.emoji === emoji);
-  });
-}
-
-// ── Подсветка выбранного цвета ────────────────────────────────────────────────
-function highlightSelectedColor(color) {
-  document.querySelectorAll('.color-dot').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.color === color);
-  });
-}
-
-// ── Emoji picker ──────────────────────────────────────────────────────────────
+// ── Эмодзи пикер ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.emoji-btn').forEach(btn => {
   btn.addEventListener('click', function() {
+    currentAvatarImageBase64 = null;
+    document.getElementById('avatarFileInput').value = '';
     const emoji = this.dataset.emoji;
     document.getElementById('avatarInput').value = emoji;
-    currentAvatarImageBase64 = null;
     highlightSelectedEmoji(emoji);
     updatePreview();
   });
 });
 
-// ── Color picker (Live Preview) ───────────────────────────────────────────────
-function handleColorChange(color) {
-  document.getElementById('themeColor').value = color;
-  highlightSelectedColor(color);
-  applyAccentColor(color);
+function highlightSelectedEmoji(emoji) {
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    if (btn.dataset.emoji === emoji && !currentAvatarImageBase64) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 }
 
-document.querySelectorAll('.color-dot').forEach(btn => {
-  btn.addEventListener('click', function() { handleColorChange(this.dataset.color); });
-});
+// ── Live Preview ─────────────────────────────────────────────────────────────
+function updatePreview() {
+  const preview = document.getElementById('previewAvatar');
+  if (!preview) return;
 
-document.getElementById('themeColor').addEventListener('input', function() {
-  handleColorChange(this.value);
-});
+  if (currentAvatarImageBase64) {
+    preview.innerHTML = `<img src="${currentAvatarImageBase64}" alt="Avatar">`;
+  } else {
+    const emoji = document.getElementById('avatarInput')?.value.trim() || '👤';
+    preview.innerHTML = escapeHtml(emoji);
+  }
+}
 
 // ── Live preview на ввод ──────────────────────────────────────────────────────
 ['displayName', 'avatarInput', 'bio'].forEach(id => {
-  document.getElementById(id).addEventListener('input', function() {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function() {
     if (id === 'avatarInput' && this.value.trim() !== '') {
       currentAvatarImageBase64 = null;
     }
@@ -169,71 +155,82 @@ document.getElementById('themeColor').addEventListener('input', function() {
 });
 
 // ── Сохранение ────────────────────────────────────────────────────────────────
-document.getElementById('btnSave').addEventListener('click', async function() {
-  const btn = this;
-  
-  const name = document.getElementById('displayName').value.trim();
-  const bio = document.getElementById('bio').value.trim();
-  const themeColor = document.getElementById('themeColor').value;
-  const currPwd = document.getElementById('currentPassword').value;
-  const newPwd = document.getElementById('newPassword').value;
-  
-  const data = {
-    displayName: name,
-    themeColor: themeColor,
-    bio: bio
-  };
+const saveBtn = document.getElementById('btnSaveSettings') || document.getElementById('btnSave');
+if (saveBtn) {
+  saveBtn.addEventListener('click', async function() {
+    const btn = this;
+    
+    const name = document.getElementById('displayName')?.value.trim() || '';
+    const bio = document.getElementById('bio')?.value.trim() || '';
+    const currPwd = document.getElementById('currentPassword')?.value || '';
+    const newPwd = document.getElementById('newPassword')?.value || '';
+    
+    // Сохраняем локальные параметры интерфейса
+    const viewMode = document.getElementById('prefDefaultView')?.value || 'grid';
+    const autoRefresh = document.getElementById('prefAutoRefresh')?.value || '5000';
+    const soundChime = document.getElementById('prefChime')?.checked ? '1' : '0';
 
-  if (currentAvatarImageBase64) {
-    data.avatarImage = currentAvatarImageBase64;
-  } else {
-    data.avatar = document.getElementById('avatarInput').value.trim();
-  }
+    localStorage.setItem('ft_viewMode', viewMode);
+    localStorage.setItem('ft_autoRefresh', autoRefresh);
+    localStorage.setItem('ft_soundChime', soundChime);
 
-  if (newPwd) {
-    data.newPassword = newPwd;
-    data.currentPassword = currPwd;
-  }
+    const data = {
+      displayName: name,
+      themeColor: '#3b82f6',
+      bio: bio
+    };
 
-  btn.disabled = true;
-  btn.textContent = 'Сохранение...';
-
-  try {
-    const r = await apiFetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const resp = await r.json();
-    if (resp.success) {
-      toast('✅ Настройки сохранены');
-      document.getElementById('newPassword').value = '';
-      document.getElementById('currentPassword').value = '';
-      currentSettings = resp.settings;
-
-      localStorage.setItem('ft_themeColor', data.themeColor);
-      if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
-      if (data.bio) localStorage.setItem('ft_bio', data.bio);
-
-      if (data.avatarImage) {
-        localStorage.setItem('ft_avatarImage', data.avatarImage);
-        localStorage.removeItem('ft_avatar');
-      } else if (data.avatar) {
-        localStorage.setItem('ft_avatar', data.avatar);
-        localStorage.removeItem('ft_avatarImage');
-      }
-      
-      document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
-      bindLogout();
+    if (currentAvatarImageBase64) {
+      data.avatarImage = currentAvatarImageBase64;
     } else {
-      toast(resp.error || 'Ошибка сохранения', 'err');
+      data.avatar = document.getElementById('avatarInput')?.value.trim() || '👤';
     }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка связи с сервером', 'err');
-  }
 
-  btn.disabled = false;
-  btn.textContent = 'Сохранить настройки';
-});
+    if (newPwd) {
+      data.newPassword = newPwd;
+      data.currentPassword = currPwd;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Сохранение...';
+
+    try {
+      const r = await apiFetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const resp = await r.json();
+      if (resp.success) {
+        toast('✅ Настройки сохранены');
+        if (document.getElementById('newPassword')) document.getElementById('newPassword').value = '';
+        if (document.getElementById('currentPassword')) document.getElementById('currentPassword').value = '';
+        currentSettings = resp.settings || {};
+
+        if (data.displayName) localStorage.setItem('ft_displayName', data.displayName);
+        if (data.bio) localStorage.setItem('ft_bio', data.bio);
+
+        if (data.avatarImage) {
+          localStorage.setItem('ft_avatarImage', data.avatarImage);
+          localStorage.removeItem('ft_avatar');
+        } else if (data.avatar) {
+          localStorage.setItem('ft_avatar', data.avatar);
+          localStorage.removeItem('ft_avatarImage');
+        }
+        
+        document.getElementById('sidebarSlot').innerHTML = renderHeader('settings');
+        bindLogout();
+      } else {
+        toast(resp.error || 'Ошибка сохранения', 'err');
+      }
+    } catch (e) {
+      if (e.message !== 'auth') toast('Ошибка связи с сервером', 'err');
+    }
+
+    btn.disabled = false;
+    btn.textContent = originalText;
+  });
+}
 
 loadSettings();

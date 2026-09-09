@@ -2,10 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS — Вход</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=160">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS Vault — Авторизация</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=210">
 </head>
 <body class="login-body">
 
@@ -14,32 +16,36 @@
       <div class="login-logo-text">NEXUS</div>
     </div>
     
-    <h1>Вход в систему</h1>
-    <div class="login-subtitle">Авторизация для управления узлами</div>
+    <h1>Панель управления</h1>
+    <div class="login-subtitle">Хранилище сессий и аккаунтов Roblox</div>
 
     <form id="loginForm">
       <div id="errorBox" class="error-msg" style="display: none;"></div>
       
       <div class="input-group">
-        <input type="text" id="username" placeholder="Логин оператора" required autocomplete="username">
+        <input type="text" id="username" placeholder="Логин" required autocomplete="username">
       </div>
+      
       <div class="input-group">
         <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
       </div>
       
       <label class="remember-me">
-        <input type="checkbox" id="rememberMe"> Запомнить меня
+        <input type="checkbox" id="rememberMe">
+        <span>Запомнить сессию</span>
       </label>
       
-      <button type="submit" class="btn-submit" id="submitBtn">Войти</button>
+      <button type="submit" class="btn-submit" id="submitBtn">
+        Войти
+      </button>
     </form>
 
     <div class="security-note">
-      Все действия логируются. Несанкционированный доступ запрещен.
+      Доступ разрешен только авторизованным операторам.
     </div>
   </div>
 
-  <script src="assets/config.js?v=160"></script>
+  <script src="assets/config.js?v=210"></script>
   <script>
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {
@@ -122,12 +128,9 @@
           errBox.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Войти';
-          errBox.style.animation = 'none';
-          errBox.offsetHeight;
-          errBox.style.animation = 'shake 0.4s ease';
         }
-      } catch (e) {
-        errBox.textContent = 'Ошибка сети. Сервер недоступен.';
+      } catch(e) {
+        errBox.textContent = 'Ошибка подключения к серверу';
         errBox.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Войти';

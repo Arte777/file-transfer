@@ -2,73 +2,122 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NEXUS - Приборная панель</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=160">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS — Панель управления</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=236">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
+    
     <main class="main-content">
+      <!-- Top Bar -->
       <div class="top-bar">
-        <h1 class="page-title">Управление файлами</h1>
+        <div>
+          <h1 class="page-title">Воркеры и сессии</h1>
+        </div>
+
+        <div class="status-indicator">
+          <span class="dot"></span>
+          <span>Воркеры онлайн</span>
+        </div>
       </div>
-  <div class="stats-bar">
-    <div class="stat-card"><div class="stat-label">Roblox Аккаунтов</div><div class="stat-value accent" id="sRoblox">—</div></div>
-    <div class="stat-card"><div class="stat-label">Компьютеров</div><div class="stat-value" id="sPCs">—</div></div>
-    <div class="stat-card"><div class="stat-label">Последняя отправка</div><div class="stat-value" id="sLast">—</div></div>
-    <div class="stat-card action-card" id="updateAllCard" style="grid-column: span 2; position: relative;">
-      <div class="stat-label" id="updateAllLabel" style="color: var(--danger); font-weight: 700; letter-spacing: 1px;">Обновление</div>
-      <div style="display: flex; align-items: baseline; gap: 8px; margin: 0.5rem 0;">
-        <span class="stat-value" id="updateAllCount" style="font-size: 3.2rem; color: var(--danger); line-height: 1;">0</span>
-        <span style="font-size: 1rem; color: var(--text-secondary); font-weight: 600;" id="updateAllUnit">ПК</span>
+
+      <!-- KPI Stats Grid -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">Roblox Аккаунтов</div>
+          <div class="stat-value" id="sRoblox">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Компьютеров</div>
+          <div class="stat-value" id="sPCs">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Последняя активность</div>
+          <div class="stat-value" id="sLast" style="font-size: 1.1rem; line-height: 1.4; color: var(--text-secondary);">—</div>
+        </div>
+
+        <div class="stat-card action-card" id="updateAllCard">
+          <div class="stat-label" id="updateAllLabel">Обновление</div>
+          <div style="display: flex; align-items: baseline; gap: 6px; margin: 0.2rem 0;">
+            <span class="stat-value" id="updateAllCount">0</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);" id="updateAllUnit">ПК</span>
+          </div>
+          <div id="updateAllSubtext" style="font-size: 0.75rem; color: var(--text-muted);">
+            Нажмите для обновления
+          </div>
+        </div>
       </div>
-      <div id="updateAllSubtext" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-        ? Нажмите, чтобы обновить у всех
+
+      <!-- Activity Analytics Chart -->
+      <div class="chart-card">
+        <canvas id="statsChart"></canvas>
       </div>
-    </div>
+
+      <!-- Search & Filters Control Bar -->
+      <div class="controls-panel">
+        <div class="search-bar-wrapper">
+          <div style="position: relative; width: 100%;">
+            <input 
+              type="text" 
+              class="search-input" 
+              id="searchBar" 
+              placeholder="Поиск по имени ПК или файлу..." 
+              oninput="filterFiles()"
+            >
+          </div>
+
+          <select class="filter-select" id="sortFiles" onchange="filterFiles()">
+            <option value="date">По дате (новые)</option>
+            <option value="roblox">Сначала с токеном</option>
+            <option value="version">По версии</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-refresh" onclick="loadFiles()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            <span>Обновить</span>
+          </button>
+          
+          <button class="btn-secondary" id="btnRequestAll">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <span>Запросить у всех</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- File Grid -->
+      <main class="files-grid" id="fileGrid">
+        <div class="skeleton" style="height: 200px;"></div>
+        <div class="skeleton" style="height: 200px;"></div>
+        <div class="skeleton" style="height: 200px;"></div>
+        <div class="skeleton" style="height: 200px;"></div>
+      </main>
+    </main>
   </div>
 
-    <!-- График статистики -->
-    <div class="chart-card">
-      <canvas id="statsChart"></canvas>
-    </div>
-
-  <div class="controls-panel">
-    <div class="search-bar-wrapper">
-      <input type="text" class="search-input" id="searchBar" placeholder="Поиск по имени файла..." oninput="filterFiles()">
-      <select class="filter-select" id="sortFiles" onchange="filterFiles()">
-        <option value="date">По дате (новые)</option>
-        <option value="roblox">Сначала зеленые</option>
-        <option value="version">По версии</option>
-      </select>
-    </div>
-    <button class="btn-refresh" onclick="loadFiles()">? Обновить</button>
-    <button class="btn-refresh" id="btnRequestAll" style="border-color:rgba(99,102,241,0.2); color:var(--accent);">?? Запросить у всех</button>
-  </div>
-
-  <main class="files-grid" id="fileGrid">
-    <div class="skeleton" style="height: 250px;"></div>
-    <div class="skeleton" style="height: 250px;"></div>
-    <div class="skeleton" style="height: 250px;"></div>
-    <div class="skeleton" style="height: 250px;"></div>
-  </main>
-  
-  </div> <!-- end of sidebar-layout -->
-
+  <!-- Details Modal -->
   <div id="fileModal" class="modal-overlay" onclick="closeModal()">
     <div class="modal-container" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeModal()">?</button>
-      <div class="modal-content-wrapper">
-      <div class="modal-content-wrapper" style="flex-direction: column; padding: 2rem; overflow-y: auto;">
-        <h3 class="modal-filename" id="modalFilename" style="text-align: center; margin-bottom: 2rem; font-size: 1.5rem; letter-spacing: -0.5px;">Название файла</h3>
+      <button class="modal-close" onclick="closeModal()" aria-label="Закрыть">✕</button>
+      
+      <div class="modal-content-wrapper" style="padding: 1.75rem; overflow-y: auto;">
+        <h3 class="modal-filename" id="modalFilename">Название файла</h3>
         
-        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+        <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem;">
+          
+          <!-- Left: Hardware Telemetry -->
           <div class="modal-details-pane">
             <div class="specs-section">
-              <h4 class="section-title">Характеристики</h4>
+              <h4 class="section-title">Характеристики системы</h4>
               <div class="specs-grid">
                 <div class="spec-row"><span class="spec-lbl">Компьютер</span><span class="spec-val" id="specName">—</span></div>
                 <div class="spec-row"><span class="spec-lbl">Версия</span><span class="spec-val" id="specVersion">—</span></div>
@@ -82,40 +131,74 @@
             </div>
           </div>
           
+          <!-- Right: Roblox Account Info & Actions -->
           <div class="modal-roblox-pane">
-          <div class="specs-section" id="robloxSpecsSection">
-            <h4 class="section-title">Roblox аккаунт</h4>
-            <div class="specs-grid">
-              <div class="spec-row"><span class="spec-lbl">Никнейм</span><span class="spec-val" id="robloxSpecUser" style="color: var(--success); font-weight: 700;">—</span></div>
-              <div class="spec-row" id="tokenStatusRow" style="display:none;"><span class="spec-lbl">Статус</span><span class="spec-val" id="tokenStatusText" style="color: var(--danger); font-weight: 600;">—</span></div>
-              <div class="spec-row" id="tokenRequestRow"><span class="spec-lbl">Запрос токена</span><span class="spec-val" id="tokenRequestStatus">—</span></div>
+            <div class="specs-section" id="robloxSpecsSection">
+              <h4 class="section-title">Roblox Аккаунт</h4>
+              <div class="specs-grid">
+                <div class="spec-row">
+                  <span class="spec-lbl">Никнейм</span>
+                  <span class="spec-val" id="robloxSpecUser" style="color: var(--success); font-weight: 600;">—</span>
+                </div>
+                <div class="spec-row" id="tokenStatusRow" style="display:none;">
+                  <span class="spec-lbl">Статус</span>
+                  <span class="spec-val" id="tokenStatusText" style="color: var(--danger); font-weight: 500;">—</span>
+                </div>
+                <div class="spec-row" id="tokenRequestRow">
+                  <span class="spec-lbl">Запрос токена</span>
+                  <span class="spec-val" id="tokenRequestStatus">—</span>
+                </div>
+              </div>
             </div>
+
+            <div class="specs-section" id="emailsSection" style="display:none;">
+              <h4 class="section-title">Почтовые аккаунты</h4>
+              <div id="emailsList" style="max-height:140px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; margin-top:4px;"></div>
+            </div>
+
+            <div class="modal-actions">
+              <button class="modal-btn" id="modalOpenBtn" style="background:#18181c; color:#fff; border:1px solid var(--border);">
+                Открыть токены
+              </button>
+              <button class="modal-btn" id="modalLoginBtn" style="background:var(--success-bg); color:var(--success); border:1px solid var(--success-border);">
+                Войти в аккаунт
+              </button>
+              <button class="modal-btn" id="modalRequestBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
+                Запросить токен
+              </button>
+              <button class="modal-btn" id="modalUpdateBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
+                Обновить клиент
+              </button>
+              <button class="modal-btn" id="modalEmailsBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
+                Почты
+              </button>
+              <button class="modal-btn del-btn" id="modalDeleteBtn">
+                Удалить
+              </button>
+            </div>
+
           </div>
 
-          <div class="specs-section" id="emailsSection" style="display:none;">
-            <h4 class="section-title">Почтовые аккаунты</h4>
-            <div id="emailsList" style="max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; margin-top:4px;"></div>
-          </div>
-
-          <div class="modal-actions">
-            <button class="modal-btn" id="modalOpenBtn" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid rgba(16,185,129,0.3);">?? Открыть токены</button>
-            <button class="modal-btn" id="modalLoginBtn" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.15);">?? Войти в аккаунт</button>
-            <button class="modal-btn" id="modalRequestBtn" style="background:rgba(99,102,241,0.15); color:var(--accent); border:1px solid rgba(99,102,241,0.3);">?? Запросить токен</button>
-            <button class="modal-btn" id="modalUpdateBtn" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.15);">? Обновить клиент</button>
-            <button class="modal-btn" id="modalEmailsBtn" style="background:rgba(99,102,241,0.12); color:var(--accent); border:1px solid rgba(99,102,241,0.2);">?? Почты</button>
-
-            <button class="modal-btn del-btn" id="modalDeleteBtn">Удалить</button>
-          </div>
         </div>
-        </div> <!-- end flex container -->
       </div>
     </div>
   </div>
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=160"></script>
-  <script src="assets/app.js?v=160"></script>
-  <script src="assets/dashboard.js?v=160"></script>
+  <!-- Global Keyboard Shortcut: '/' or 'Ctrl+K' to focus search -->
+  <script>
+    window.addEventListener('keydown', function(e) {
+      if ((e.key === '/' || (e.ctrlKey && e.key === 'k')) && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        const s = document.getElementById('searchBar');
+        if (s) { s.focus(); s.select(); }
+      }
+    });
+  </script>
+
+  <script src="assets/config.js?v=236"></script>
+  <script src="assets/app.js?v=236"></script>
+  <script src="assets/dashboard.js?v=236"></script>
 </body>
 </html>

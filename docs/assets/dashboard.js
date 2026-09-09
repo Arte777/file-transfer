@@ -228,6 +228,11 @@ function updateStats() {
   }
   document.getElementById("sRoblox").textContent = robloxCount;
   
+  const sbPcs = document.getElementById("sbPcsCount");
+  if (sbPcs) sbPcs.textContent = pcs.toLocaleString();
+  const sbTok = document.getElementById("sbTokensCount");
+  if (sbTok) sbTok.textContent = robloxCount.toLocaleString();
+
   const last = allFiles[0];
   document.getElementById("sLast").textContent = last ? fmtDate(last.uploadedAt) : "—";
 
@@ -333,7 +338,7 @@ function renderFiles(list) {
 
     const color = hasValidToken ? "var(--success)" : "var(--danger)";
     const title = hasValidToken ? "Roblox токен найден" : "Токен отсутствует или недействителен";
-    let indicator = "<div class='roblox-indicator' style='position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; background:" + color + "; box-shadow:0 0 15px " + color + "; z-index: 10;' title='" + title + "'></div>";
+    let indicator = "<div class='roblox-indicator' style='position:absolute; top:10px; right:10px; width:9px; height:9px; border-radius:50%; background:" + color + "; box-shadow:0 0 6px " + color + "; border:2px solid #090c15; z-index: 10;' title='" + title + "'></div>";
 
     const ver = f.computer?.version || "7.0.0\u20137.0.1";
 
@@ -503,11 +508,19 @@ function openModalByIndex(idx) {
   document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
-  document.getElementById("fileModal").classList.add("active");
+  const m = document.getElementById("fileModal");
+  if (m) {
+    m.classList.add("active");
+    m.classList.add("open");
+  }
 }
 
 function closeModal() {
-  document.getElementById("fileModal").classList.remove("active");
+  const m = document.getElementById("fileModal");
+  if (m) {
+    m.classList.remove("active");
+    m.classList.remove("open");
+  }
 }
 
 function copyToken() {

@@ -1467,6 +1467,104 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
   }
 });
 
+// ── OPERATOR CHAT API ────────────────────────────────────────────────────────
+app.get('/api/chat/messages', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+    if (db) {
+      const msgs = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(150).toArray();
+      return res.json(msgs);
+    }
+    if (!global.memChatMessages) global.memChatMessages = [];
+    return res.json(global.memChatMessages);
+  } catch (e) {
+    console.error('Chat get error:', e.message);
+    return res.json([]);
+  }
+});
+
+app.post('/api/chat/messages', requireAuth, async (req, res) => {
+  try {
+    const user = req.authUser || req.session.user || 'operator';
+    const { type, text, caption, imageUrl, account, duration, audioUrl } = req.body || {};
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const msg = {
+      id: 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      type: type || 'text',
+      user: user,
+      time: timeStr,
+      createdAt: now.toISOString(),
+      text: typeof text === 'string' ? text.substring(0, 4000) : '',
+      caption: typeof caption === 'string' ? caption.substring(0, 1000) : '',
+      imageUrl: typeof imageUrl === 'string' ? imageUrl : null,
+      account: account && typeof account === 'object' ? account : null,
+      duration: duration || null,
+      audioUrl: typeof audioUrl === 'string' ? audioUrl : null
+    };
+
+    const db = await getDb();
+    if (db) {
+      await db.collection('chat_messages').insertOne(msg);
+      // Keep only last 200 in DB
+      const count = await db.collection('chat_messages').countDocuments();
+      if (count > 200) {
+        const oldest = await db.collection('chat_messages').find({}).sort({ createdAt: 1 }).limit(count - 200).toArray();
+        const ids = oldest.map(o => o._id);
+        await db.collection('chat_messages').deleteMany({ _id: { $in: ids } });
+      }
+    } else {
+      if (!global.memChatMessages) global.memChatMessages = [];
+      global.memChatMessages.push(msg);
+      if (global.memChatMessages.length > 200) global.memChatMessages = global.memChatMessages.slice(-200);
+    }
+    return res.json({ success: true, message: msg });
+  } catch (e) {
+    console.error('Chat post error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/chat/messages/:id', requireAuth, async (req, res) => {
+  try {
+    const user = (req.authUser || req.session.user || '').toLowerCase();
+    const msgId = req.params.id;
+    const db = await getDb();
+    if (db) {
+      const msg = await db.collection('chat_messages').findOne({ id: msgId });
+      if (!msg) return res.status(404).json({ error: 'Not found' });
+      if (user !== 'shonll' && (msg.user || '').toLowerCase() !== user) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      await db.collection('chat_messages').deleteOne({ id: msgId });
+    } else {
+      if (!global.memChatMessages) global.memChatMessages = [];
+      global.memChatMessages = global.memChatMessages.filter(m => m.id !== msgId);
+    }
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/chat/upload', requireAuth, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      if (req.body && req.body.image) {
+        return res.json({ success: true, url: req.body.image });
+      }
+      return res.status(400).json({ error: 'No file provided' });
+    }
+    const mime = req.file.mimetype || 'image/png';
+    const base64 = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+    return res.json({ success: true, url: base64 });
+  } catch (e) {
+    console.error('Chat upload error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
   app.get('/api/emails/:filename', requireAuth, async (req, res) => {
     try {
       const user = req.authUser || req.session.user;
