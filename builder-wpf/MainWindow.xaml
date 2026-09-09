@@ -317,8 +317,8 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="⚡" FontSize="14" Foreground="#3b82f6" Margin="0,0,8,0" VerticalAlignment="Center" />
                         <TextBlock Text="NEXUS BUILDER" Foreground="#f1f5f9" FontSize="13" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <Border Background="#232733" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                            <TextBlock Text="v8.0.0" Foreground="#94a3b8" FontSize="10.5" FontWeight="Medium" />
+                        <Border Background="#1e293b" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                            <TextBlock Text="v8.0.0 Cloud Sync" Foreground="#38bdf8" FontSize="10.5" FontWeight="SemiBold" />
                         </Border>
                     </StackPanel>
 

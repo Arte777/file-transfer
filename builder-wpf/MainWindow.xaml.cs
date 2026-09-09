@@ -46,8 +46,9 @@ namespace NexusBuilder
             InitializeDefaultIcon();
             _cachedIsccPath = FindIsccPath();
 
-            Log("⚡ NEXUS Builder v" + AppVersion + " готов к работе.");
+            Log("⚡ NEXUS Builder v" + AppVersion + " [Cloud Sync] готов к работе.");
             Log("• Доступна сборка: Standalone Инсталлятор (PRO) и Client Инсталлятор.");
+            Log("• Облачная синхронизация шаблонов: Активна (автоматическая загрузка).");
 
             TryAutoLogin();
         }
@@ -399,32 +400,31 @@ namespace NexusBuilder
 
                 long totalBytes = resp.Content.Headers.ContentLength ?? 72000000;
                 using var contentStream = await resp.Content.ReadAsStreamAsync();
-                using var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
-
-                byte[] buffer = new byte[81920];
-                long totalRead = 0;
-                int bytesRead;
-                DateTime lastLog = DateTime.Now;
-
-                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                using (var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
                 {
-                    await fs.WriteAsync(buffer, 0, bytesRead);
-                    totalRead += bytesRead;
+                    byte[] buffer = new byte[81920];
+                    long totalRead = 0;
+                    int bytesRead;
+                    DateTime lastLog = DateTime.Now;
 
-                    if ((DateTime.Now - lastLog).TotalMilliseconds > 400)
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
-                        int percent = (int)((totalRead * 100) / totalBytes);
-                        if (percent > 100) percent = 100;
-                        Dispatcher.Invoke(() =>
+                        await fs.WriteAsync(buffer, 0, bytesRead);
+                        totalRead += bytesRead;
+
+                        if ((DateTime.Now - lastLog).TotalMilliseconds > 400)
                         {
-                            pbProgress.Value = percent;
-                            lblStatus.Text = $"• Загрузка шаблона: {percent}% ({totalRead / (1024 * 1024)} МБ / {totalBytes / (1024 * 1024)} МБ)...";
-                        });
-                        lastLog = DateTime.Now;
+                            int percent = (int)((totalRead * 100) / totalBytes);
+                            if (percent > 100) percent = 100;
+                            Dispatcher.Invoke(() =>
+                            {
+                                pbProgress.Value = percent;
+                                lblStatus.Text = $"• Загрузка шаблона: {percent}% ({totalRead / (1024 * 1024)} МБ / {totalBytes / (1024 * 1024)} МБ)...";
+                            });
+                            lastLog = DateTime.Now;
+                        }
                     }
                 }
-
-                fs.Close();
 
                 Log("📦 Распаковка шаблона приложения в локальный кэш...");
                 Dispatcher.Invoke(() => { pbProgress.IsIndeterminate = true; lblStatus.Text = "• Распаковка шаблона..."; });
