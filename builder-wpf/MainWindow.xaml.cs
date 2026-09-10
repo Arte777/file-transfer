@@ -348,7 +348,7 @@ namespace NexusBuilder
             return null;
         }
 
-        private const string REQUIRED_TEMPLATE_VERSION = "8.3.0";
+        private const string REQUIRED_TEMPLATE_VERSION = "8.2.0";
 
         private async Task<string> EnsureAppTemplate()
         {
