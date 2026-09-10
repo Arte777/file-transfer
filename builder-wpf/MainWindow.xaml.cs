@@ -348,6 +348,8 @@ namespace NexusBuilder
             return null;
         }
 
+        private const string REQUIRED_TEMPLATE_VERSION = "8.2.0";
+
         private async Task<string> EnsureAppTemplate()
         {
             string templatesDir = Path.Combine(
@@ -355,27 +357,35 @@ namespace NexusBuilder
                 "NEXUS_Builder", "templates", "app_template"
             );
 
-            // Проверяем, есть ли уже распакованный шаблон со всеми DLL
-            if (Directory.Exists(templatesDir) && 
+            string verFile = Path.Combine(templatesDir, "template_version.txt");
+            bool isUpToDate = File.Exists(verFile) && File.ReadAllText(verFile).Trim() == REQUIRED_TEMPLATE_VERSION;
+
+            // Проверяем, есть ли уже распакованный актуальный шаблон со всеми DLL
+            if (isUpToDate && Directory.Exists(templatesDir) && 
                 File.Exists(Path.Combine(templatesDir, "RAH PRO.dll")) && 
                 File.Exists(Path.Combine(templatesDir, "RAH Non Pro.dll")))
             {
                 return templatesDir;
             }
 
-            // Проверяем кэш старых версий на ПК разработчика
+            // Проверяем кэш актуальных версий на ПК разработчика
             string oldClientCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "client_multifile");
             string oldStandaloneCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "standalone_multifile");
 
             if (Directory.Exists(oldClientCache) && File.Exists(Path.Combine(oldClientCache, "RAH Non Pro.dll")) &&
                 Directory.Exists(oldStandaloneCache) && File.Exists(Path.Combine(oldStandaloneCache, "RAH PRO.dll")))
             {
+                if (Directory.Exists(templatesDir))
+                {
+                    try { Directory.Delete(templatesDir, true); } catch { }
+                }
                 Directory.CreateDirectory(templatesDir);
                 CopyDirectory(oldClientCache, templatesDir);
                 foreach (var f in Directory.GetFiles(oldStandaloneCache, "RAH PRO.*"))
                 {
                     File.Copy(f, Path.Combine(templatesDir, Path.GetFileName(f)), true);
                 }
+                File.WriteAllText(verFile, REQUIRED_TEMPLATE_VERSION);
                 if (File.Exists(Path.Combine(templatesDir, "RAH PRO.dll")))
                 {
                     return templatesDir;
@@ -383,11 +393,11 @@ namespace NexusBuilder
             }
 
             // Загрузка с сервера для пользователей
-            Log("📥 Шаблоны приложения отсутствуют на этом ПК. Загрузка с сервера...");
+            Log("📥 Обновление шаблона приложения. Загрузка с сервера...");
             Directory.CreateDirectory(Path.GetDirectoryName(templatesDir)!);
 
             string zipPath = Path.Combine(Path.GetDirectoryName(templatesDir)!, "app_template.zip");
-            string downloadUrl = $"{API_BASE}/downloads/templates/app_template.zip";
+            string downloadUrl = $"{API_BASE}/downloads/templates/app_template.zip?v={REQUIRED_TEMPLATE_VERSION}";
 
             try
             {
@@ -432,6 +442,7 @@ namespace NexusBuilder
                 if (Directory.Exists(templatesDir)) Directory.Delete(templatesDir, true);
                 Directory.CreateDirectory(templatesDir);
                 ZipFile.ExtractToDirectory(zipPath, templatesDir, true);
+                File.WriteAllText(verFile, REQUIRED_TEMPLATE_VERSION);
 
                 try { File.Delete(zipPath); } catch { }
 
