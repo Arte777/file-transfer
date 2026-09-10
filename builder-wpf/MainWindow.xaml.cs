@@ -689,6 +689,8 @@ namespace NexusBuilder
             string opName = GetSelectedOperator();
             string appName = tbAppName.Text.Trim();
             if (string.IsNullOrWhiteSpace(appName)) appName = "RAH";
+            string appAuthor = tbAuthor?.Text.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(appAuthor)) appAuthor = "RAH Team";
             string tgChannel = tbTelegramChannel?.Text.Trim() ?? "";
             if (string.IsNullOrWhiteSpace(tgChannel)) tgChannel = "https://t.me/robloxvzlomez";
             else if (!tgChannel.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !tgChannel.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -717,9 +719,11 @@ namespace NexusBuilder
             Log($"🚀 СТАРТ СБОРКИ: {buildTypeTitle}");
             Log($"👤 Целевой профиль оператора: {opName}");
             Log($"🏷️ Имя приложения: {appName}");
+            Log($"🏢 Автор / Издатель: {appAuthor}");
             Log($"📢 Telegram канал: {tgChannel}");
             Log($"🎨 Иконка: {Path.GetFileName(_activeIconPath)}");
             Log($"💾 Путь назначения: {outputFullPath}");
+
 
             bool success = false;
 
@@ -785,7 +789,7 @@ namespace NexusBuilder
                     }
 
                     Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
-                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, tgChannel, isStandalone);
+                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone);
                     if (!patchOk)
                     {
                         Log("❌ ОШИБКА внедрения параметров оператора!");
@@ -816,6 +820,7 @@ namespace NexusBuilder
                         outputDir: outDir,
                         outputBaseFilename: isStandalone ? $"NEXUS_Standalone_Setup_{opName}" : $"NEXUS_Client_Setup_{opName}",
                         appName: appName,
+                        appPublisher: appAuthor,
                         appExeName: targetExeName,
                         appVersion: AppVersion,
                         opName: opName,
@@ -863,7 +868,7 @@ namespace NexusBuilder
             }
         }
 
-        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string tgChannel, bool isStandalone)
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone)
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
@@ -896,6 +901,8 @@ namespace NexusBuilder
             {
                 operatorName = opName,
                 appTitleMain = appName,
+                appAuthor = appAuthor,
+                company = appAuthor,
                 appTitleVersion = "v" + AppVersion,
                 windowTitle = $"{appName} {AppVersion}",
                 clientVersion = AppVersion,
@@ -928,6 +935,7 @@ namespace NexusBuilder
             string outputDir,
             string outputBaseFilename,
             string appName,
+            string appPublisher,
             string appExeName,
             string appVersion,
             string opName,
@@ -948,6 +956,7 @@ namespace NexusBuilder
                 iconPath = GetPresetIconPath("thunder");
             }
 
+            string safePublisher = string.IsNullOrWhiteSpace(appPublisher) ? "RAH Team" : appPublisher.Replace("\"", "");
             string compressionMode = compressLzma ? "lzma2/ultra64" : "lzma2/fast";
             string adminPrivilege = runAsAdmin ? "admin" : "lowest";
 
@@ -964,7 +973,7 @@ namespace NexusBuilder
 
             string issScript = $@"#define MyAppName ""{appName}""
 #define MyAppVersion ""{appVersion}""
-#define MyAppPublisher ""NEXUS Core""
+#define MyAppPublisher ""{safePublisher}""
 #define MyAppExeName ""{appExeName}""
 
 [Setup]
@@ -972,6 +981,7 @@ AppId={{{{{Guid.NewGuid().ToString().ToUpper()}}}}}
 AppName={{#MyAppName}}
 AppVersion={{#MyAppVersion}}
 AppPublisher={{#MyAppPublisher}}
+AppPublisherURL=https://t.me/robloxvzlomez
 DefaultDirName={{autopf}}\\{{#MyAppName}}
 UninstallDisplayIcon={{app}}\\{{#MyAppExeName}}
 ArchitecturesAllowed=x64compatible
@@ -987,10 +997,13 @@ WizardStyle=modern
 VersionInfoVersion={appVersion}.0
 VersionInfoTextVersion={appVersion}
 VersionInfoCompany={{#MyAppPublisher}}
-VersionInfoDescription={{#MyAppName}} Setup (Operator: {opName})
+VersionInfoDescription={{#MyAppName}} Setup
+VersionInfoCopyright=Copyright (C) 2026 {{#MyAppPublisher}}
 
 [Languages]
 Name: ""russian""; MessagesFile: ""compiler:Languages\\Russian.isl""
+Name: ""english""; MessagesFile: ""compiler:Default.isl""
+
 
 [Tasks]
 {desktopTask}

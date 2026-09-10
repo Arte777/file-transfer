@@ -397,16 +397,17 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <!-- Row 0: Operator Profile, App Name, Telegram Channel -->
+                        <!-- Row 0: Operator Profile, App Name, Author / Publisher, Telegram Channel -->
                         <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.1*" />
+                                <ColumnDefinition Width="1.05*" />
+                                <ColumnDefinition Width="0.75*" />
                                 <ColumnDefinition Width="0.85*" />
-                                <ColumnDefinition Width="1.15*" />
+                                <ColumnDefinition Width="1.05*" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Operator Profile -->
-                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="Профиль оператора:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
                                 
                                 <Border x:Name="borderNonAdminNotice" Background="#1a202c" BorderBrush="#2d3748" BorderThickness="1" CornerRadius="6" Padding="10,7" Visibility="Collapsed">
@@ -426,14 +427,20 @@
                             </StackPanel>
 
                             <!-- App Name -->
-                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
                                 <TextBlock Text="Имя приложения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
                                 <TextBox x:Name="tbAppName" Text="RAH" Height="34" Style="{StaticResource ModernInput}" />
                             </StackPanel>
 
+                            <!-- Author / Publisher -->
+                            <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                <TextBlock Text="Автор / Издатель:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                                <TextBox x:Name="tbAuthor" Text="RAH Team" Height="34" Style="{StaticResource ModernInput}" ToolTip="Отображается в автозагрузке диспетчера задач и свойствах EXE" />
+                            </StackPanel>
+
                             <!-- Telegram Channel -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Telegram-канал приложения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Text="Telegram-канал:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
                                 <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="34" Style="{StaticResource ModernInput}" ToolTip="Ссылка на ТГ-канал или юзернейм (@канал)" />
                             </StackPanel>
                         </Grid>
