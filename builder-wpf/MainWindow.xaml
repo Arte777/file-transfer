@@ -420,6 +420,7 @@
                                     <ComboBoxItem Content="🐉 DildMan" Tag="DildMan" />
                                     <ComboBoxItem Content="🔗 saha_kakaha122" Tag="saha_kakaha122" />
                                     <ComboBoxItem Content="🎤 SinGeR1isss" Tag="SinGeR1isss" />
+                                    <ComboBoxItem Content="⚡ Ximza1" Tag="Ximza1" />
                                     <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
                                 </ComboBox>
                                 

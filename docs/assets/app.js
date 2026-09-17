@@ -153,7 +153,8 @@ const OPERATOR_PRESETS = {
   'singer1isss': { name: 'SinGeR1isss', avatar: '🎤', initials: 'SG', cls: 'sg', color: '#10b981' },
   'saha_kakaha122': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' },
   'svyaz': { name: 'SVYAZ', avatar: '🔗', initials: 'SK', cls: 'sk', color: '#a855f7' },
-  'huilaebanaya': { name: 'HuilaEbanaya', avatar: '⚡', initials: 'HE', cls: 'he', color: '#f59e0b' }
+  'huilaebanaya': { name: 'HuilaEbanaya', avatar: '⚡', initials: 'HE', cls: 'he', color: '#f59e0b' },
+  'ximza1': { name: 'Ximza1', avatar: '⚡', initials: 'XZ', cls: 'xz', color: '#eab308' }
 };
 
 let remoteOperatorProfiles = {};
@@ -401,7 +402,8 @@ const OPERATOR_ACCOUNTS = [
   { username: 'DildMan', displayName: 'DildMan', role: 'Воркер', avatar: '🐉' },
   { username: 'saha_kakaha122', displayName: 'SVYAZ', role: 'Воркер', avatar: '🔗' },
   { username: 'SinGeR1isss', displayName: 'SinGeR1isss', role: 'Воркер', avatar: '🎤' },
-  { username: 'HuilaEbanaya', displayName: 'HuilaEbanaya', role: 'Воркер', avatar: '⚡' }
+  { username: 'HuilaEbanaya', displayName: 'HuilaEbanaya', role: 'Воркер', avatar: '⚡' },
+  { username: 'Ximza1', displayName: 'Ximza1', role: 'Воркер', avatar: '⚡' }
 ];
 
 let chatOnlineOperators = [];

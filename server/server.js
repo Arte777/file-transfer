@@ -173,7 +173,8 @@ const DEFAULT_SETTINGS = {
   'DildMan':       { avatar: '🐉', displayName: 'DildMan',       themeColor: '#ff007f', bio: 'Worker',     role: 'Воркер' },
   'saha_kakaha122': { avatar: '🔗', displayName: 'SVYAZ',         themeColor: '#a855f7', bio: 'Worker',     role: 'Воркер' },
   'SinGeR1isss':   { avatar: '🎤', displayName: 'SinGeR1isss',   themeColor: '#10b981', bio: 'Worker',     role: 'Воркер' },
-  'HuilaEbanaya':  { avatar: '💀', displayName: 'HuilaEbanaya',  themeColor: '#f97316', bio: 'Worker',     role: 'Воркер' }
+  'HuilaEbanaya':  { avatar: '💀', displayName: 'HuilaEbanaya',  themeColor: '#f97316', bio: 'Worker',     role: 'Воркер' },
+  'Ximza1':        { avatar: '⚡', displayName: 'Ximza1',        themeColor: '#eab308', bio: 'Worker',     role: 'Воркер' }
 };
 
 const KNOWN_OPERATORS = Object.keys(DEFAULT_SETTINGS);
@@ -434,7 +435,16 @@ function touchSessionActivity(sessionId) {
 }
 
 // In-memory fallback when MongoDB is not available (dev only)
-const memSettings = {};
+const memSettings = {
+  'Ximza1': {
+    password: hashPassword('123123', 'seed_ximza1_salt'),
+    user: 'Ximza1',
+    displayName: 'Ximza1',
+    avatar: '⚡',
+    themeColor: '#eab308',
+    role: 'Воркер'
+  }
+};
 
 async function getOperatorSettings(user) {
   const canonical = getCanonicalOperator(user);
@@ -540,6 +550,39 @@ async function initOperatorSettings() {
       }
     } catch (e) {
       console.error('[AUTH] Failed to initialize operator profile:', user, e.message);
+    }
+  }
+
+  // Начальные пароли операторов по умолчанию
+  const SEED_PASSWORDS = {
+    'Ximza1': '123123'
+  };
+  for (const [u, pwd] of Object.entries(SEED_PASSWORDS)) {
+    try {
+      const canonical = getCanonicalOperator(u);
+      const hashed = hashPassword(pwd);
+      const defaults = DEFAULT_SETTINGS[canonical] || { avatar: '⚡', displayName: canonical, themeColor: '#eab308', bio: 'Worker', role: 'Воркер' };
+      const doc = await db.collection('settings').findOne({
+        user: { $regex: new RegExp('^' + escapeRegex(canonical) + '$', 'i') }
+      });
+      if (!doc) {
+        await db.collection('settings').insertOne({
+          user: canonical,
+          ...defaults,
+          password: hashed,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log(`[AUTH] Created seeded operator profile: ${canonical}`);
+      } else if (!doc.password || !verifyPassword(pwd, doc.password)) {
+        await db.collection('settings').updateOne(
+          { _id: doc._id },
+          { $set: { password: hashed, updatedAt: new Date() } }
+        );
+        console.log(`[AUTH] Set seeded password for operator: ${canonical}`);
+      }
+    } catch (err) {
+      console.error('[AUTH] Failed to seed operator password:', u, err.message);
     }
   }
 
