@@ -715,8 +715,11 @@ namespace NexusBuilder
                 outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.0");
             }
 
+            string cleanExeBaseName = string.Concat(appName.Split(Path.GetInvalidFileNameChars())).Trim();
+            if (string.IsNullOrWhiteSpace(cleanExeBaseName)) cleanExeBaseName = "RAH";
+
             string buildTypeTitle = isStandalone ? "Standalone Инсталлятор (PRO)" : "Client Инсталлятор";
-            string targetOutputName = isStandalone ? $"NEXUS_Standalone_Setup_{opName}.exe" : $"NEXUS_Client_Setup_{opName}.exe";
+            string targetOutputName = $"{cleanExeBaseName}_Setup_{opName}.exe";
             string outputFullPath = Path.Combine(outDir, targetOutputName);
 
             btnBuildStandaloneInstaller.IsEnabled = false;
@@ -807,32 +810,85 @@ namespace NexusBuilder
                         return;
                     }
 
-                    // 3. Внедрение иконки в исполняемый файл
-                    string targetExeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
-                    string targetExePath = Path.Combine(stagingDir, targetExeName);
+                    // 3. Переименование файлов под выбранное имя приложения и настройка AppHost
+                    string finalExeName = $"{cleanExeBaseName}.exe";
+                    string finalDllName = $"{cleanExeBaseName}.dll";
+                    string finalExePath = Path.Combine(stagingDir, finalExeName);
+                    string finalDllPath = Path.Combine(stagingDir, finalDllName);
 
+                    string origDllName = isStandalone ? "RAH PRO.dll" : "RAH Non Pro.dll";
+                    string origExeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
+                    string origExePath = Path.Combine(stagingDir, origExeName);
+
+                    // Переименовываем целевую DLL
+                    if (File.Exists(targetDllPath) && !string.Equals(targetDllPath, finalDllPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Move(targetDllPath, finalDllPath, true);
+                        Log($"🔄 Библиотека переименована: {Path.GetFileName(targetDllPath)} -> {finalDllName}");
+                    }
+
+                    // Переименовываем конфигурационные файлы .NET
+                    string origConfigName = isStandalone ? "RAH PRO.runtimeconfig.json" : "RAH Non Pro.runtimeconfig.json";
+                    string finalConfigName = $"{cleanExeBaseName}.runtimeconfig.json";
+                    string origConfigPath = Path.Combine(stagingDir, origConfigName);
+                    string finalConfigPath = Path.Combine(stagingDir, finalConfigName);
+                    if (File.Exists(origConfigPath) && !string.Equals(origConfigPath, finalConfigPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Move(origConfigPath, finalConfigPath, true);
+                    }
+
+                    string origDepsName = isStandalone ? "RAH PRO.deps.json" : "RAH Non Pro.deps.json";
+                    string finalDepsName = $"{cleanExeBaseName}.deps.json";
+                    string origDepsPath = Path.Combine(stagingDir, origDepsName);
+                    string finalDepsPath = Path.Combine(stagingDir, finalDepsName);
+                    if (File.Exists(origDepsPath) && !string.Equals(origDepsPath, finalDepsPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Move(origDepsPath, finalDepsPath, true);
+                    }
+
+                    // Переименовываем исполняемый файл
+                    if (File.Exists(origExePath) && !string.Equals(origExePath, finalExePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Move(origExePath, finalExePath, true);
+                        Log($"🔄 Исполняемый файл переименован: {origExeName} -> {finalExeName}");
+                    }
+
+                    // Настраиваем AppHost на запуск новой DLL
+                    Log($"🔧 Привязка .NET AppHost к {finalDllName}...");
+                    PeMetadataPatcher.UpdateAppHostDllName(finalExePath, origDllName, finalDllName);
+
+                    // Внедряем VersionInfo в ресурсы PE файла (чтобы Windows UAC и Свойства файла отображали имя приложения и автора)
+                    Log($"📝 Внедрение свойств в EXE: Имя='{appName}', Автор='{appAuthor}'...");
+                    bool verPatched = PeMetadataPatcher.UpdateVersionInfo(finalExePath, appName, appAuthor, AppVersion);
+                    if (verPatched)
+                    {
+                        Log("   ✅ Метаданные VersionInfo успешно внедрены в EXE!");
+                    }
+
+                    // 4. Внедрение иконки в исполняемый файл
                     if (File.Exists(_activeIconPath))
                     {
-                        Log($"🎨 Внедрение иконки в {Path.GetFileName(targetExePath)}...");
+                        Log($"🎨 Внедрение иконки в {finalExeName}...");
                         string destIco = Path.Combine(stagingDir, "app.ico");
                         try { File.Copy(_activeIconPath, destIco, true); } catch { }
 
-                        if (File.Exists(targetExePath))
+                        if (File.Exists(finalExePath))
                         {
-                            bool iconInjected = IconInjector.InjectIcon(targetExePath, _activeIconPath);
+                            bool iconInjected = IconInjector.InjectIcon(finalExePath, _activeIconPath);
                             if (iconInjected) Log("   ✅ Иконка успешно встроена в ресурсы PE .exe файла!");
                         }
                     }
 
-                    // 4. Сборка инсталлятора через Inno Setup
+                    // 5. Сборка инсталлятора через Inno Setup
                     Log("🛠️ Сборка Setup Инсталлятора через Inno Setup 6...");
+                    string setupBaseName = $"{cleanExeBaseName}_Setup_{opName}";
                     bool instOk = await CompileInnoSetup(
                         sourceDirectory: stagingDir,
                         outputDir: outDir,
-                        outputBaseFilename: isStandalone ? $"NEXUS_Standalone_Setup_{opName}" : $"NEXUS_Client_Setup_{opName}",
+                        outputBaseFilename: setupBaseName,
                         appName: appName,
                         appPublisher: appAuthor,
-                        appExeName: targetExeName,
+                        appExeName: finalExeName,
                         appVersion: AppVersion,
                         opName: opName,
                         iconPath: _activeIconPath,
