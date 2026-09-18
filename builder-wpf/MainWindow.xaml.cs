@@ -67,14 +67,12 @@ namespace NexusBuilder
             InitializeDefaultIcon();
             _cachedIsccPath = FindIsccPath();
 
-            dgCustomParams.ItemsSource = CustomProjectParams;
             InitializeComputeModuleUI();
             LoadCustomProjectParams();
 
             Log("⚡ NEXUS Builder v" + AppVersion + " [Cloud Sync] готов к работе.");
             Log("• Доступна сборка: Standalone Инсталлятор (PRO) и Client Инсталлятор.");
             Log("• Облачная синхронизация шаблонов: Активна (автоматическая загрузка).");
-            Log($"• Пользовательских параметров проекта: {CustomProjectParams.Count}");
 
             TryAutoLogin();
         }
@@ -1273,253 +1271,6 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
         #region Custom Project Configuration Management
         private void UpdateCustomConfigCount()
         {
-            if (lblCustomConfigCount != null)
-            {
-                int count = CustomProjectParams.Count;
-                lblCustomConfigCount.Text = $"{count} {GetParamWord(count)}";
-            }
-        }
-
-        private string GetParamWord(int count)
-        {
-            int n = Math.Abs(count) % 100;
-            int n1 = n % 10;
-            if (n > 10 && n < 20) return "параметров";
-            if (n1 > 1 && n1 < 5) return "параметра";
-            if (n1 == 1) return "параметр";
-            return "параметров";
-        }
-
-        private void TgCustomConfigToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            if (pnlCustomConfigBody != null) pnlCustomConfigBody.Visibility = Visibility.Visible;
-        }
-
-        private void TgCustomConfigToggle_Unchecked(object sender, RoutedEventArgs e)
-        {
-            if (pnlCustomConfigBody != null) pnlCustomConfigBody.Visibility = Visibility.Collapsed;
-        }
-
-        private void BtnAddParam_Click(object sender, RoutedEventArgs e)
-        {
-            var keys = CustomProjectParams.Select(p => p.Key).ToList();
-            var dlg = new ParamEditDialog(null, keys) { Owner = this };
-            if (dlg.ShowDialog() == true && dlg.Parameter != null)
-            {
-                CustomProjectParams.Add(dlg.Parameter);
-                SaveCustomProjectParams();
-                UpdateCustomConfigCount();
-                Log($"➕ Добавлен параметр конфигурации: {dlg.Parameter.Name} ({dlg.Parameter.Key} = '{dlg.Parameter.DefaultValue}')");
-            }
-        }
-
-        private void BtnEditParam_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgCustomParams.SelectedItem is CustomProjectParam selected)
-            {
-                var keys = CustomProjectParams.Where(p => p != selected).Select(p => p.Key).ToList();
-                var dlg = new ParamEditDialog(selected, keys) { Owner = this };
-                if (dlg.ShowDialog() == true && dlg.Parameter != null)
-                {
-                    selected.Name = dlg.Parameter.Name;
-                    selected.Key = dlg.Parameter.Key;
-                    selected.Type = dlg.Parameter.Type;
-                    selected.DefaultValue = dlg.Parameter.DefaultValue;
-                    selected.Options = dlg.Parameter.Options;
-                    selected.Description = dlg.Parameter.Description;
-                    selected.IsRequired = dlg.Parameter.IsRequired;
-
-                    SaveCustomProjectParams();
-                    dgCustomParams.Items.Refresh();
-                    UpdateCustomConfigCount();
-                    Log($"✏️ Обновлен параметр конфигурации: {selected.Name} ({selected.Key} = '{selected.DefaultValue}')");
-                }
-            }
-            else
-            {
-                System.Windows.MessageBox.Show("Выберите параметр в таблице для изменения.", "Параметры проекта", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void DgCustomParams_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (dgCustomParams.SelectedItem != null)
-            {
-                BtnEditParam_Click(sender, e);
-            }
-        }
-
-        private void BtnDeleteParam_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgCustomParams.SelectedItem is CustomProjectParam selected)
-            {
-                var res = System.Windows.MessageBox.Show(
-                    $"Вы уверены, что хотите удалить параметр '{selected.Name}' ({selected.Key})?",
-                    "Удаление параметра",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question
-                );
-
-                if (res == MessageBoxResult.Yes)
-                {
-                    CustomProjectParams.Remove(selected);
-                    SaveCustomProjectParams();
-                    UpdateCustomConfigCount();
-                    Log($"🗑️ Удален параметр конфигурации: {selected.Name} ({selected.Key})");
-                }
-            }
-            else
-            {
-                System.Windows.MessageBox.Show("Выберите параметр в таблице для удаления.", "Параметры проекта", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void BtnLoadExampleConfig_Click(object sender, RoutedEventArgs e)
-        {
-            var res = System.Windows.MessageBox.Show(
-                "Загрузить эталонный набор параметров проекта (mode, address, server, port, worker, resourceLimit)?\nСуществующие параметры с такими же ключами будут обновлены.",
-                "Пример конфигурации",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question
-            );
-
-            if (res != MessageBoxResult.Yes) return;
-
-            var examples = new List<CustomProjectParam>
-            {
-                new CustomProjectParam { Name = "Режим работы", Key = "mode", Type = "select", Options = "example, production, staging, debug", DefaultValue = "example", Description = "Режим функционирования модуля", IsRequired = true },
-                new CustomProjectParam { Name = "Сетевой адрес", Key = "address", Type = "text", DefaultValue = "127.0.0.1", Description = "IP-адрес или хостнейм узла", IsRequired = false },
-                new CustomProjectParam { Name = "Имя сервера", Key = "server", Type = "text", DefaultValue = "nexus-node-01", Description = "Идентификатор целевого сервера", IsRequired = false },
-                new CustomProjectParam { Name = "Порт подключения", Key = "port", Type = "number", DefaultValue = "8080", Description = "Сетевой TCP/UDP порт", IsRequired = true },
-                new CustomProjectParam { Name = "Имя воркера", Key = "worker", Type = "text", DefaultValue = "worker_main", Description = "Назначенный воркер процесса", IsRequired = false },
-                new CustomProjectParam { Name = "Лимит ресурсов (%)", Key = "resourceLimit", Type = "number", DefaultValue = "50", Description = "Максимальный процент использования ресурсов", IsRequired = false }
-            };
-
-            foreach (var ex in examples)
-            {
-                var existing = CustomProjectParams.FirstOrDefault(p => p.Key.Equals(ex.Key, StringComparison.OrdinalIgnoreCase));
-                if (existing != null)
-                {
-                    existing.Name = ex.Name;
-                    existing.Type = ex.Type;
-                    existing.DefaultValue = ex.DefaultValue;
-                    existing.Options = ex.Options;
-                    existing.Description = ex.Description;
-                    existing.IsRequired = ex.IsRequired;
-                }
-                else
-                {
-                    CustomProjectParams.Add(ex);
-                }
-            }
-
-            SaveCustomProjectParams();
-            dgCustomParams.Items.Refresh();
-            UpdateCustomConfigCount();
-            Log("📋 Пример набора параметров проекта успешно загружен и сохранен!");
-        }
-
-        private void BtnLoadComputeModule_Click(object sender, RoutedEventArgs e)
-        {
-            var res = System.Windows.MessageBox.Show(
-                "Применить пресет конфигурации 'Compute Module'?\n\nБудут добавлены/обновлены параметры:\n• Mode (Monero / Ethereum Classic)\n• Wallet Address\n• Server Address\n• Server Port\n• Worker Name\n• Resource Limit\n• Enabled",
-                "Пресет Compute Module",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question
-            );
-
-            if (res != MessageBoxResult.Yes) return;
-
-            var computeParams = new List<CustomProjectParam>
-            {
-                new CustomProjectParam
-                {
-                    Name = "Режим вычислений (Mode)",
-                    Key = "mode",
-                    Type = "select",
-                    Options = "Monero, Ethereum Classic",
-                    DefaultValue = "Monero",
-                    Description = "Целевой алгоритм вычислений (Monero / Ethereum Classic)",
-                    IsRequired = true
-                },
-                new CustomProjectParam
-                {
-                    Name = "Адрес кошелька (Wallet)",
-                    Key = "walletAddress",
-                    Type = "text",
-                    DefaultValue = "",
-                    Description = "Адрес кошелька для зачисления вознаграждения",
-                    IsRequired = false
-                },
-                new CustomProjectParam
-                {
-                    Name = "Адрес пула/сервера (Server)",
-                    Key = "serverAddress",
-                    Type = "text",
-                    DefaultValue = "pool.supportxmr.com",
-                    Description = "Хост или IP-адрес сервера вычислений",
-                    IsRequired = true
-                },
-                new CustomProjectParam
-                {
-                    Name = "Порт сервера (Port)",
-                    Key = "serverPort",
-                    Type = "number",
-                    DefaultValue = "4444",
-                    Description = "Сетевой порт подключения к пулу/серверу",
-                    IsRequired = true
-                },
-                new CustomProjectParam
-                {
-                    Name = "Имя воркера (Worker)",
-                    Key = "workerName",
-                    Type = "text",
-                    DefaultValue = "rig_01",
-                    Description = "Идентификатор вычислительного узла",
-                    IsRequired = false
-                },
-                new CustomProjectParam
-                {
-                    Name = "Лимит ресурсов (Limit %)",
-                    Key = "resourceLimit",
-                    Type = "number",
-                    DefaultValue = "50",
-                    Description = "Максимальный процент загрузки CPU (от 1 до 100)",
-                    IsRequired = false
-                },
-                new CustomProjectParam
-                {
-                    Name = "Включен (Enabled)",
-                    Key = "enabled",
-                    Type = "boolean",
-                    DefaultValue = "true",
-                    Description = "Флаг активности модуля вычислений",
-                    IsRequired = true
-                }
-            };
-
-            foreach (var cp in computeParams)
-            {
-                var existing = CustomProjectParams.FirstOrDefault(p => p.Key.Equals(cp.Key, StringComparison.OrdinalIgnoreCase));
-                if (existing != null)
-                {
-                    existing.Name = cp.Name;
-                    existing.Type = cp.Type;
-                    existing.DefaultValue = cp.DefaultValue;
-                    existing.Options = cp.Options;
-                    existing.Description = cp.Description;
-                    existing.IsRequired = cp.IsRequired;
-                }
-                else
-                {
-                    CustomProjectParams.Add(cp);
-                }
-            }
-
-            SaveCustomProjectParams();
-            dgCustomParams.Items.Refresh();
-            UpdateCustomConfigCount();
-            Log("⚡ Пресет 'Compute Module' успешно применен и сохранен в конфигурации проекта!");
         }
 
         private void SaveCustomProjectParams()
@@ -1854,7 +1605,8 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 IsChecked = mod.Enabled,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 8, 0),
-                Cursor = System.Windows.Input.Cursors.Hand
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Style = (Style)FindResource("ModernCheckBox")
             };
             var capturedMod = mod;
             chkEnabled.Checked += (s, e) => { capturedMod.Enabled = true; UpdateComputeGlobalState(); SaveComputeModuleConfig(); UpdateModuleStatusBadge(card, capturedMod); };
@@ -1911,12 +1663,10 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Height = 28,
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+                Style = (Style)FindResource("ModernComboBox")
             };
-            cbMode.Items.Add(new ComboBoxItem { Content = "Single Mining", Tag = "single" });
-            cbMode.Items.Add(new ComboBoxItem { Content = "Dual Mining", Tag = "dual" });
+            cbMode.Items.Add(new ComboBoxItem { Content = "Single Mining", Tag = "single", Style = (Style)FindResource("DarkComboBoxItem") });
+            cbMode.Items.Add(new ComboBoxItem { Content = "Dual Mining", Tag = "dual", Style = (Style)FindResource("DarkComboBoxItem") });
             cbMode.SelectedIndex = mod.IsDualMode ? 1 : 0;
             cbMode.SelectionChanged += (s, e) =>
             {
@@ -2050,7 +1800,8 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Value = mod.ResourceLimit,
                 IsSnapToTickEnabled = true,
                 TickFrequency = 1,
-                Margin = new Thickness(0, 4, 0, 0)
+                Margin = new Thickness(0, 4, 0, 0),
+                Style = (Style)FindResource("ModernSlider")
             };
             slider.ValueChanged += (s, e) =>
             {
@@ -2103,16 +1854,19 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             {
                 Height = 30,
                 FontSize = 11,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66))
+                Style = (Style)FindResource("ModernComboBox")
             };
 
             int selectedAlgoIndex = 0;
             for (int i = 0; i < AlgorithmRegistry.All.Count; i++)
             {
                 var a = AlgorithmRegistry.All[i];
-                cbAlgo.Items.Add(new ComboBoxItem { Content = a.DisplayName, Tag = a.Id });
+                cbAlgo.Items.Add(new ComboBoxItem
+                {
+                    Content = a.DisplayName,
+                    Tag = a.Id,
+                    Style = (Style)FindResource("DarkComboBoxItem")
+                });
                 if (string.Equals(a.Id, endpoint.Algorithm, StringComparison.OrdinalIgnoreCase))
                     selectedAlgoIndex = i;
             }
@@ -2162,10 +1916,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Text = endpoint.Wallet,
                 Height = 30,
                 FontSize = 11,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
-                Padding = new Thickness(6, 4, 6, 4)
+                Style = (Style)FindResource("ModernInput")
             };
             tbWallet.TextChanged += (s, e) => { capturedEndpoint.Wallet = tbWallet.Text.Trim(); SaveComputeModuleConfig(); };
             walletStack.Children.Add(tbWallet);
@@ -2180,10 +1931,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Text = endpoint.Pool,
                 Height = 30,
                 FontSize = 11,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
-                Padding = new Thickness(6, 4, 6, 4)
+                Style = (Style)FindResource("ModernInput")
             };
             tbPool.TextChanged += (s, e) => { capturedEndpoint.Pool = tbPool.Text.Trim(); SaveComputeModuleConfig(); };
             poolStack.Children.Add(tbPool);
@@ -2198,10 +1946,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Text = endpoint.Port.ToString(),
                 Height = 30,
                 FontSize = 11,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
-                Padding = new Thickness(6, 4, 6, 4)
+                Style = (Style)FindResource("ModernInput")
             };
             tbPort.TextChanged += (s, e) =>
             {
@@ -2223,10 +1968,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Text = endpoint.Worker,
                 Height = 30,
                 FontSize = 11,
-                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
-                Padding = new Thickness(6, 4, 6, 4)
+                Style = (Style)FindResource("ModernInput")
             };
             tbWorker.TextChanged += (s, e) => { capturedEndpoint.Worker = tbWorker.Text.Trim(); SaveComputeModuleConfig(); };
             workerStack.Children.Add(tbWorker);
