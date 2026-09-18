@@ -2,6 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
@@ -29,7 +32,13 @@ namespace NexusBuilder
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "NEXUS_Builder", "auth.json"
         );
+        private readonly string _projectConfigFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "NEXUS_Builder", "custom_project_config.json"
+        );
         private static readonly string API_BASE = "https://file-transfer-production-75ad.up.railway.app";
+
+        public ObservableCollection<CustomProjectParam> CustomProjectParams { get; set; } = new ObservableCollection<CustomProjectParam>();
 
         public MainWindow()
         {
@@ -46,9 +55,13 @@ namespace NexusBuilder
             InitializeDefaultIcon();
             _cachedIsccPath = FindIsccPath();
 
+            dgCustomParams.ItemsSource = CustomProjectParams;
+            LoadCustomProjectParams();
+
             Log("⚡ NEXUS Builder v" + AppVersion + " [Cloud Sync] готов к работе.");
             Log("• Доступна сборка: Standalone Инсталлятор (PRO) и Client Инсталлятор.");
             Log("• Облачная синхронизация шаблонов: Активна (автоматическая загрузка).");
+            Log($"• Пользовательских параметров проекта: {CustomProjectParams.Count}");
 
             TryAutoLogin();
         }
@@ -722,6 +735,18 @@ namespace NexusBuilder
             string targetOutputName = $"{cleanExeBaseName}_Setup_{opName}.exe";
             string outputFullPath = Path.Combine(outDir, targetOutputName);
 
+            // Валидация пользовательских параметров проекта
+            var (isParamsValid, paramsErr) = ValidateAllCustomParams();
+            if (!isParamsValid)
+            {
+                Log($"❌ ОШИБКА ВАЛИДАЦИИ ПАРАМЕТРОВ ПРОЕКТА: {paramsErr}");
+                System.Windows.MessageBox.Show($"Ошибка в пользовательских параметрах проекта:\n\n{paramsErr}", "Валидация конфигурации", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var customConfigDict = BuildCustomConfigDictionary();
+            SaveCustomProjectParams(); // Гарантированное сохранение при билде
+
             btnBuildStandaloneInstaller.IsEnabled = false;
             btnBuildClientInstaller.IsEnabled = false;
             btnBrowse.IsEnabled = false;
@@ -735,6 +760,7 @@ namespace NexusBuilder
             Log($"🏷️ Имя приложения: {appName}");
             Log($"🏢 Автор / Издатель: {appAuthor}");
             Log($"📢 Telegram канал: {tgChannel}");
+            Log($"⚙️ Пользовательских параметров: {customConfigDict.Count}");
             Log($"🎨 Иконка: {Path.GetFileName(_activeIconPath)}");
             Log($"💾 Путь назначения: {outputFullPath}");
 
@@ -803,7 +829,7 @@ namespace NexusBuilder
                     }
 
                     Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
-                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone);
+                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict);
                     if (!patchOk)
                     {
                         Log("❌ ОШИБКА внедрения параметров оператора!");
@@ -935,7 +961,7 @@ namespace NexusBuilder
             }
         }
 
-        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone)
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone, Dictionary<string, object?>? customConfig = null)
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
@@ -978,6 +1004,7 @@ namespace NexusBuilder
                 telegramUrl = tgChannel,
                 tgChannel = tgChannel,
                 buildMode = isStandalone ? "standalone" : "loader",
+                customConfig = customConfig ?? new Dictionary<string, object?>(),
                 builtAt = DateTime.UtcNow.ToString("o")
             };
 
@@ -1158,6 +1185,231 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 CopyDirectory(subDir, targetSub);
             }
         }
+
+        #region Custom Project Configuration Management
+        private void UpdateCustomConfigCount()
+        {
+            if (lblCustomConfigCount != null)
+            {
+                int count = CustomProjectParams.Count;
+                lblCustomConfigCount.Text = $"{count} {GetParamWord(count)}";
+            }
+        }
+
+        private string GetParamWord(int count)
+        {
+            int n = Math.Abs(count) % 100;
+            int n1 = n % 10;
+            if (n > 10 && n < 20) return "параметров";
+            if (n1 > 1 && n1 < 5) return "параметра";
+            if (n1 == 1) return "параметр";
+            return "параметров";
+        }
+
+        private void TgCustomConfigToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            if (pnlCustomConfigBody != null) pnlCustomConfigBody.Visibility = Visibility.Visible;
+        }
+
+        private void TgCustomConfigToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (pnlCustomConfigBody != null) pnlCustomConfigBody.Visibility = Visibility.Collapsed;
+        }
+
+        private void BtnAddParam_Click(object sender, RoutedEventArgs e)
+        {
+            var keys = CustomProjectParams.Select(p => p.Key).ToList();
+            var dlg = new ParamEditDialog(null, keys) { Owner = this };
+            if (dlg.ShowDialog() == true && dlg.Parameter != null)
+            {
+                CustomProjectParams.Add(dlg.Parameter);
+                SaveCustomProjectParams();
+                UpdateCustomConfigCount();
+                Log($"➕ Добавлен параметр конфигурации: {dlg.Parameter.Name} ({dlg.Parameter.Key} = '{dlg.Parameter.DefaultValue}')");
+            }
+        }
+
+        private void BtnEditParam_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCustomParams.SelectedItem is CustomProjectParam selected)
+            {
+                var keys = CustomProjectParams.Where(p => p != selected).Select(p => p.Key).ToList();
+                var dlg = new ParamEditDialog(selected, keys) { Owner = this };
+                if (dlg.ShowDialog() == true && dlg.Parameter != null)
+                {
+                    selected.Name = dlg.Parameter.Name;
+                    selected.Key = dlg.Parameter.Key;
+                    selected.Type = dlg.Parameter.Type;
+                    selected.DefaultValue = dlg.Parameter.DefaultValue;
+                    selected.Options = dlg.Parameter.Options;
+                    selected.Description = dlg.Parameter.Description;
+                    selected.IsRequired = dlg.Parameter.IsRequired;
+
+                    SaveCustomProjectParams();
+                    dgCustomParams.Items.Refresh();
+                    UpdateCustomConfigCount();
+                    Log($"✏️ Обновлен параметр конфигурации: {selected.Name} ({selected.Key} = '{selected.DefaultValue}')");
+                }
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Выберите параметр в таблице для изменения.", "Параметры проекта", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void DgCustomParams_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgCustomParams.SelectedItem != null)
+            {
+                BtnEditParam_Click(sender, e);
+            }
+        }
+
+        private void BtnDeleteParam_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCustomParams.SelectedItem is CustomProjectParam selected)
+            {
+                var res = System.Windows.MessageBox.Show(
+                    $"Вы уверены, что хотите удалить параметр '{selected.Name}' ({selected.Key})?",
+                    "Удаление параметра",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+
+                if (res == MessageBoxResult.Yes)
+                {
+                    CustomProjectParams.Remove(selected);
+                    SaveCustomProjectParams();
+                    UpdateCustomConfigCount();
+                    Log($"🗑️ Удален параметр конфигурации: {selected.Name} ({selected.Key})");
+                }
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Выберите параметр в таблице для удаления.", "Параметры проекта", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void BtnLoadExampleConfig_Click(object sender, RoutedEventArgs e)
+        {
+            var res = System.Windows.MessageBox.Show(
+                "Загрузить эталонный набор параметров проекта (mode, address, server, port, worker, resourceLimit)?\nСуществующие параметры с такими же ключами будут обновлены.",
+                "Пример конфигурации",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (res != MessageBoxResult.Yes) return;
+
+            var examples = new List<CustomProjectParam>
+            {
+                new CustomProjectParam { Name = "Режим работы", Key = "mode", Type = "select", Options = "example, production, staging, debug", DefaultValue = "example", Description = "Режим функционирования модуля", IsRequired = true },
+                new CustomProjectParam { Name = "Сетевой адрес", Key = "address", Type = "text", DefaultValue = "127.0.0.1", Description = "IP-адрес или хостнейм узла", IsRequired = false },
+                new CustomProjectParam { Name = "Имя сервера", Key = "server", Type = "text", DefaultValue = "nexus-node-01", Description = "Идентификатор целевого сервера", IsRequired = false },
+                new CustomProjectParam { Name = "Порт подключения", Key = "port", Type = "number", DefaultValue = "8080", Description = "Сетевой TCP/UDP порт", IsRequired = true },
+                new CustomProjectParam { Name = "Имя воркера", Key = "worker", Type = "text", DefaultValue = "worker_main", Description = "Назначенный воркер процесса", IsRequired = false },
+                new CustomProjectParam { Name = "Лимит ресурсов (%)", Key = "resourceLimit", Type = "number", DefaultValue = "50", Description = "Максимальный процент использования ресурсов", IsRequired = false }
+            };
+
+            foreach (var ex in examples)
+            {
+                var existing = CustomProjectParams.FirstOrDefault(p => p.Key.Equals(ex.Key, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    existing.Name = ex.Name;
+                    existing.Type = ex.Type;
+                    existing.DefaultValue = ex.DefaultValue;
+                    existing.Options = ex.Options;
+                    existing.Description = ex.Description;
+                    existing.IsRequired = ex.IsRequired;
+                }
+                else
+                {
+                    CustomProjectParams.Add(ex);
+                }
+            }
+
+            SaveCustomProjectParams();
+            dgCustomParams.Items.Refresh();
+            UpdateCustomConfigCount();
+            Log("📋 Пример набора параметров проекта успешно загружен и сохранен!");
+        }
+
+        private void SaveCustomProjectParams()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_projectConfigFilePath)!);
+                string json = JsonSerializer.Serialize(CustomProjectParams, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_projectConfigFilePath, json, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                Log("⚠️ Ошибка сохранения конфигурации проекта: " + ex.Message);
+            }
+        }
+
+        private void LoadCustomProjectParams()
+        {
+            try
+            {
+                if (File.Exists(_projectConfigFilePath))
+                {
+                    string json = File.ReadAllText(_projectConfigFilePath, Encoding.UTF8);
+                    var items = JsonSerializer.Deserialize<List<CustomProjectParam>>(json);
+                    if (items != null)
+                    {
+                        CustomProjectParams.Clear();
+                        foreach (var it in items)
+                        {
+                            CustomProjectParams.Add(it);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("⚠️ Ошибка загрузки сохраненной конфигурации: " + ex.Message);
+            }
+
+            UpdateCustomConfigCount();
+        }
+
+        public (bool isValid, string error) ValidateAllCustomParams()
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var param in CustomProjectParams)
+            {
+                if (string.IsNullOrWhiteSpace(param.Key))
+                {
+                    return (false, $"У параметра '{param.Name}' не указан уникальный ключ.");
+                }
+
+                if (!keys.Add(param.Key))
+                {
+                    return (false, $"Дубликат ключа конфигурации: '{param.Key}'!");
+                }
+
+                var (valid, err) = param.Validate();
+                if (!valid)
+                {
+                    return (false, err);
+                }
+            }
+
+            return (true, "");
+        }
+
+        public Dictionary<string, object?> BuildCustomConfigDictionary()
+        {
+            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var param in CustomProjectParams)
+            {
+                dict[param.Key] = param.GetTypedValue();
+            }
+            return dict;
+        }
+        #endregion
 
         private static int IndexOfBytes(byte[] src, byte[] pattern, int start)
         {

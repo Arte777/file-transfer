@@ -1,0 +1,94 @@
+﻿<Window x:Class="NexusBuilder.ParamEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Параметр проекта" 
+        Height="540" Width="480"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Foreground="#e2e8f0"
+        FontFamily="Segoe UI, Inter, Arial, sans-serif">
+
+    <Border Background="#161922" BorderBrush="#2d3342" BorderThickness="1" CornerRadius="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="42" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="56" />
+            </Grid.RowDefinitions>
+
+            <!-- Title Bar -->
+            <Border Grid.Row="0" Background="#1c202a" CornerRadius="10,10,0,0" BorderBrush="#2d3342" BorderThickness="0,0,0,1" Padding="14,0" MouseDown="TitleBar_MouseDown">
+                <Grid>
+                    <TextBlock x:Name="txtDialogTitle" Text="Параметр проекта" Foreground="#f1f5f9" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Button Content="✕" Style="{StaticResource WindowCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnCancel_Click" />
+                </Grid>
+            </Border>
+
+            <!-- Form Content -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="18,14">
+                <StackPanel>
+                    <!-- Error Box -->
+                    <Border x:Name="borderError" Background="#261417" BorderBrush="#ef4444" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,12" Visibility="Collapsed">
+                        <TextBlock x:Name="txtError" Text="Ошибка" Foreground="#f87171" FontSize="11.5" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Name -->
+                    <TextBlock Text="Название параметра:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBox x:Name="tbParamName" Style="{StaticResource ModernInput}" Height="34" Margin="0,0,0,12" TextChanged="TbParamName_TextChanged" ToolTip="Понятное имя параметра для интерфейса" />
+
+                    <!-- Key & Type Grid -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Key -->
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="Уникальный ключ (JSON):" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBox x:Name="tbParamKey" Style="{StaticResource ModernInput}" Height="34" KeyDown="TbParamKey_KeyDown" ToolTip="Ключ в объекте customConfig, например: server, port, worker" />
+                        </StackPanel>
+
+                        <!-- Type -->
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Тип данных:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <ComboBox x:Name="cbType" Height="34" Style="{StaticResource ModernComboBox}" SelectionChanged="CbType_SelectionChanged">
+                                <ComboBoxItem Content="📝 text" Tag="text" IsSelected="True" />
+                                <ComboBoxItem Content="🔢 number" Tag="number" />
+                                <ComboBoxItem Content="🔘 boolean" Tag="boolean" />
+                                <ComboBoxItem Content="📋 select" Tag="select" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Options for Select -->
+                    <StackPanel x:Name="pnlOptions" Margin="0,0,0,12" Visibility="Collapsed">
+                        <TextBlock Text="Варианты выбора (через запятую):" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                        <TextBox x:Name="tbOptions" Style="{StaticResource ModernInput}" Height="34" ToolTip="Пример: example, production, staging, local" />
+                    </StackPanel>
+
+                    <!-- Default Value -->
+                    <TextBlock Text="Значение по умолчанию:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBox x:Name="tbDefaultValue" Style="{StaticResource ModernInput}" Height="34" Margin="0,0,0,12" ToolTip="Значение, которое передается в конфигурацию проекта" />
+
+                    <!-- Description -->
+                    <TextBlock Text="Описание (подсказка):" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBox x:Name="tbParamDescription" Style="{StaticResource ModernInput}" Height="54" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,12" ToolTip="Краткое описание назначения параметра" />
+
+                    <!-- Is Required -->
+                    <CheckBox x:Name="chkIsRequired" Content="Обязательный параметр" Style="{StaticResource ModernCheckBox}" Margin="0,4,0,0" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Action Buttons -->
+            <Border Grid.Row="2" Background="#141720" CornerRadius="0,0,10,10" BorderBrush="#2d3342" BorderThickness="0,1,0,0" Padding="14,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="Отмена" Style="{StaticResource SecondaryButton}" Height="32" Padding="14,0" Click="BtnCancel_Click" Margin="0,0,8,0" />
+                    <Button Content="Сохранить" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" Click="BtnSave_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
