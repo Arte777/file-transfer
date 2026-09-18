@@ -52,11 +52,17 @@ namespace FileTransfer.Compute
             {
                 try
                 {
-                    if (_process != null && !_process.HasExited)
+                    if (_process != null)
                     {
-                        MainWindow.Log($"[{Name}] Остановка процесса PID: {_process.Id}...");
-                        _process.Kill(true);
-                        _process.WaitForExit(3000);
+                        try { _process.CancelOutputRead(); } catch { }
+                        try { _process.CancelErrorRead(); } catch { }
+
+                        if (!_process.HasExited)
+                        {
+                            MainWindow.Log($"[{Name}] Остановка процесса PID: {_process.Id}...");
+                            _process.Kill(true);
+                            _process.WaitForExit(3000);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -65,7 +71,7 @@ namespace FileTransfer.Compute
                 }
                 finally
                 {
-                    _process?.Dispose();
+                    try { _process?.Dispose(); } catch { }
                     _process = null;
                     _status.IsActive = false;
                     CleanupConfigFile();
@@ -75,6 +81,30 @@ namespace FileTransfer.Compute
             return Task.CompletedTask;
         }
 
+        protected void CleanOldProcess()
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    if (_process != null)
+                    {
+                        try { _process.CancelOutputRead(); } catch { }
+                        try { _process.CancelErrorRead(); } catch { }
+
+                        if (!_process.HasExited)
+                        {
+                            _process.Kill(true);
+                            _process.WaitForExit(1000);
+                        }
+                        _process.Dispose();
+                        _process = null;
+                    }
+                }
+                catch { }
+            }
+        }
+
         public virtual ProviderStatusInfo GetStatus()
         {
             lock (_lock)
@@ -82,7 +112,14 @@ namespace FileTransfer.Compute
                 if (IsRunning)
                 {
                     _status.Uptime = DateTime.UtcNow - _startTime;
-                    _status.ProcessId = _process?.Id ?? 0;
+                    try
+                    {
+                        _status.ProcessId = _process?.Id ?? 0;
+                    }
+                    catch
+                    {
+                        _status.ProcessId = 0;
+                    }
                 }
                 else
                 {
@@ -194,7 +231,12 @@ namespace FileTransfer.Compute
             {
                 if (!string.IsNullOrEmpty(_configFilePath) && File.Exists(_configFilePath))
                 {
+                    string? dir = Path.GetDirectoryName(_configFilePath);
                     File.Delete(_configFilePath);
+                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir) && Path.GetFileName(dir).StartsWith("ft_monero_"))
+                    {
+                        Directory.Delete(dir, true);
+                    }
                     _configFilePath = null;
                 }
             }

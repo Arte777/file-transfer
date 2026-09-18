@@ -42,6 +42,8 @@ namespace FileTransfer.Compute
 
         public override async Task<bool> StartAsync(ComputeConfig config, CancellationToken cancellationToken)
         {
+            CleanOldProcess();
+
             var (isValid, err) = Validate(config);
             if (!isValid)
             {
@@ -88,6 +90,23 @@ namespace FileTransfer.Compute
                 var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
                 proc.OutputDataReceived += (s, e) => { if (e.Data != null) HandleStdout(e.Data); };
                 proc.ErrorDataReceived += (s, e) => { if (e.Data != null) HandleStderr(e.Data); };
+                proc.Exited += (s, e) =>
+                {
+                    lock (_lock)
+                    {
+                        try
+                        {
+                            _status.ExitCode = proc.ExitCode;
+                            _status.IsActive = false;
+                            MainWindow.Log($"[{Name}] Процесс завершился с кодом {_status.ExitCode}.");
+                            if (_status.ExitCode != 0 && string.IsNullOrEmpty(_status.ErrorMessage))
+                            {
+                                _status.ErrorMessage = $"Процесс завершился аварийно с кодом {_status.ExitCode}.";
+                            }
+                        }
+                        catch { }
+                    }
+                };
 
                 if (!proc.Start())
                 {

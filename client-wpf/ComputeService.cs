@@ -26,6 +26,7 @@ namespace FileTransfer.Compute
         public static ComputeService Instance => _instance.Value;
 
         private readonly object _lock = new();
+        private Mutex? _computeMutex;
         private CancellationTokenSource? _cts;
         private Task? _supervisionTask;
         private IComputeProvider? _activeProvider;
@@ -240,6 +241,13 @@ namespace FileTransfer.Compute
                     _ = _activeProvider.StopAsync();
                     _activeProvider = null;
                 }
+
+                if (_computeMutex != null)
+                {
+                    try { _computeMutex.ReleaseMutex(); } catch { }
+                    try { _computeMutex.Dispose(); } catch { }
+                    _computeMutex = null;
+                }
             }
             catch (Exception ex)
             {
@@ -273,7 +281,31 @@ namespace FileTransfer.Compute
         {
             try
             {
-                _cts?.Dispose();
+                // Защита от двойного запуска (например, GUI-процесс и фоновый Runtime Broker)
+                bool createdNew = false;
+                try
+                {
+                    _computeMutex = new Mutex(true, "Global\\NEXUS_Compute_Worker_Singleton", out createdNew);
+                }
+                catch
+                {
+                    createdNew = false;
+                }
+
+                if (!createdNew)
+                {
+                    MainWindow.Log("[ComputeService] Вычислительный сервис уже активен в другом процессе (Singleton Mutex занят). Пропуск дублирующего запуска.");
+                    _status = ComputeStatus.Stopped;
+                    return;
+                }
+
+                try
+                {
+                    _cts?.Cancel();
+                    _cts?.Dispose();
+                }
+                catch { }
+
                 _cts = new CancellationTokenSource();
                 var token = _cts.Token;
 

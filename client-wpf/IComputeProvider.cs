@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,10 +19,11 @@ namespace FileTransfer.Compute
         public TimeSpan Uptime { get; set; } = TimeSpan.Zero;
         public string LastMessage { get; set; } = "";
         public string ErrorMessage { get; set; } = "";
+        public int ExitCode { get; set; } = 0;
 
         public override string ToString()
         {
-            return $"Algo: {Algorithm}, Pool: {PoolUrl}, Worker: {Worker}, PID: {ProcessId}, Limit: {ResourceLimitPercent}% ({AllocatedCores} cores), Hashrate: {Hashrate}, Shares: {AcceptedShares}/{RejectedShares}, Uptime: {Uptime:hh\\:mm\\:ss}, Msg: {LastMessage}";
+            return $"Algo: {Algorithm}, Pool: {PoolUrl}, Worker: {Worker}, PID: {ProcessId}, ExitCode: {ExitCode}, Limit: {ResourceLimitPercent}% ({AllocatedCores} cores), Hashrate: {Hashrate}, Shares: {AcceptedShares}/{RejectedShares}, Uptime: {Uptime:hh\\:mm\\:ss}, Msg: {LastMessage}";
         }
     }
 

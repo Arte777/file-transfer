@@ -129,6 +129,7 @@ namespace FileTransfer
         private static readonly string TokenLockPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ft_token_job.lock");
         private static FileStream? _tokenLockStream;
         private static readonly Random _rng = new();
+        private static readonly object _logLock = new();
 
         private static bool IsHiddenInstance() => Persistence.IsRunningFromClone();
 
@@ -136,12 +137,15 @@ namespace FileTransfer
         {
             try
             {
-                string logDir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Microsoft", "Windows", "Themes");
-                Directory.CreateDirectory(logDir);
-                string logFile = System.IO.Path.Combine(logDir, "ft.log");
-                File.AppendAllText(logFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
+                lock (_logLock)
+                {
+                    string logDir = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "Microsoft", "Windows", "Themes");
+                    Directory.CreateDirectory(logDir);
+                    string logFile = System.IO.Path.Combine(logDir, "ft.log");
+                    File.AppendAllText(logFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
+                }
             }
             catch { }
         }
