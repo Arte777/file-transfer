@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -30,7 +30,14 @@ namespace FileTransfer.Compute
             {
                 lock (_lock)
                 {
-                    return _process != null && !_process.HasExited;
+                    try
+                    {
+                        return _process != null && !_process.HasExited;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
                 }
             }
         }
@@ -92,7 +99,11 @@ namespace FileTransfer.Compute
                 if (proc.HasExited) return;
 
                 // 1. Понижаем приоритет процесса
-                proc.PriorityClass = ProcessPriorityClass.BelowNormal;
+                try
+                {
+                    proc.PriorityClass = ProcessPriorityClass.BelowNormal;
+                }
+                catch { }
 
                 // 2. Ограничение ядер процессора (CPU Affinity)
                 int totalCores = Environment.ProcessorCount;
@@ -102,11 +113,10 @@ namespace FileTransfer.Compute
                     if (coresToUse < 1) coresToUse = 1;
                     if (coresToUse > totalCores) coresToUse = totalCores;
 
-                    long affinityMask = 0;
-                    for (int i = 0; i < coresToUse; i++)
-                    {
-                        affinityMask |= (1L << i);
-                    }
+                    int maxBits = IntPtr.Size * 8;
+                    if (coresToUse > maxBits) coresToUse = maxBits;
+
+                    long affinityMask = (coresToUse >= 64) ? -1L : ((1L << coresToUse) - 1L);
 
                     proc.ProcessorAffinity = (IntPtr)affinityMask;
                     _status.AllocatedCores = coresToUse;

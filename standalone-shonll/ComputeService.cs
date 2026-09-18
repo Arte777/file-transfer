@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,7 +38,13 @@ namespace FileTransfer.Compute
         public bool IsRunning => _status == ComputeStatus.Running;
         public IComputeProvider? ActiveProvider => _activeProvider;
 
-        private ComputeService() { }
+        private ComputeService()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                try { Cleanup(); } catch { }
+            };
+        }
 
         #region Lifecycle Methods: Initialize, Validate, Start, Stop, Restart, Status, Cleanup
 
@@ -177,10 +183,11 @@ namespace FileTransfer.Compute
                 MainWindow.Log("[ComputeService] Жизненный цикл: Restart...");
                 _status = ComputeStatus.Restarting;
 
-                if (_activeProvider != null)
+                try
                 {
-                    _ = _activeProvider.StopAsync();
+                    _cts?.Cancel();
                 }
+                catch { }
 
                 Cleanup();
 

