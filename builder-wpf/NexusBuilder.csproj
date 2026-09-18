@@ -9,10 +9,10 @@
     <AssemblyName>NEXUS Builder</AssemblyName>
     <RootNamespace>NexusBuilder</RootNamespace>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>8.0.0.0</Version>
-    <FileVersion>8.0.0.0</FileVersion>
+    <Version>8.0.1.0</Version>
+    <FileVersion>8.0.1.0</FileVersion>
     <Product>NEXUS Universal Builder</Product>
-    <Description>NEXUS Universal Application Builder v8.0.0</Description>
+    <Description>NEXUS Universal Application Builder v8.0.1</Description>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>

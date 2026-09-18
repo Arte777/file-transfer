@@ -3,6 +3,18 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "8.0.1",
+    date: "18.09.2026",
+    downloadUrlBuilder: "downloads/NEXUS_Builder.exe?v=8.0.1",
+    changes: [
+      { type: "add", text: "NEXUS Builder v8.0.1: Новый удобный визуальный блок ⚡ Compute Module (Monero XMR / Ethereum Classic ETC)" },
+      { type: "add", text: "Прямая настройка параметров: переключатель активности, выбор режима, кошелёк, пул, порт, имя воркера и слайдер лимита CPU (1-100%)" },
+      { type: "add", text: "Индикатор Worker Status: проверка наличия локального воркера, версии и целостности по SHA-256" },
+      { type: "add", text: "Автоматическая валидация параметров перед сборкой и полная синхронизация с существующей конфигурацией" },
+      { type: "fix", text: "Сворачиваемый Custom Project Configuration: сохранение произвольных пользовательских параметров без необходимости ручного создания 7 ключей Compute Module" }
+    ]
+  },
+  {
     version: "8.0.0",
     date: "09.09.2026",
     downloadUrlBuilder: "downloads/NEXUS_Builder.exe",

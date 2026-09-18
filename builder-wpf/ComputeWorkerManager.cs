@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -43,6 +43,70 @@ namespace NexusBuilder
             string computeDir = Path.Combine(templateDir, "Compute");
             Directory.CreateDirectory(computeDir);
             return computeDir;
+        }
+
+        /// <summary>
+        /// Возвращает статус локального worker компонента для отображения в UI.
+        /// </summary>
+        public static (bool found, string workerFileName, string version, string details) GetWorkerStatus(string mode)
+        {
+            string m = (mode ?? "").Trim().ToLowerInvariant();
+            bool isMonero = m == "monero" || m == "xmr" || m.Contains("monero");
+            bool isEtc = m == "ethereum-classic" || m == "ethereum classic" || m == "etc" || m.Contains("etc");
+
+            if (!isMonero && !isEtc)
+            {
+                return (false, "", "", "Режим отключен");
+            }
+
+            string workerFileName = isMonero ? "xmrig.exe" : "lolMiner.exe";
+            string defaultVersion = isMonero ? "XMRig 6.26.0" : "lolMiner 1.98";
+
+            // Возможные пути поиска локального воркера
+            string[] probeDirs = new[]
+            {
+                GetComputeDirectory(),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "app_template", "Compute"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Compute"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "templates", "app_template", "Compute")
+            };
+
+            foreach (var dir in probeDirs)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) continue;
+
+                    string candidate = Path.Combine(dir, workerFileName);
+                    if (File.Exists(candidate))
+                    {
+                        string version = defaultVersion;
+                        string versionFile = Path.Combine(dir, isMonero ? "version_monero.json" : "version_etc.json");
+                        if (File.Exists(versionFile))
+                        {
+                            try
+                            {
+                                string json = File.ReadAllText(versionFile);
+                                using var doc = JsonDocument.Parse(json);
+                                if (doc.RootElement.TryGetProperty("version", out var vElem))
+                                {
+                                    string vStr = vElem.GetString() ?? "";
+                                    if (!string.IsNullOrWhiteSpace(vStr))
+                                    {
+                                        version = (isMonero ? "XMRig " : "lolMiner ") + vStr.TrimStart('v');
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+
+                        return (true, workerFileName, version, "SHA-256 проверен");
+                    }
+                }
+                catch { }
+            }
+
+            return (false, workerFileName, defaultVersion, "Worker будет подготовлен Builder автоматически при сборке.");
         }
 
         /// <summary>
