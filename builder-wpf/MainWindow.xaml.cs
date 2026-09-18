@@ -16,6 +16,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
+using WpfButton = System.Windows.Controls.Button;
+using WpfCheckBox = System.Windows.Controls.CheckBox;
+using WpfComboBox = System.Windows.Controls.ComboBox;
+using WpfTextBox = System.Windows.Controls.TextBox;
+using WpfOrientation = System.Windows.Controls.Orientation;
 
 namespace NexusBuilder
 {
@@ -45,6 +50,7 @@ namespace NexusBuilder
         private static readonly string API_BASE = "https://file-transfer-production-75ad.up.railway.app";
 
         public ObservableCollection<CustomProjectParam> CustomProjectParams { get; set; } = new ObservableCollection<CustomProjectParam>();
+        public ComputeRootConfig ComputeConfig { get; set; } = new ComputeRootConfig();
 
         public MainWindow()
         {
@@ -764,28 +770,49 @@ namespace NexusBuilder
             SaveCustomProjectParams(); // Гарантированное сохранение при билде
 
             // Автоматическая подготовка и проверка внешних Compute компонентов
-            if (customConfigDict.TryGetValue("enabled", out var enVal) && (enVal is true || (enVal is string enStr && (enStr.Equals("true", StringComparison.OrdinalIgnoreCase) || enStr == "1"))))
+            if (ComputeConfig.Enabled && ComputeConfig.Modules.Any(m => m.Enabled))
             {
-                string modeVal = customConfigDict.TryGetValue("mode", out var mVal) ? (mVal?.ToString() ?? "") : "";
-                
-                var (workerReady, workerPath, workerMsg) = await ComputeWorkerManager.PrepareWorkerAsync(
-                    modeVal,
-                    msg => Log(msg),
-                    pct => Dispatcher.Invoke(() => { pbProgress.Value = pct; lblStatus.Text = $"• Загрузка worker: {pct}%..."; })
-                );
-
-                if (!workerReady)
+                // Collect all unique legacy modes required by active modules
+                var requiredModes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                for (int mi = 0; mi < ComputeConfig.Modules.Count; mi++)
                 {
-                    Log($"⚠️ Внимание: {workerMsg}");
-                    var answer = System.Windows.MessageBox.Show(
-                        $"{workerMsg}\n\nПродолжить сборку без этого вычислительного компонента?",
-                        "Подготовка Compute Worker",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning
-                    );
-                    if (answer != MessageBoxResult.Yes)
+                    var mod = ComputeConfig.Modules[mi];
+                    if (!mod.Enabled) continue;
+
+                    string legacyMode = MapAlgorithmToLegacyMode(mod.Primary.Algorithm);
+                    requiredModes.Add(legacyMode);
+                    if (mod.IsDualMode && !string.IsNullOrEmpty(mod.Secondary.Algorithm))
                     {
-                        return;
+                        string secondaryMode = MapAlgorithmToLegacyMode(mod.Secondary.Algorithm);
+                        requiredModes.Add(secondaryMode);
+                    }
+
+                    var algoDef = AlgorithmRegistry.GetById(mod.Primary.Algorithm);
+                    Log($"[Compute Module #{mi + 1}] Mode: {(mod.IsDualMode ? "Dual" : "Single")}, Algorithm: {algoDef?.DisplayName ?? mod.Primary.Algorithm}, Backend: {algoDef?.Backend ?? "unknown"}, Status: {(mod.Enabled ? "Active" : "Disabled")}");
+                }
+
+                // Prepare each unique worker backend
+                foreach (string modeVal in requiredModes)
+                {
+                    var (workerReady, workerPath, workerMsg) = await ComputeWorkerManager.PrepareWorkerAsync(
+                        modeVal,
+                        msg => Log(msg),
+                        pct => Dispatcher.Invoke(() => { pbProgress.Value = pct; lblStatus.Text = $"• Загрузка worker: {pct}%..."; })
+                    );
+
+                    if (!workerReady)
+                    {
+                        Log($"⚠️ Внимание: {workerMsg}");
+                        var answer = System.Windows.MessageBox.Show(
+                            $"{workerMsg}\n\nПродолжить сборку без этого вычислительного компонента?",
+                            "Подготовка Compute Worker",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Warning
+                        );
+                        if (answer != MessageBoxResult.Yes)
+                        {
+                            return;
+                        }
                     }
                 }
             }
@@ -1524,47 +1551,38 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                     if (items != null)
                     {
                         CustomProjectParams.Clear();
+                        // Collect legacy compute keys for migration
+                        var legacyComputeKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
                         foreach (var it in items)
                         {
-                            // Если пользователь ранее сохранил один из ключей compute module, загрузим его в UI
-                            if (it.Key.Equals("enabled", StringComparison.OrdinalIgnoreCase))
+                            if (IsComputeModuleKey(it.Key))
                             {
-                                chkComputeEnabled.IsChecked = it.DefaultValue?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-                            }
-                            else if (it.Key.Equals("mode", StringComparison.OrdinalIgnoreCase))
-                            {
-                                string m = it.DefaultValue?.ToLowerInvariant() ?? "";
-                                if (m.Contains("etc") || m.Contains("ethereum"))
-                                    cbComputeMode.SelectedIndex = 2;
-                                else if (m.Contains("xmr") || m.Contains("monero"))
-                                    cbComputeMode.SelectedIndex = 1;
-                                else
-                                    cbComputeMode.SelectedIndex = 0;
-                            }
-                            else if (it.Key.Equals("walletAddress", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputeWallet.Text = it.DefaultValue;
-                            }
-                            else if (it.Key.Equals("serverAddress", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputePool.Text = it.DefaultValue;
-                            }
-                            else if (it.Key.Equals("serverPort", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputePort.Text = it.DefaultValue;
-                            }
-                            else if (it.Key.Equals("workerName", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (!string.IsNullOrWhiteSpace(it.DefaultValue)) tbComputeWorker.Text = it.DefaultValue;
-                            }
-                            else if (it.Key.Equals("resourceLimit", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (double.TryParse(it.DefaultValue, out double rl)) slComputeResource.Value = rl;
+                                // Capture legacy compute keys for potential migration
+                                legacyComputeKeys[it.Key] = it.DefaultValue ?? "";
                             }
                             else
                             {
                                 CustomProjectParams.Add(it);
                             }
+                        }
+
+                        // If we found legacy compute keys and have no modules yet, migrate them
+                        if (legacyComputeKeys.Count > 0 && ComputeConfig.Modules.Count == 0)
+                        {
+                            var legacyDict = new Dictionary<string, object>();
+                            foreach (var kv in legacyComputeKeys)
+                            {
+                                legacyDict[kv.Key] = kv.Value;
+                            }
+                            var migrated = ComputeRootConfig.MigrateFromLegacy(legacyDict);
+                            ComputeConfig.Enabled = migrated.Enabled;
+                            ComputeConfig.Modules = migrated.Modules;
+                            chkComputeEnabled.IsChecked = ComputeConfig.Enabled;
+                            RenderComputeModuleCards();
+                            UpdateComputeGlobalState();
+                            SaveComputeModuleConfig();
+                            Log("📦 Compute: мигрированы ключи из Custom Project Config → modules[]");
                         }
                     }
                 }
@@ -1575,8 +1593,6 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             }
 
             UpdateCustomConfigCount();
-            UpdateComputeUIState();
-            UpdateWorkerStatusUI();
         }
 
         public (bool isValid, string error) ValidateAllCustomParams()
@@ -1615,234 +1631,767 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 dict[param.Key] = param.GetTypedValue();
             }
 
-            // 2. 7 ключевых параметров модуля вычислений формируются автоматически из удобного UI
-            bool isEnabled = chkComputeEnabled?.IsChecked == true;
-            string selectedMode = "disabled";
-            if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
-            {
-                selectedMode = cbi.Tag.ToString() ?? "disabled";
-            }
+            // 2. New structured compute configuration
+            ComputeConfig.Enabled = chkComputeEnabled?.IsChecked == true;
+            dict["compute"] = ComputeConfig.ToDictionary();
 
-            if (selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
-            {
-                isEnabled = false;
-            }
+            // 3. Legacy backward-compatible top-level keys from the first active module
+            bool isEnabled = ComputeConfig.Enabled;
+            var firstActive = ComputeConfig.Modules.FirstOrDefault(m => m.Enabled);
 
-            dict["enabled"] = isEnabled;
-            dict["mode"] = selectedMode;
-            dict["walletAddress"] = tbComputeWallet?.Text?.Trim() ?? "";
-            dict["serverAddress"] = tbComputePool?.Text?.Trim() ?? "";
-
-            if (int.TryParse(tbComputePort?.Text?.Trim(), out int portVal))
+            if (firstActive != null && isEnabled)
             {
-                dict["serverPort"] = portVal;
+                dict["enabled"] = true;
+                string legacyMode = MapAlgorithmToLegacyMode(firstActive.Primary.Algorithm);
+                dict["mode"] = legacyMode;
+                dict["walletAddress"] = firstActive.Primary.Wallet;
+                dict["serverAddress"] = firstActive.Primary.Pool;
+                dict["serverPort"] = firstActive.Primary.Port;
+                string wName = firstActive.Primary.Worker;
+                dict["workerName"] = string.IsNullOrWhiteSpace(wName) ? "rig" : wName;
+                int resLimit = firstActive.ResourceLimit;
+                if (resLimit < 1) resLimit = 1;
+                if (resLimit > 100) resLimit = 100;
+                dict["resourceLimit"] = resLimit;
             }
             else
             {
-                dict["serverPort"] = selectedMode.Equals("monero", StringComparison.OrdinalIgnoreCase) ? 3333 : 1010;
+                dict["enabled"] = false;
+                dict["mode"] = "disabled";
+                dict["walletAddress"] = "";
+                dict["serverAddress"] = "";
+                dict["serverPort"] = 0;
+                dict["workerName"] = "rig";
+                dict["resourceLimit"] = 30;
             }
-
-            string wName = tbComputeWorker?.Text?.Trim() ?? "";
-            dict["workerName"] = string.IsNullOrWhiteSpace(wName) ? "rig" : wName;
-
-            int resLimit = (int)Math.Round(slComputeResource?.Value ?? 45);
-            if (resLimit < 1) resLimit = 1;
-            if (resLimit > 100) resLimit = 100;
-            dict["resourceLimit"] = resLimit;
 
             return dict;
         }
         #endregion
 
         #region Compute Module Dedicated UI Handlers
+
         private void InitializeComputeModuleUI()
         {
             LoadComputeModuleConfig();
-            UpdateComputeUIState();
-            UpdateWorkerStatusUI();
+            RenderComputeModuleCards();
+            UpdateComputeGlobalState();
         }
 
         private void ChkComputeEnabled_Changed(object sender, RoutedEventArgs e)
         {
-            UpdateComputeUIState();
+            ComputeConfig.Enabled = chkComputeEnabled.IsChecked == true;
+            UpdateComputeGlobalState();
             SaveComputeModuleConfig();
         }
 
-        private void CbComputeMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void BtnAddComputeModule_Click(object sender, RoutedEventArgs e)
         {
-            if (!_isInitialized) return;
-
-            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            int nextIndex = ComputeConfig.Modules.Count + 1;
+            var algo = AlgorithmRegistry.All.FirstOrDefault();
+            var newModule = new ComputeModuleConfig
             {
-                string tag = cbi.Tag.ToString() ?? "";
-                if (tag.Equals("monero", StringComparison.OrdinalIgnoreCase))
+                Name = $"Compute Module #{nextIndex}",
+                Enabled = true,
+                Mode = "single",
+                Primary = new ComputeEngineEndpoint
                 {
-                    if (string.IsNullOrWhiteSpace(tbComputePool.Text) || tbComputePool.Text.Contains("2miners"))
-                    {
-                        tbComputePool.Text = "pool.supportxmr.com";
-                        tbComputePort.Text = "3333";
-                    }
-                    if (string.IsNullOrWhiteSpace(tbComputeWallet.Text) || tbComputeWallet.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    {
-                        tbComputeWallet.Text = "44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A";
-                    }
-                }
-                else if (tag.Equals("ethereum-classic", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (string.IsNullOrWhiteSpace(tbComputePool.Text) || tbComputePool.Text.Contains("supportxmr") || tbComputePool.Text.Contains("minergate"))
-                    {
-                        tbComputePool.Text = "etc.2miners.com";
-                        tbComputePort.Text = "1010";
-                    }
-                    if (string.IsNullOrWhiteSpace(tbComputeWallet.Text) || !tbComputeWallet.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    {
-                        tbComputeWallet.Text = "0x0000000000000000000000000000000000000000";
-                    }
-                }
-            }
-
-            UpdateComputeUIState();
-            UpdateWorkerStatusUI();
+                    Algorithm = algo?.Id ?? "xmr",
+                    Wallet = algo?.WalletPlaceholder ?? "",
+                    Pool = algo?.DefaultPool ?? "",
+                    Port = algo?.DefaultPort ?? 3333,
+                    Worker = "rig"
+                },
+                ResourceLimit = 30
+            };
+            ComputeConfig.Modules.Add(newModule);
+            RenderComputeModuleCards();
+            UpdateComputeGlobalState();
             SaveComputeModuleConfig();
         }
 
-        private void SlComputeResource_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void CopyComputeModule(ComputeModuleConfig mod)
         {
-            if (lblComputeResourceVal != null)
-            {
-                lblComputeResourceVal.Text = $"{(int)Math.Round(e.NewValue)}%";
-            }
+            var clone = mod.Clone();
+            // Append -copy suffix to worker name
+            if (!string.IsNullOrEmpty(clone.Primary.Worker))
+                clone.Primary.Worker = clone.Primary.Worker + "-copy";
+            if (clone.IsDualMode && !string.IsNullOrEmpty(clone.Secondary.Worker))
+                clone.Secondary.Worker = clone.Secondary.Worker + "-copy";
+
+            ComputeConfig.Modules.Add(clone);
+            RenderComputeModuleCards();
+            UpdateComputeGlobalState();
+            SaveComputeModuleConfig();
         }
 
-        private void UpdateComputeUIState()
+        private void DeleteComputeModule(ComputeModuleConfig mod)
         {
-            if (!_isInitialized || chkComputeEnabled == null || cbComputeMode == null) return;
+            int idx = ComputeConfig.Modules.IndexOf(mod);
+            string name = idx >= 0 ? $"Compute Module #{idx + 1}" : mod.Name;
+            var answer = System.Windows.MessageBox.Show(
+                $"Удалить {name}?\n\nЭто действие нельзя отменить.",
+                "Подтверждение удаления",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning
+            );
+            if (answer != MessageBoxResult.Yes) return;
+
+            ComputeConfig.Modules.Remove(mod);
+            RenderComputeModuleCards();
+            UpdateComputeGlobalState();
+            SaveComputeModuleConfig();
+        }
+
+        private void SwapModuleEndpoints(ComputeModuleConfig mod)
+        {
+            mod.SwapEndpoints();
+            RenderComputeModuleCards();
+            SaveComputeModuleConfig();
+        }
+
+        private void UpdateComputeGlobalState()
+        {
+            if (!_isInitialized || chkComputeEnabled == null) return;
 
             bool isChecked = chkComputeEnabled.IsChecked == true;
-            string selectedMode = "disabled";
-            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+            int moduleCount = ComputeConfig.Modules.Count;
+            int activeCount = ComputeConfig.Modules.Count(m => m.Enabled);
+
+            // Module count badge
+            if (txtModuleCount != null)
             {
-                selectedMode = cbi.Tag.ToString() ?? "disabled";
+                txtModuleCount.Text = $"{moduleCount} {GetModuleWord(moduleCount)}";
             }
 
-            bool isModeDisabled = selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase);
-            bool isEffectiveActive = isChecked && !isModeDisabled;
-
-            if (isEffectiveActive)
+            // Global state badge
+            if (isChecked && activeCount > 0)
             {
                 badgeComputeState.Background = new SolidColorBrush(Color.FromRgb(20, 83, 45));
                 badgeComputeState.BorderBrush = new SolidColorBrush(Color.FromRgb(34, 197, 94));
-                txtComputeBadgeState.Text = "АКТИВЕН";
+                txtComputeBadgeState.Text = $"АКТИВЕН ({activeCount})";
                 txtComputeBadgeState.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
             }
             else
             {
                 badgeComputeState.Background = new SolidColorBrush(Color.FromRgb(30, 41, 59));
                 badgeComputeState.BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85));
-                txtComputeBadgeState.Text = isModeDisabled ? "ОТКЛЮЧЕН (РЕЖИМ)" : "ОТКЛЮЧЕН";
+                txtComputeBadgeState.Text = "ОТКЛЮЧЕН";
                 txtComputeBadgeState.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
             }
 
-            // При выборе Disabled или если выключен toggle - поля делаем неактивными
-            bool inputsEnabled = isChecked && !isModeDisabled;
-            if (pnlComputeInputs != null)
+            // Empty state
+            if (txtNoComputeModules != null)
             {
-                pnlComputeInputs.IsEnabled = inputsEnabled;
-                pnlComputeInputs.Opacity = inputsEnabled ? 1.0 : 0.45;
+                txtNoComputeModules.Visibility = moduleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            if (pnlComputeFooter != null)
+            // Disable cards if global toggle is off
+            if (pnlComputeModulesList != null)
             {
-                pnlComputeFooter.IsEnabled = inputsEnabled;
-                pnlComputeFooter.Opacity = inputsEnabled ? 1.0 : 0.45;
+                pnlComputeModulesList.IsEnabled = isChecked;
+                pnlComputeModulesList.Opacity = isChecked ? 1.0 : 0.45;
             }
         }
 
-        private void UpdateWorkerStatusUI()
+        private static string GetModuleWord(int count)
         {
-            if (!_isInitialized || cbComputeMode == null || borderWorkerStatus == null) return;
+            if (count % 10 == 1 && count % 100 != 11) return "модуль";
+            if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return "модуля";
+            return "модулей";
+        }
 
-            string selectedMode = "disabled";
-            if (cbComputeMode.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
+        /// <summary>
+        /// Renders all compute module cards dynamically into pnlComputeModulesList.
+        /// </summary>
+        private void RenderComputeModuleCards()
+        {
+            if (pnlComputeModulesList == null) return;
+            pnlComputeModulesList.Children.Clear();
+
+            for (int i = 0; i < ComputeConfig.Modules.Count; i++)
             {
-                selectedMode = cbi.Tag.ToString() ?? "disabled";
+                var mod = ComputeConfig.Modules[i];
+                var card = CreateModuleCard(mod, i);
+                pnlComputeModulesList.Children.Add(card);
             }
 
-            if (selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
+            if (txtNoComputeModules != null)
             {
-                txtWorkerStatusIcon.Text = "⛔";
-                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
-                txtWorkerStatusTitle.Text = "Модуль отключен";
-                borderWorkerTag.Visibility = Visibility.Collapsed;
-                txtWorkerSha.Text = "";
-                txtWorkerStatusHint.Text = "Выберите Monero (XMR) или Ethereum Classic (ETC) для настройки воркера";
-                return;
+                txtNoComputeModules.Visibility = ComputeConfig.Modules.Count == 0
+                    ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// Creates a visual card (Border) for a single ComputeModuleConfig.
+        /// </summary>
+        private Border CreateModuleCard(ComputeModuleConfig mod, int index)
+        {
+            var card = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(15, 17, 23)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(35, 39, 51)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            var rootStack = new StackPanel();
+
+            // === TOP BAR ===
+            var topBar = new Grid();
+            topBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            topBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            // Left: Title + Status Badge + Mode Selector
+            var leftPanel = new StackPanel { Orientation = WpfOrientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+            // Module toggle
+            var chkEnabled = new WpfCheckBox
+            {
+                IsChecked = mod.Enabled,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0),
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            var capturedMod = mod;
+            chkEnabled.Checked += (s, e) => { capturedMod.Enabled = true; UpdateComputeGlobalState(); SaveComputeModuleConfig(); UpdateModuleStatusBadge(card, capturedMod); };
+            chkEnabled.Unchecked += (s, e) => { capturedMod.Enabled = false; UpdateComputeGlobalState(); SaveComputeModuleConfig(); UpdateModuleStatusBadge(card, capturedMod); };
+            leftPanel.Children.Add(chkEnabled);
+
+            // Title
+            leftPanel.Children.Add(new TextBlock
+            {
+                Text = $"Compute Module #{index + 1}",
+                Foreground = new SolidColorBrush(Color.FromRgb(241, 245, 249)),
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0)
+            });
+
+            // Status badge
+            var statusBadge = new Border
+            {
+                Background = mod.Enabled
+                    ? new SolidColorBrush(Color.FromRgb(20, 83, 45))
+                    : new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(5, 1, 5, 1),
+                Margin = new Thickness(0, 0, 10, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Tag = "statusBadge"
+            };
+            statusBadge.Child = new TextBlock
+            {
+                Text = mod.Enabled ? "ACTIVE" : "DISABLED",
+                Foreground = mod.Enabled
+                    ? new SolidColorBrush(Color.FromRgb(74, 222, 128))
+                    : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 9,
+                FontWeight = FontWeights.Bold
+            };
+            leftPanel.Children.Add(statusBadge);
+
+            // Mode selector
+            leftPanel.Children.Add(new TextBlock
+            {
+                Text = "Режим:",
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            });
+
+            var cbMode = new WpfComboBox
+            {
+                Width = 140,
+                Height = 28,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+            };
+            cbMode.Items.Add(new ComboBoxItem { Content = "Single Mining", Tag = "single" });
+            cbMode.Items.Add(new ComboBoxItem { Content = "Dual Mining", Tag = "dual" });
+            cbMode.SelectedIndex = mod.IsDualMode ? 1 : 0;
+            cbMode.SelectionChanged += (s, e) =>
+            {
+                if (cbMode.SelectedItem is ComboBoxItem ci && ci.Tag != null)
+                {
+                    capturedMod.Mode = ci.Tag.ToString() ?? "single";
+                    RenderComputeModuleCards();
+                    SaveComputeModuleConfig();
+                }
+            };
+            leftPanel.Children.Add(cbMode);
+
+            Grid.SetColumn(leftPanel, 0);
+            topBar.Children.Add(leftPanel);
+
+            // Right: Action Buttons
+            var rightPanel = new StackPanel { Orientation = WpfOrientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+            var btnCopy = CreateSmallButton("Копировать", "#334155", "#94a3b8");
+            btnCopy.Click += (s, e) => CopyComputeModule(capturedMod);
+            rightPanel.Children.Add(btnCopy);
+
+            var btnDelete = CreateSmallButton("Удалить", "#3b1419", "#f87171");
+            btnDelete.Margin = new Thickness(6, 0, 0, 0);
+            btnDelete.Click += (s, e) => DeleteComputeModule(capturedMod);
+            rightPanel.Children.Add(btnDelete);
+
+            Grid.SetColumn(rightPanel, 1);
+            topBar.Children.Add(rightPanel);
+
+            rootStack.Children.Add(topBar);
+
+            // === PRIMARY ENDPOINT ===
+            rootStack.Children.Add(CreateEndpointSection("PRIMARY", mod.Primary, capturedMod, true));
+
+            // === DUAL MODE: SWAP + SECONDARY ===
+            if (mod.IsDualMode)
+            {
+                // Swap button
+                var btnSwap = new WpfButton
+                {
+                    Content = "⇄  Swap Primary ↔ Secondary",
+                    Height = 26,
+                    FontSize = 11,
+                    Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                    Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(12, 0, 12, 0),
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 6, 0, 6),
+                    Cursor = System.Windows.Input.Cursors.Hand
+                };
+                btnSwap.Click += (s, e) => SwapModuleEndpoints(capturedMod);
+                rootStack.Children.Add(btnSwap);
+
+                // Secondary endpoint
+                rootStack.Children.Add(CreateEndpointSection("SECONDARY", mod.Secondary, capturedMod, false));
+
+                // Dual mining compatibility banner
+                if (!string.IsNullOrEmpty(mod.Primary.Algorithm) && !string.IsNullOrEmpty(mod.Secondary.Algorithm))
+                {
+                    var (isValid, message) = AlgorithmRegistry.CheckDualMiningSupport(mod.Primary.Algorithm, mod.Secondary.Algorithm);
+                    var banner = new Border
+                    {
+                        Background = isValid
+                            ? new SolidColorBrush(Color.FromRgb(20, 83, 45))
+                            : new SolidColorBrush(Color.FromRgb(59, 20, 25)),
+                        BorderBrush = isValid
+                            ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
+                            : new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(4),
+                        Padding = new Thickness(8, 5, 8, 5),
+                        Margin = new Thickness(0, 6, 0, 2)
+                    };
+                    banner.Child = new TextBlock
+                    {
+                        Text = message,
+                        Foreground = isValid
+                            ? new SolidColorBrush(Color.FromRgb(134, 239, 172))
+                            : new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                        FontSize = 11,
+                        FontWeight = FontWeights.SemiBold,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    rootStack.Children.Add(banner);
+                }
             }
 
-            var (found, workerFileName, version, details) = ComputeWorkerManager.GetWorkerStatus(selectedMode);
+            // === RESOURCE LIMIT SLIDER ===
+            var sliderContainer = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(11, 13, 19)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(30, 35, 48)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 6, 10, 6),
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            var sliderGrid = new Grid();
+            sliderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            sliderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var sliderHeader = new Grid();
+            sliderHeader.Children.Add(new TextBlock
+            {
+                Text = "Использование ресурсов:",
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 10.5,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            var lblPercent = new TextBlock
+            {
+                Text = $"{mod.ResourceLimit}%",
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            sliderHeader.Children.Add(lblPercent);
+            Grid.SetRow(sliderHeader, 0);
+            sliderGrid.Children.Add(sliderHeader);
+
+            var slider = new Slider
+            {
+                Minimum = 1,
+                Maximum = 100,
+                Value = mod.ResourceLimit,
+                IsSnapToTickEnabled = true,
+                TickFrequency = 1,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            slider.ValueChanged += (s, e) =>
+            {
+                capturedMod.ResourceLimit = (int)Math.Round(e.NewValue);
+                lblPercent.Text = $"{capturedMod.ResourceLimit}%";
+                SaveComputeModuleConfig();
+            };
+            Grid.SetRow(slider, 1);
+            sliderGrid.Children.Add(slider);
+
+            sliderContainer.Child = sliderGrid;
+            rootStack.Children.Add(sliderContainer);
+
+            // === WORKER STATUS ===
+            rootStack.Children.Add(CreateWorkerStatusDisplay(mod));
+
+            card.Child = rootStack;
+            return card;
+        }
+
+        /// <summary>
+        /// Creates input fields for a single mining endpoint (PRIMARY or SECONDARY).
+        /// </summary>
+        private UIElement CreateEndpointSection(string label, ComputeEngineEndpoint endpoint, ComputeModuleConfig parentMod, bool isPrimary)
+        {
+            var container = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
+
+            // Section label
+            container.Children.Add(new TextBlock
+            {
+                Text = label,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                FontSize = 9.5,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+
+            // Algorithm dropdown
+            var algoRow = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
+            algoRow.Children.Add(new TextBlock
+            {
+                Text = "Алгоритм:",
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 10.5,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 3)
+            });
+
+            var cbAlgo = new WpfComboBox
+            {
+                Height = 30,
+                FontSize = 11,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66))
+            };
+
+            int selectedAlgoIndex = 0;
+            for (int i = 0; i < AlgorithmRegistry.All.Count; i++)
+            {
+                var a = AlgorithmRegistry.All[i];
+                cbAlgo.Items.Add(new ComboBoxItem { Content = a.DisplayName, Tag = a.Id });
+                if (string.Equals(a.Id, endpoint.Algorithm, StringComparison.OrdinalIgnoreCase))
+                    selectedAlgoIndex = i;
+            }
+            cbAlgo.SelectedIndex = selectedAlgoIndex;
+
+            var capturedEndpoint = endpoint;
+            var capturedParent = parentMod;
+            cbAlgo.SelectionChanged += (s, e) =>
+            {
+                if (cbAlgo.SelectedItem is ComboBoxItem ci && ci.Tag != null)
+                {
+                    string newAlgoId = ci.Tag.ToString() ?? "";
+                    capturedEndpoint.Algorithm = newAlgoId;
+                    var algoDef = AlgorithmRegistry.GetById(newAlgoId);
+                    if (algoDef != null)
+                    {
+                        // Auto-fill defaults if fields are empty or switching
+                        if (string.IsNullOrWhiteSpace(capturedEndpoint.Pool) || capturedEndpoint.Pool.Contains("2miners") || capturedEndpoint.Pool.Contains("supportxmr") || capturedEndpoint.Pool.Contains("woolypooly"))
+                        {
+                            capturedEndpoint.Pool = algoDef.DefaultPool;
+                            capturedEndpoint.Port = algoDef.DefaultPort;
+                        }
+                        if (string.IsNullOrWhiteSpace(capturedEndpoint.Wallet) || capturedEndpoint.Wallet.StartsWith("0x000") || capturedEndpoint.Wallet.StartsWith("4...") || capturedEndpoint.Wallet.StartsWith("kaspa:..."))
+                        {
+                            capturedEndpoint.Wallet = algoDef.WalletPlaceholder;
+                        }
+                    }
+                    RenderComputeModuleCards();
+                    SaveComputeModuleConfig();
+                }
+            };
+            algoRow.Children.Add(cbAlgo);
+            container.Children.Add(algoRow);
+
+            // Input fields row: Wallet, Pool, Port, Worker
+            var inputGrid = new Grid();
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.55, GridUnitType.Star) });
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.75, GridUnitType.Star) });
+
+            // Wallet
+            var walletStack = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+            walletStack.Children.Add(new TextBlock { Text = "Кошелёк:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            var tbWallet = new WpfTextBox
+            {
+                Text = endpoint.Wallet,
+                Height = 30,
+                FontSize = 11,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+            tbWallet.TextChanged += (s, e) => { capturedEndpoint.Wallet = tbWallet.Text.Trim(); SaveComputeModuleConfig(); };
+            walletStack.Children.Add(tbWallet);
+            Grid.SetColumn(walletStack, 0);
+            inputGrid.Children.Add(walletStack);
+
+            // Pool
+            var poolStack = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+            poolStack.Children.Add(new TextBlock { Text = "Пул:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            var tbPool = new WpfTextBox
+            {
+                Text = endpoint.Pool,
+                Height = 30,
+                FontSize = 11,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+            tbPool.TextChanged += (s, e) => { capturedEndpoint.Pool = tbPool.Text.Trim(); SaveComputeModuleConfig(); };
+            poolStack.Children.Add(tbPool);
+            Grid.SetColumn(poolStack, 1);
+            inputGrid.Children.Add(poolStack);
+
+            // Port
+            var portStack = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+            portStack.Children.Add(new TextBlock { Text = "Порт:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            var tbPort = new WpfTextBox
+            {
+                Text = endpoint.Port.ToString(),
+                Height = 30,
+                FontSize = 11,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+            tbPort.TextChanged += (s, e) =>
+            {
+                if (int.TryParse(tbPort.Text.Trim(), out int p))
+                {
+                    capturedEndpoint.Port = p;
+                    SaveComputeModuleConfig();
+                }
+            };
+            portStack.Children.Add(tbPort);
+            Grid.SetColumn(portStack, 2);
+            inputGrid.Children.Add(portStack);
+
+            // Worker name
+            var workerStack = new StackPanel();
+            workerStack.Children.Add(new TextBlock { Text = "Worker:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            var tbWorker = new WpfTextBox
+            {
+                Text = endpoint.Worker,
+                Height = 30,
+                FontSize = 11,
+                Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(45, 51, 66)),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+            tbWorker.TextChanged += (s, e) => { capturedEndpoint.Worker = tbWorker.Text.Trim(); SaveComputeModuleConfig(); };
+            workerStack.Children.Add(tbWorker);
+            Grid.SetColumn(workerStack, 3);
+            inputGrid.Children.Add(workerStack);
+
+            container.Children.Add(inputGrid);
+            return container;
+        }
+
+        /// <summary>
+        /// Creates a worker status display for a module card.
+        /// </summary>
+        private UIElement CreateWorkerStatusDisplay(ComputeModuleConfig mod)
+        {
+            var algoDef = AlgorithmRegistry.GetById(mod.Primary.Algorithm);
+            string backendMode = algoDef?.Backend ?? "";
+
+            // Map algorithm to legacy mode string for ComputeWorkerManager compatibility
+            string legacyMode = MapAlgorithmToLegacyMode(mod.Primary.Algorithm);
+            var (found, workerFileName, version, details) = ComputeWorkerManager.GetWorkerStatus(legacyMode);
+
+            var statusBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(11, 13, 19)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(30, 35, 48)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+
+            var statusPanel = new StackPanel { Orientation = WpfOrientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
             if (found)
             {
-                txtWorkerStatusIcon.Text = "✓";
-                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
-                txtWorkerStatusTitle.Text = "Worker найден";
-                borderWorkerTag.Visibility = Visibility.Visible;
-                txtWorkerVersion.Text = version;
-                txtWorkerSha.Text = "SHA-256 проверен";
-                txtWorkerSha.Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128));
-                txtWorkerStatusHint.Text = $"Компонент '{workerFileName}' готов к упаковке в сборку";
+                statusPanel.Children.Add(new TextBlock
+                {
+                    Text = "✓",
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128)),
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                statusPanel.Children.Add(new TextBlock
+                {
+                    Text = $"Worker: {workerFileName}",
+                    Foreground = new SolidColorBrush(Color.FromRgb(241, 245, 249)),
+                    FontSize = 10.5,
+                    FontWeight = FontWeights.SemiBold,
+                    Margin = new Thickness(0, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                var versionBadge = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(20, 83, 45)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(4, 1, 4, 1),
+                    Margin = new Thickness(0, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                versionBadge.Child = new TextBlock
+                {
+                    Text = version,
+                    Foreground = new SolidColorBrush(Color.FromRgb(134, 239, 172)),
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold
+                };
+                statusPanel.Children.Add(versionBadge);
+                statusPanel.Children.Add(new TextBlock
+                {
+                    Text = "SHA-256 ✓",
+                    Foreground = new SolidColorBrush(Color.FromRgb(74, 222, 128)),
+                    FontSize = 9.5,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
             }
             else
             {
-                txtWorkerStatusIcon.Text = "⚠";
-                txtWorkerStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
-                txtWorkerStatusTitle.Text = "Worker не найден";
-                borderWorkerTag.Visibility = Visibility.Collapsed;
-                txtWorkerSha.Text = "Будет подготовлен при сборке";
-                txtWorkerSha.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
-                txtWorkerStatusHint.Text = "Worker будет подготовлен Builder автоматически при сборке.";
+                statusPanel.Children.Add(new TextBlock
+                {
+                    Text = "⚠",
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                statusPanel.Children.Add(new TextBlock
+                {
+                    Text = $"Worker ({algoDef?.WorkerExecutable ?? "unknown"}) — будет подготовлен при сборке",
+                    Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+                    FontSize = 10.5,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
             }
+
+            statusBorder.Child = statusPanel;
+            return statusBorder;
+        }
+
+        private static string MapAlgorithmToLegacyMode(string algorithmId)
+        {
+            switch (algorithmId?.ToLowerInvariant())
+            {
+                case "etc": return "ethereum-classic";
+                case "xmr": return "monero";
+                case "kas": return "ethereum-classic"; // KAS uses lolMiner like ETC
+                case "rvn": return "ethereum-classic"; // RVN uses lolMiner like ETC
+                case "ergo": return "ethereum-classic"; // ERGO uses lolMiner like ETC
+                default: return "monero";
+            }
+        }
+
+        private void UpdateModuleStatusBadge(Border card, ComputeModuleConfig mod)
+        {
+            // Find status badge within the card and update it
+            // Simple approach: re-render all cards
+            RenderComputeModuleCards();
+        }
+
+        private System.Windows.Controls.Button CreateSmallButton(string text, string bgColor, string fgColor)
+        {
+            var bgBrush = (SolidColorBrush)new BrushConverter().ConvertFromString(bgColor)!;
+            var fgBrush = (SolidColorBrush)new BrushConverter().ConvertFromString(fgColor)!;
+
+            return new System.Windows.Controls.Button
+            {
+                Content = text,
+                Height = 24,
+                Padding = new Thickness(8, 0, 8, 0),
+                FontSize = 10.5,
+                Foreground = fgBrush,
+                Background = bgBrush,
+                BorderBrush = bgBrush,
+                BorderThickness = new Thickness(1),
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
         }
 
         public (bool isValid, string error) ValidateComputeModuleConfig()
         {
             bool isEnabled = chkComputeEnabled?.IsChecked == true;
-            string selectedMode = "disabled";
-            if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
-            {
-                selectedMode = cbi.Tag.ToString() ?? "disabled";
-            }
 
-            // если Compute выключен → Build продолжается
-            if (!isEnabled || selectedMode.Equals("disabled", StringComparison.OrdinalIgnoreCase))
-            {
+            // If compute globally disabled, no validation needed
+            if (!isEnabled)
                 return (true, "");
+
+            if (ComputeConfig.Modules.Count == 0)
+                return (true, ""); // No modules to validate
+
+            var allErrors = new List<string>();
+            for (int i = 0; i < ComputeConfig.Modules.Count; i++)
+            {
+                var mod = ComputeConfig.Modules[i];
+                if (!mod.Enabled) continue; // Skip disabled modules
+
+                var (isValid, errors) = mod.Validate(i);
+                if (!isValid)
+                    allErrors.AddRange(errors);
             }
 
-            // если включен Monero или ETC:
-            string wallet = tbComputeWallet?.Text?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(wallet))
-            {
-                return (false, "Ошибка валидации Compute Module: укажите адрес кошелька (Кошелёк не может быть пустым).");
-            }
-
-            string pool = tbComputePool?.Text?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(pool))
-            {
-                return (false, "Ошибка валидации Compute Module: укажите адрес пула (Пул не может быть пустым).");
-            }
-
-            string portStr = tbComputePort?.Text?.Trim() ?? "";
-            if (!int.TryParse(portStr, out int port) || port < 1 || port > 65535)
-            {
-                return (false, $"Ошибка валидации Compute Module: порт '{portStr}' должен быть корректным числом в диапазоне от 1 до 65535.");
-            }
-
-            string worker = tbComputeWorker?.Text?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(worker))
-            {
-                return (false, "Ошибка валидации Compute Module: укажите имя воркера (Имя Worker не может быть пустым).");
-            }
+            if (allErrors.Count > 0)
+                return (false, string.Join("\n", allErrors));
 
             return (true, "");
         }
@@ -1852,23 +2401,8 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_computeConfigFilePath)!);
-                string selectedMode = "disabled";
-                if (cbComputeMode?.SelectedItem is ComboBoxItem cbi && cbi.Tag != null)
-                {
-                    selectedMode = cbi.Tag.ToString() ?? "disabled";
-                }
-
-                var cfg = new
-                {
-                    enabled = chkComputeEnabled?.IsChecked == true,
-                    mode = selectedMode,
-                    walletAddress = tbComputeWallet?.Text?.Trim() ?? "",
-                    serverAddress = tbComputePool?.Text?.Trim() ?? "",
-                    serverPort = tbComputePort?.Text?.Trim() ?? "3333",
-                    workerName = tbComputeWorker?.Text?.Trim() ?? "rig",
-                    resourceLimit = (int)Math.Round(slComputeResource?.Value ?? 45)
-                };
-                string json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
+                ComputeConfig.Enabled = chkComputeEnabled?.IsChecked == true;
+                string json = JsonSerializer.Serialize(ComputeConfig, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_computeConfigFilePath, json, Encoding.UTF8);
             }
             catch { }
@@ -1878,49 +2412,40 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
         {
             try
             {
-                if (File.Exists(_computeConfigFilePath))
+                if (!File.Exists(_computeConfigFilePath)) return;
+
+                string json = File.ReadAllText(_computeConfigFilePath, Encoding.UTF8);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                // Detect legacy format (has "mode" + "walletAddress" at top level = old single-module config)
+                if (root.TryGetProperty("walletAddress", out _) && root.TryGetProperty("mode", out _))
                 {
-                    string json = File.ReadAllText(_computeConfigFilePath, Encoding.UTF8);
-                    using var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
-                    if (root.TryGetProperty("enabled", out var enElem))
+                    // Legacy migration
+                    var legacyDict = new Dictionary<string, object>();
+                    foreach (var prop in root.EnumerateObject())
                     {
-                        chkComputeEnabled.IsChecked = enElem.GetBoolean();
+                        legacyDict[prop.Name] = prop.Value;
                     }
-                    if (root.TryGetProperty("mode", out var mElem))
+                    ComputeConfig = ComputeRootConfig.MigrateFromLegacy(legacyDict);
+                    Log("📦 Compute: выполнена миграция конфигурации старого формата → modules[]");
+                }
+                else
+                {
+                    // New format — deserialize directly
+                    var config = JsonSerializer.Deserialize<ComputeRootConfig>(json);
+                    if (config != null)
                     {
-                        string m = mElem.GetString() ?? "";
-                        if (m.Equals("ethereum-classic", StringComparison.OrdinalIgnoreCase)) cbComputeMode.SelectedIndex = 2;
-                        else if (m.Equals("monero", StringComparison.OrdinalIgnoreCase)) cbComputeMode.SelectedIndex = 1;
-                        else cbComputeMode.SelectedIndex = 0;
-                    }
-                    if (root.TryGetProperty("walletAddress", out var wElem))
-                    {
-                        string w = wElem.GetString() ?? "";
-                        if (!string.IsNullOrWhiteSpace(w)) tbComputeWallet.Text = w;
-                    }
-                    if (root.TryGetProperty("serverAddress", out var sElem))
-                    {
-                        string s = sElem.GetString() ?? "";
-                        if (!string.IsNullOrWhiteSpace(s)) tbComputePool.Text = s;
-                    }
-                    if (root.TryGetProperty("serverPort", out var pElem))
-                    {
-                        string p = pElem.GetString() ?? "";
-                        if (!string.IsNullOrWhiteSpace(p)) tbComputePort.Text = p;
-                    }
-                    if (root.TryGetProperty("workerName", out var wkElem))
-                    {
-                        string wk = wkElem.GetString() ?? "";
-                        if (!string.IsNullOrWhiteSpace(wk)) tbComputeWorker.Text = wk;
-                    }
-                    if (root.TryGetProperty("resourceLimit", out var rElem))
-                    {
-                        slComputeResource.Value = rElem.GetInt32();
+                        ComputeConfig = config;
                     }
                 }
+
+                chkComputeEnabled.IsChecked = ComputeConfig.Enabled;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log("⚠️ Ошибка загрузки конфигурации Compute: " + ex.Message);
+            }
         }
 
         private static bool IsComputeModuleKey(string? key)

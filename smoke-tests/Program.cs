@@ -36,6 +36,7 @@ namespace SmokeTests
             RunPackagingAuditTests();
             RunWorkerAutoPackagingTests();
             RunComputeModuleUITests();
+            RunMultiModuleAndDualMiningTests();
 
             Console.WriteLine("\n==================================================================");
             Console.WriteLine("                      РЕЗУЛЬТАТЫ SMOKE-TEST                       ");
@@ -930,6 +931,190 @@ namespace SmokeTests
             catch (Exception ex)
             {
                 Fail("Compute Module Tests", "Исключение во время тестирования: " + ex.Message);
+            }
+        }
+
+        static void RunMultiModuleAndDualMiningTests()
+        {
+            Console.WriteLine("\n------------------------------------------------------------------");
+            Console.WriteLine("ТЕСТ: Multi-Module & Dual Mining Configuration, Validation & Migration");
+            Console.WriteLine("------------------------------------------------------------------");
+
+            try
+            {
+                // 1. Test AlgorithmRegistry definitions
+                var allAlgos = AlgorithmRegistry.All;
+                if (allAlgos.Count >= 5)
+                {
+                    Pass("AlgorithmRegistry", $"Зарегистрировано {allAlgos.Count} алгоритмов: ETC, XMR, KAS, RVN, ERGO");
+                }
+                else
+                {
+                    Fail("AlgorithmRegistry", $"Слишком мало алгоритмов в реестре: {allAlgos.Count}");
+                }
+
+                // 2. Dual Mining Compatibility - Valid pair
+                var (validDual, validMsg) = AlgorithmRegistry.CheckDualMiningSupport("etc", "kas");
+                if (validDual)
+                {
+                    Pass("Dual Mining Support Check (Valid)", $"Пара ETC + KAS валидна: {validMsg}");
+                }
+                else
+                {
+                    Fail("Dual Mining Support Check (Valid)", $"ETC + KAS должны поддерживать Dual Mining, но вернулось: {validMsg}");
+                }
+
+                // 3. Dual Mining Compatibility - Invalid pair (XMR does not support dual mining)
+                var (invalidXmrDual, xmrMsg) = AlgorithmRegistry.CheckDualMiningSupport("xmr", "kas");
+                if (!invalidXmrDual && xmrMsg.Contains("не поддерживает"))
+                {
+                    Pass("Dual Mining Incompatibility (XMR)", $"XMR блокирует Dual Mining: {xmrMsg}");
+                }
+                else
+                {
+                    Fail("Dual Mining Incompatibility (XMR)", $"XMR не должен поддерживать Dual Mining!");
+                }
+
+                // 4. Dual Mining Compatibility - Same algorithm rejected
+                var (sameAlgoDual, sameMsg) = AlgorithmRegistry.CheckDualMiningSupport("etc", "etc");
+                if (!sameAlgoDual && sameMsg.Contains("не могут быть одним"))
+                {
+                    Pass("Dual Mining Identity Check", $"Одинаковые алгоритмы блокируются: {sameMsg}");
+                }
+                else
+                {
+                    Fail("Dual Mining Identity Check", "Одинаковые алгоритмы не должны поддерживаться!");
+                }
+
+                // 5. Multi-Module Configuration & Serialization
+                var root = new ComputeRootConfig { Enabled = true };
+                var mod1 = new ComputeModuleConfig
+                {
+                    Name = "Compute Module #1",
+                    Enabled = true,
+                    Mode = "single",
+                    Primary = new ComputeEngineEndpoint
+                    {
+                        Algorithm = "etc",
+                        Wallet = "0x1111111111111111111111111111111111111111",
+                        Pool = "etc.2miners.com",
+                        Port = 1010,
+                        Worker = "rig1"
+                    },
+                    ResourceLimit = 40
+                };
+
+                var mod2 = new ComputeModuleConfig
+                {
+                    Name = "Compute Module #2",
+                    Enabled = true,
+                    Mode = "dual",
+                    Primary = new ComputeEngineEndpoint
+                    {
+                        Algorithm = "etc",
+                        Wallet = "0x2222222222222222222222222222222222222222",
+                        Pool = "etc.2miners.com",
+                        Port = 1010,
+                        Worker = "rig2-primary"
+                    },
+                    Secondary = new ComputeEngineEndpoint
+                    {
+                        Algorithm = "kas",
+                        Wallet = "kaspa:qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+                        Pool = "pool.woolypooly.com",
+                        Port = 3112,
+                        Worker = "rig2-secondary"
+                    },
+                    ResourceLimit = 60
+                };
+
+                root.Modules.Add(mod1);
+                root.Modules.Add(mod2);
+
+                // Check validation of valid modules
+                var (val1Ok, val1Errs) = mod1.Validate(0);
+                var (val2Ok, val2Errs) = mod2.Validate(1);
+                if (val1Ok && val2Ok)
+                {
+                    Pass("Module Validation (Valid)", "Валидация Single (ETC) и Dual (ETC+KAS) модулей прошла успешно");
+                }
+                else
+                {
+                    Fail("Module Validation (Valid)", $"Ошибки валидации: {string.Join(", ", val1Errs)} / {string.Join(", ", val2Errs)}");
+                }
+
+                // 6. Test Module Copy & Swap
+                var mod2Copy = mod2.Clone();
+                if (mod2Copy.Id != mod2.Id && mod2Copy.Name.Contains("копия") && mod2Copy.Primary.Wallet == mod2.Primary.Wallet)
+                {
+                    Pass("Module Copy", "Клонирование модуля создает новый уникальный ID и сохраняет конфигурацию");
+                }
+                else
+                {
+                    Fail("Module Copy", "Ошибка клонирования модуля");
+                }
+
+                // Test Swap Primary <-> Secondary
+                string origPrimaryWallet = mod2.Primary.Wallet;
+                string origSecondaryWallet = mod2.Secondary.Wallet;
+                mod2.SwapEndpoints();
+                if (mod2.Primary.Wallet == origSecondaryWallet && mod2.Secondary.Wallet == origPrimaryWallet)
+                {
+                    Pass("Module Swap Primary<->Secondary", "Swap успешно поменял Primary и Secondary местами");
+                    mod2.SwapEndpoints(); // restore
+                }
+                else
+                {
+                    Fail("Module Swap Primary<->Secondary", "Swap не поменял местами эндпоинты");
+                }
+
+                // 7. Dictionary export test
+                var exportedDict = root.ToDictionary();
+                if (exportedDict.ContainsKey("enabled") && exportedDict.ContainsKey("modules"))
+                {
+                    var modsList = exportedDict["modules"] as List<object>;
+                    if (modsList != null && modsList.Count == 2)
+                    {
+                        Pass("Structured Schema Export", "ComputeRootConfig.ToDictionary формирует структуру compute.modules[] с правильным числом элементов");
+                    }
+                    else
+                    {
+                        Fail("Structured Schema Export", "Неверный формат modules[] в ToDictionary");
+                    }
+                }
+                else
+                {
+                    Fail("Structured Schema Export", "ToDictionary не содержит required ключи enabled/modules");
+                }
+
+                // 8. Legacy 7-key Migration test
+                var legacyConfig = new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["mode"] = "ethereum-classic",
+                    ["walletAddress"] = "0xLegacyETCWallet",
+                    ["serverAddress"] = "etc.2miners.com",
+                    ["serverPort"] = 1010,
+                    ["workerName"] = "legacy_rig",
+                    ["resourceLimit"] = 55
+                };
+
+                var migrated = ComputeRootConfig.MigrateFromLegacy(legacyConfig);
+                if (migrated.Enabled && migrated.Modules.Count == 1 &&
+                    migrated.Modules[0].Primary.Algorithm == "etc" &&
+                    migrated.Modules[0].Primary.Wallet == "0xLegacyETCWallet" &&
+                    migrated.Modules[0].ResourceLimit == 55)
+                {
+                    Pass("Legacy 7-key Migration", "Автоматическая миграция legacy 7-key параметров в modules[0].primary прошла корректно");
+                }
+                else
+                {
+                    Fail("Legacy 7-key Migration", "Ошибка автоматической миграции legacy конфигурации");
+                }
+            }
+            catch (Exception ex)
+            {
+                Fail("Multi-Module & Dual Mining Tests", "Исключение: " + ex.Message);
             }
         }
 

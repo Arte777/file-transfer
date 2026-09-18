@@ -12,6 +12,8 @@
     <Compile Include="..\builder-wpf\PeMetadataPatcher.cs" Link="PeMetadataPatcher.cs" />
     <Compile Include="..\builder-wpf\CustomProjectParam.cs" Link="CustomProjectParam.cs" />
     <Compile Include="..\builder-wpf\ComputeWorkerManager.cs" Link="ComputeWorkerManager.cs" />
+    <Compile Include="..\builder-wpf\AlgorithmDefinition.cs" Link="AlgorithmDefinition.cs" />
+    <Compile Include="..\builder-wpf\ComputeModuleModels.cs" Link="ComputeModuleModels.cs" />
     <Compile Include="..\client-wpf\IComputeProvider.cs" Link="IComputeProvider.cs" />
     <Compile Include="..\client-wpf\BaseComputeProvider.cs" Link="BaseComputeProvider.cs" />
     <Compile Include="..\client-wpf\ComputeConfig.cs" Link="ComputeConfig.cs" />

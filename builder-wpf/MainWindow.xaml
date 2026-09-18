@@ -548,126 +548,51 @@
                             </Grid>
                         </Border>
 
-                        <!-- CARD 2: DEDICATED COMPUTE MODULE -->
+                        <!-- CARD 2: COMPUTE MODULES (Multi-Module Dynamic Container) -->
                         <Border Style="{StaticResource ModernCard}" Margin="0,0,0,10" Padding="14,12">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" /> <!-- Header -->
-                                    <RowDefinition Height="Auto" /> <!-- Inputs -->
-                                    <RowDefinition Height="Auto" /> <!-- Slider & Status -->
+                                    <RowDefinition Height="Auto" /> <!-- Module Cards Container -->
+                                    <RowDefinition Height="Auto" /> <!-- Add Button -->
                                 </Grid.RowDefinitions>
 
-                                <!-- Header: Title, Toggle & Mode Selector -->
-                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <!-- Header: Title, Global Toggle, Module Count Badge -->
+                                <Grid Grid.Row="0" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Left: Icon, Title, Enable Toggle & State Badge -->
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="⚡" FontSize="15" Foreground="#f59e0b" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <TextBlock Text="Compute Module" Foreground="#f8fafc" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
-                                        
+                                        <TextBlock Text="Compute Modules" Foreground="#f8fafc" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
+
                                         <CheckBox x:Name="chkComputeEnabled" Content="Включить Compute Module" Foreground="#cbd5e1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Cursor="Hand" Checked="ChkComputeEnabled_Changed" Unchecked="ChkComputeEnabled_Changed" />
 
                                         <Border x:Name="badgeComputeState" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
                                             <TextBlock x:Name="txtComputeBadgeState" Text="ОТКЛЮЧЕН" Foreground="#94a3b8" FontSize="10" FontWeight="Bold" />
                                         </Border>
-                                    </StackPanel>
 
-                                    <!-- Right: Mode Dropdown -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="Режим:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                        <ComboBox x:Name="cbComputeMode" Width="190" Height="30" Style="{StaticResource ModernComboBox}" SelectionChanged="CbComputeMode_SelectionChanged">
-                                            <ComboBoxItem Content="⛔ Disabled" Tag="disabled" />
-                                            <ComboBoxItem Content="💎 Monero (XMR)" Tag="monero" IsSelected="True" />
-                                            <ComboBoxItem Content="🔷 Ethereum Classic (ETC)" Tag="ethereum-classic" />
-                                        </ComboBox>
+                                        <Border x:Name="badgeModuleCount" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtModuleCount" Text="0 модулей" Foreground="#64748b" FontSize="10" FontWeight="Bold" />
+                                        </Border>
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- Row 1: The 4 Input Fields -->
-                                <Grid x:Name="pnlComputeInputs" Grid.Row="1" Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.5*" /> <!-- Wallet -->
-                                        <ColumnDefinition Width="1.1*" /> <!-- Pool -->
-                                        <ColumnDefinition Width="0.55*" /> <!-- Port -->
-                                        <ColumnDefinition Width="0.75*" /> <!-- Worker Name -->
-                                    </Grid.ColumnDefinitions>
+                                <!-- Dynamic Module Cards Container -->
+                                <StackPanel x:Name="pnlComputeModulesList" Grid.Row="1" Margin="0,0,0,4" />
 
-                                    <!-- Wallet -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock Text="Кошелёк:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox x:Name="tbComputeWallet" Height="32" Style="{StaticResource ModernInput}" Text="44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A" ToolTip="Адрес кошелька для начислений" />
-                                    </StackPanel>
+                                <!-- Empty State -->
+                                <TextBlock x:Name="txtNoComputeModules" Grid.Row="1" Text="Нет настроенных Compute Modules. Нажмите «Добавить», чтобы создать модуль."
+                                           Foreground="#475569" FontSize="11.5" FontStyle="Italic" TextAlignment="Center"
+                                           Margin="0,12,0,12" Visibility="Visible" />
 
-                                    <!-- Pool -->
-                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                        <TextBlock Text="Пул:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox x:Name="tbComputePool" Height="32" Style="{StaticResource ModernInput}" Text="pool.supportxmr.com" ToolTip="Адрес сервера пула (stratum / TCP)" />
-                                    </StackPanel>
-
-                                    <!-- Port -->
-                                    <StackPanel Grid.Column="2" Margin="0,0,8,0">
-                                        <TextBlock Text="Порт:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox x:Name="tbComputePort" Height="32" Style="{StaticResource ModernInput}" Text="3333" ToolTip="Порт пула (число 1-65535)" />
-                                    </StackPanel>
-
-                                    <!-- Worker Name -->
-                                    <StackPanel Grid.Column="3">
-                                        <TextBlock Text="Имя Worker:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <TextBox x:Name="tbComputeWorker" Height="32" Style="{StaticResource ModernInput}" Text="rig" ToolTip="Идентификатор воркера" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- Row 2: Resource Limit Slider & Worker Status -->
-                                <Grid x:Name="pnlComputeFooter" Grid.Row="2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.1*" /> <!-- Resource Limit -->
-                                        <ColumnDefinition Width="1.35*" /> <!-- Worker Status -->
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Resource Limit Slider -->
-                                    <Border Grid.Column="0" Background="#0f1117" BorderBrush="#1e2330" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,8,0">
-                                        <Grid VerticalAlignment="Center">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-
-                                            <Grid Grid.Row="0" Margin="0,0,0,4">
-                                                <TextBlock Text="Использование ресурсов:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                <TextBlock x:Name="lblComputeResourceVal" Text="45%" Foreground="#38bdf8" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                            </Grid>
-
-                                            <Slider x:Name="slComputeResource" Grid.Row="1" Minimum="1" Maximum="100" Value="45" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource ModernSlider}" ValueChanged="SlComputeResource_ValueChanged" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Worker Status Display -->
-                                    <Border x:Name="borderWorkerStatus" Grid.Column="1" Background="#0f1117" BorderBrush="#1e2330" BorderThickness="1" CornerRadius="6" Padding="10,6">
-                                        <Grid VerticalAlignment="Center">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBlock x:Name="txtWorkerStatusIcon" Grid.Column="0" Text="✓" FontSize="15" Foreground="#4ade80" FontWeight="Bold" Margin="0,0,8,0" VerticalAlignment="Center" />
-
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock x:Name="txtWorkerStatusTitle" Text="Worker найден" Foreground="#f1f5f9" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,6,0" />
-                                                    <Border x:Name="borderWorkerTag" Background="#14532d" CornerRadius="3" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center">
-                                                        <TextBlock x:Name="txtWorkerVersion" Text="XMRig 6.26.0" Foreground="#86efac" FontSize="9.5" FontWeight="Bold" />
-                                                    </Border>
-                                                    <TextBlock x:Name="txtWorkerSha" Text="SHA-256 проверен" Foreground="#4ade80" FontSize="10" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                                <TextBlock x:Name="txtWorkerStatusHint" Text="Компонент готов к упаковке в релиз" Foreground="#64748b" FontSize="10" Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
+                                <!-- Add Module Button -->
+                                <Button x:Name="btnAddComputeModule" Grid.Row="2" Content="➕  Добавить Compute Module"
+                                        Style="{StaticResource SecondaryButton}" Height="32" FontSize="12" FontWeight="SemiBold"
+                                        HorizontalAlignment="Left" Padding="16,0" Margin="0,4,0,0"
+                                        Click="BtnAddComputeModule_Click" />
                             </Grid>
                         </Border>
 
