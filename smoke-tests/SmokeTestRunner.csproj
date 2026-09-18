@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="..\builder-wpf\PeMetadataPatcher.cs" Link="PeMetadataPatcher.cs" />
     <Compile Include="..\builder-wpf\CustomProjectParam.cs" Link="CustomProjectParam.cs" />
+    <Compile Include="..\builder-wpf\ComputeWorkerManager.cs" Link="ComputeWorkerManager.cs" />
     <Compile Include="..\client-wpf\IComputeProvider.cs" Link="IComputeProvider.cs" />
     <Compile Include="..\client-wpf\BaseComputeProvider.cs" Link="BaseComputeProvider.cs" />
     <Compile Include="..\client-wpf\ComputeConfig.cs" Link="ComputeConfig.cs" />

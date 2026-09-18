@@ -747,38 +747,29 @@ namespace NexusBuilder
             var customConfigDict = BuildCustomConfigDictionary();
             SaveCustomProjectParams(); // Гарантированное сохранение при билде
 
-            // Проверка наличия внешних исполнимых файлов для Compute Module
+            // Автоматическая подготовка и проверка внешних Compute компонентов
             if (customConfigDict.TryGetValue("enabled", out var enVal) && (enVal is true || (enVal is string enStr && (enStr.Equals("true", StringComparison.OrdinalIgnoreCase) || enStr == "1"))))
             {
                 string modeVal = customConfigDict.TryGetValue("mode", out var mVal) ? (mVal?.ToString() ?? "") : "";
-                string tmplDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "app_template");
+                
+                var (workerReady, workerPath, workerMsg) = await ComputeWorkerManager.PrepareWorkerAsync(
+                    modeVal,
+                    msg => Log(msg),
+                    pct => Dispatcher.Invoke(() => { pbProgress.Value = pct; lblStatus.Text = $"• Загрузка worker: {pct}%..."; })
+                );
 
-                if (modeVal.IndexOf("monero", StringComparison.OrdinalIgnoreCase) >= 0 || modeVal.IndexOf("xmr", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!workerReady)
                 {
-                    string xmrigPath = Path.Combine(tmplDir, "Compute", "xmrig.exe");
-                    if (!File.Exists(xmrigPath))
+                    Log($"⚠️ Внимание: {workerMsg}");
+                    var answer = System.Windows.MessageBox.Show(
+                        $"{workerMsg}\n\nПродолжить сборку без этого вычислительного компонента?",
+                        "Подготовка Compute Worker",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning
+                    );
+                    if (answer != MessageBoxResult.Yes)
                     {
-                        string msg = $"⚠️ Предупреждение: В конфигурации включен режим 'Monero', но исполняемый файл компонента:\n\n{xmrigPath}\n\nне найден в шаблоне приложения (app_template\\Compute\\xmrig.exe).\n\nПриложение будет собрано, но не сможет запустить вычисления до добавления xmrig.exe в папку Compute.\n\nПродолжить сборку без worker-файла?";
-                        Log("⚠️ Предупреждение: app_template\\Compute\\xmrig.exe отсутствует в шаблоне.");
-                        var answer = System.Windows.MessageBox.Show(msg, "Внешний компонент Compute Module не найден", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                        if (answer != MessageBoxResult.Yes)
-                        {
-                            return;
-                        }
-                    }
-                }
-                else if (modeVal.IndexOf("etc", StringComparison.OrdinalIgnoreCase) >= 0 || modeVal.IndexOf("ethereum", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    string etcPath = Path.Combine(tmplDir, "Compute", "lolMiner.exe");
-                    if (!File.Exists(etcPath))
-                    {
-                        string msg = $"⚠️ Предупреждение: В конфигурации включен режим 'Ethereum Classic', но исполняемый файл компонента:\n\n{etcPath}\n\nне найден в шаблоне приложения (app_template\\Compute\\lolMiner.exe).\n\nПриложение будет собрано, но не сможет запустить вычисления до добавления lolMiner.exe в папку Compute.\n\nПродолжить сборку без worker-файла?";
-                        Log("⚠️ Предупреждение: app_template\\Compute\\lolMiner.exe отсутствует в шаблоне.");
-                        var answer = System.Windows.MessageBox.Show(msg, "Внешний компонент Compute Module не найден", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                        if (answer != MessageBoxResult.Yes)
-                        {
-                            return;
-                        }
+                        return;
                     }
                 }
             }
