@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <Platforms>AnyCPU;x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\builder-wpf\PeMetadataPatcher.cs" Link="PeMetadataPatcher.cs" />
+    <Compile Include="..\builder-wpf\CustomProjectParam.cs" Link="CustomProjectParam.cs" />
+    <Compile Include="..\client-wpf\IComputeProvider.cs" Link="IComputeProvider.cs" />
+    <Compile Include="..\client-wpf\BaseComputeProvider.cs" Link="BaseComputeProvider.cs" />
+    <Compile Include="..\client-wpf\ComputeConfig.cs" Link="ComputeConfig.cs" />
+    <Compile Include="..\client-wpf\ComputeService.cs" Link="ComputeService.cs" />
+    <Compile Include="..\client-wpf\MoneroProvider.cs" Link="MoneroProvider.cs" />
+    <Compile Include="..\client-wpf\EthereumClassicProvider.cs" Link="EthereumClassicProvider.cs" />
+  </ItemGroup>
+</Project>
