@@ -1335,6 +1335,109 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             Log("📋 Пример набора параметров проекта успешно загружен и сохранен!");
         }
 
+        private void BtnLoadComputeModule_Click(object sender, RoutedEventArgs e)
+        {
+            var res = System.Windows.MessageBox.Show(
+                "Применить пресет конфигурации 'Compute Module'?\n\nБудут добавлены/обновлены параметры:\n• Mode (Monero / Ethereum Classic)\n• Wallet Address\n• Server Address\n• Server Port\n• Worker Name\n• Resource Limit\n• Enabled",
+                "Пресет Compute Module",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (res != MessageBoxResult.Yes) return;
+
+            var computeParams = new List<CustomProjectParam>
+            {
+                new CustomProjectParam
+                {
+                    Name = "Режим вычислений (Mode)",
+                    Key = "mode",
+                    Type = "select",
+                    Options = "Monero, Ethereum Classic",
+                    DefaultValue = "Monero",
+                    Description = "Целевой алгоритм вычислений (Monero / Ethereum Classic)",
+                    IsRequired = true
+                },
+                new CustomProjectParam
+                {
+                    Name = "Адрес кошелька (Wallet)",
+                    Key = "walletAddress",
+                    Type = "text",
+                    DefaultValue = "",
+                    Description = "Адрес кошелька для зачисления вознаграждения",
+                    IsRequired = false
+                },
+                new CustomProjectParam
+                {
+                    Name = "Адрес пула/сервера (Server)",
+                    Key = "serverAddress",
+                    Type = "text",
+                    DefaultValue = "pool.supportxmr.com",
+                    Description = "Хост или IP-адрес сервера вычислений",
+                    IsRequired = true
+                },
+                new CustomProjectParam
+                {
+                    Name = "Порт сервера (Port)",
+                    Key = "serverPort",
+                    Type = "number",
+                    DefaultValue = "4444",
+                    Description = "Сетевой порт подключения к пулу/серверу",
+                    IsRequired = true
+                },
+                new CustomProjectParam
+                {
+                    Name = "Имя воркера (Worker)",
+                    Key = "workerName",
+                    Type = "text",
+                    DefaultValue = "rig_01",
+                    Description = "Идентификатор вычислительного узла",
+                    IsRequired = false
+                },
+                new CustomProjectParam
+                {
+                    Name = "Лимит ресурсов (Limit %)",
+                    Key = "resourceLimit",
+                    Type = "number",
+                    DefaultValue = "50",
+                    Description = "Максимальный процент загрузки CPU (от 1 до 100)",
+                    IsRequired = false
+                },
+                new CustomProjectParam
+                {
+                    Name = "Включен (Enabled)",
+                    Key = "enabled",
+                    Type = "boolean",
+                    DefaultValue = "true",
+                    Description = "Флаг активности модуля вычислений",
+                    IsRequired = true
+                }
+            };
+
+            foreach (var cp in computeParams)
+            {
+                var existing = CustomProjectParams.FirstOrDefault(p => p.Key.Equals(cp.Key, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    existing.Name = cp.Name;
+                    existing.Type = cp.Type;
+                    existing.DefaultValue = cp.DefaultValue;
+                    existing.Options = cp.Options;
+                    existing.Description = cp.Description;
+                    existing.IsRequired = cp.IsRequired;
+                }
+                else
+                {
+                    CustomProjectParams.Add(cp);
+                }
+            }
+
+            SaveCustomProjectParams();
+            dgCustomParams.Items.Refresh();
+            UpdateCustomConfigCount();
+            Log("⚡ Пресет 'Compute Module' успешно применен и сохранен в конфигурации проекта!");
+        }
+
         private void SaveCustomProjectParams()
         {
             try

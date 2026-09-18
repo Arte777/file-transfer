@@ -544,7 +544,8 @@
                                         <Button x:Name="btnAddParam" Content="➕ Добавить" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" FontSize="11" Margin="0,0,6,0" Click="BtnAddParam_Click" ToolTip="Добавить новый пользовательский параметр" />
                                         <Button x:Name="btnEditParam" Content="✏️ Изменить" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" FontSize="11" Margin="0,0,6,0" Click="BtnEditParam_Click" ToolTip="Редактировать выбранный параметр" />
                                         <Button x:Name="btnDeleteParam" Content="🗑️ Удалить" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" FontSize="11" Margin="0,0,6,0" Click="BtnDeleteParam_Click" ToolTip="Удалить выбранный параметр" />
-                                        <Button x:Name="btnLoadExampleConfig" Content="📋 Пример" Style="{StaticResource SecondaryButton}" Height="28" Padding="8,0" FontSize="11" Click="BtnLoadExampleConfig_Click" ToolTip="Загрузить пример конфигурации (mode, address, server, port, worker, resourceLimit)" />
+                                        <Button x:Name="btnLoadComputeModule" Content="⚡ Compute Module" Style="{StaticResource SecondaryButton}" Height="28" Padding="9,0" FontSize="11" Margin="0,0,6,0" Click="BtnLoadComputeModule_Click" ToolTip="Применить пресет 'Compute Module' (Monero / Ethereum Classic, Wallet, Server, Port, Worker, Limit, Enabled)" />
+                                        <Button x:Name="btnLoadExampleConfig" Content="📋 Пример" Style="{StaticResource SecondaryButton}" Height="28" Padding="8,0" FontSize="11" Click="BtnLoadExampleConfig_Click" ToolTip="Загрузить базовый пример конфигурации (mode, address, server, port, worker, resourceLimit)" />
                                     </StackPanel>
                                 </Grid>
 
