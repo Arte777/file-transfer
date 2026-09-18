@@ -281,7 +281,7 @@ namespace FileTransfer
                 // Инициализация сервисного слоя Compute Service из Custom Project Config
                 try
                 {
-                    FileTransfer.Compute.ComputeService.Instance.InitializeAndStart(CustomConfigJson);
+                    FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
                 }
                 catch (Exception compEx)
                 {
