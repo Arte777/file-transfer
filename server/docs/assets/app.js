@@ -286,6 +286,7 @@ function renderHeader(activePage) {
     </a>`;
   }
 
+  const iconHome = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
   const iconDashboard = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`;
   const iconTokens = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`;
   const iconUpdates = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
@@ -300,18 +301,16 @@ function renderHeader(activePage) {
 
   return `<aside class="sidebar" aria-label="Основная навигация">
     <div class="logo">
-      <span class="logo-mark" aria-hidden="true"><span></span></span>
-      <span class="logo-copy">
+      <a href="index.html" class="logo-link" title="NEXUS — На главную">
         <span class="logo-text">NEXUS</span>
-        <span class="logo-caption">Control center</span>
-      </span>
-      <span class="system-live" title="Система активна"><span></span>LIVE</span>
+      </a>
     </div>
 
     <nav class="nav-links" aria-label="Разделы панели">
       <div class="nav-group">
         <div class="nav-group-label">Обзор</div>
-        ${navLink('files', 'index.html', iconDashboard, 'Воркеры')}
+        ${navLink('home', 'index.html', iconHome, 'Главная')}
+        ${navLink('files', 'workers.html', iconDashboard, 'Воркеры')}
       </div>
 
       <div class="nav-group">
@@ -2321,7 +2320,7 @@ function initSpaRouter() {
       return;
     }
 
-    const validPages = ['index.html', 'tokens.html', 'bookmarks.html', 'updates.html', 'settings.html'];
+    const validPages = ['index.html', 'workers.html', 'tokens.html', 'bookmarks.html', 'updates.html', 'settings.html'];
     const targetFile = href.split('?')[0].split('#')[0];
     if (validPages.includes(targetFile)) {
       e.preventDefault();
@@ -2369,7 +2368,7 @@ async function spaNavigate(url, pushState = true) {
     // Обновляем подсветку и accessibility-состояние активного пункта меню
     document.querySelectorAll('.sidebar .nav-link').forEach(nl => {
       const aHref = nl.getAttribute('href') || '';
-      const isActive = aHref === targetFile || (targetFile === 'index.html' && aHref.includes('index.html'));
+      const isActive = aHref === targetFile;
       nl.classList.toggle('active', isActive);
       if (isActive) nl.setAttribute('aria-current', 'page');
       else nl.removeAttribute('aria-current');
@@ -2395,7 +2394,8 @@ async function spaNavigate(url, pushState = true) {
 
 function reinitPageScript(pageFile) {
   const scriptMap = {
-    'index.html': 'assets/dashboard.js',
+    'index.html': 'assets/home.js',
+    'workers.html': 'assets/dashboard.js',
     'tokens.html': 'assets/tokens.js',
     'bookmarks.html': 'assets/bookmarks.js',
     'updates.html': 'assets/updates.js',

