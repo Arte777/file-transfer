@@ -3,6 +3,19 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "8.0.2",
+    date: "19.09.2026",
+    downloadUrlBuilder: "downloads/NEXUS_Builder.exe?v=8.0.2",
+    changes: [
+      { type: "add", text: "NEXUS Builder v8.0.2: Полноценная архитектура Single & Dual Mining с независимыми Compute Modules" },
+      { type: "add", text: "Интеграция lolMiner 1.98a (GPU) и XMRig 6.26.0 (CPU) с автоматической валидацией локального кэша и SHA-256" },
+      { type: "add", text: "Поддержка алгоритмов вычислений: Ethereum Classic (ETC), Kaspa (KAS), Ravencoin (RVN), ERGO (Autolykos2), Monero (XMR)" },
+      { type: "add", text: "Управление модулями: добавление независимых конфигураций, копирование (Clone), удаление и быстрое переключение Primary / Secondary" },
+      { type: "fix", text: "Премиальный темный UI настроек майнера: устранены белые артефакты выпадающих списков, оптимизированы поля ввода" },
+      { type: "fix", text: "Автоматическая обратная совместимость: миграция старых 7-ключевых настроек в модульную схему compute.modules[]" }
+    ]
+  },
+  {
     version: "8.0.1",
     date: "18.09.2026",
     downloadUrlBuilder: "downloads/NEXUS_Builder.exe?v=8.0.1",

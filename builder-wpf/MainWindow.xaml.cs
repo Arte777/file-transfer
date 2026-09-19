@@ -26,7 +26,7 @@ namespace NexusBuilder
 {
     public partial class MainWindow : Window
     {
-        private const string AppVersion = "8.0.1";
+        private const string AppVersion = "8.0.2";
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         private string? _cachedIsccPath;
         private string _activeIconPath = "";
@@ -59,7 +59,7 @@ namespace NexusBuilder
             
             string defaultOut = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                "NEXUS_Builds_v8.0.1"
+                "NEXUS_Builds_v8.0.2"
             );
             tbOutputPath.Text = defaultOut;
 
@@ -736,7 +736,7 @@ namespace NexusBuilder
             string outDir = tbOutputPath.Text.Trim();
             if (string.IsNullOrWhiteSpace(outDir))
             {
-                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.1");
+                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.2");
             }
 
             string cleanExeBaseName = string.Concat(appName.Split(Path.GetInvalidFileNameChars())).Trim();
