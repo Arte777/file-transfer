@@ -3,22 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Операционный центр NEXUS для мониторинга воркеров и сессий.">
   <title>NEXUS — Панель управления</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=239">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=300">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body data-page="files">
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
     
     <main class="main-content">
       <!-- Top Bar -->
       <div class="top-bar">
-        <div>
+        <div class="page-heading">
+          <div class="page-eyebrow">Операционный центр</div>
           <h1 class="page-title">Воркеры и сессии</h1>
+          <p class="page-subtitle">Мониторинг подключений, состояния клиентов и активности системы.</p>
         </div>
 
         <div class="status-indicator" id="workerStatusIndicator" style="display: none;">
@@ -192,8 +197,8 @@
     });
   </script>
 
-  <script src="assets/config.js?v=236"></script>
-  <script src="assets/app.js?v=239"></script>
-  <script src="assets/dashboard.js?v=236"></script>
+  <script src="assets/config.js?v=300"></script>
+  <script src="assets/app.js?v=300"></script>
+  <script src="assets/dashboard.js?v=300"></script>
 </body>
 </html>

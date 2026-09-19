@@ -3,24 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Центр обновлений NEXUS: актуальные сборки и история версий.">
   <title>NEXUS — Обновления</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=239">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=300">
 </head>
-<body>
+<body data-page="updates">
   <div class="sidebar-layout">
     <div id="sidebarSlot"></div>
     
     <main class="main-content">
       <div class="top-bar">
-        <div>
+        <div class="page-heading">
+          <div class="page-eyebrow">Дистрибутивы</div>
           <h1 class="page-title">Центр обновлений</h1>
+          <p class="page-subtitle">Актуальные сборки, инструменты и полная история версий.</p>
         </div>
       </div>
       
-      <div class="container" style="max-width: 800px; margin: 0 auto;">
+      <div class="container release-layout">
         
         <!-- Hero Download Card -->
         <div class="settings-card" id="heroDownloadCard" style="margin-bottom: 1.75rem;">
@@ -75,8 +80,8 @@
 
   <div id="toast"></div>
 
-  <script src="assets/config.js?v=236"></script>
-  <script src="assets/app.js?v=239"></script>
-  <script src="assets/updates.js?v=236"></script>
+  <script src="assets/config.js?v=300"></script>
+  <script src="assets/app.js?v=300"></script>
+  <script src="assets/updates.js?v=300"></script>
 </body>
 </html>

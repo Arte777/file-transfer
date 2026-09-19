@@ -3,21 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Защищенный вход в операционный центр NEXUS.">
   <title>NEXUS — Авторизация</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=239">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=300">
 </head>
-<body class="login-body">
+<body class="login-body" data-page="login">
 
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="login-logo-text">NEXUS</div>
-    </div>
-    
-    <h1>Панель управления</h1>
-    <div class="login-subtitle">Хранилище сессий и аккаунтов Roblox</div>
+  <div class="login-shell">
+    <section class="login-intro" aria-label="О системе">
+      <div class="login-intro-mark"><span></span></div>
+      <div class="login-kicker">NEXUS CONTROL CENTER</div>
+      <h2>Единое пространство оператора</h2>
+      <p>Воркеры, аккаунты, сессии и обновления — в защищенной рабочей среде.</p>
+      <div class="login-system-status"><span></span> Система готова</div>
+    </section>
+
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-text">NEXUS</div>
+      </div>
+      
+      <div class="login-kicker">Авторизация оператора</div>
+      <h1>Панель управления</h1>
+      <div class="login-subtitle">Хранилище сессий и аккаунтов Roblox</div>
 
     <form id="loginForm">
       <div id="errorBox" class="error-msg" style="display: none;"></div>
@@ -40,12 +53,13 @@
       </button>
     </form>
 
-    <div class="security-note">
-      Доступ разрешен только авторизованным операторам.
+      <div class="security-note">
+        Доступ разрешен только авторизованным операторам.
+      </div>
     </div>
   </div>
 
-  <script src="assets/config.js?v=210"></script>
+  <script src="assets/config.js?v=300"></script>
   <script>
     (async function() {
       if (localStorage.getItem('ft_remember') === '1') {

@@ -276,9 +276,11 @@ function renderHeader(activePage) {
   const hasUnseenUpdate = seenVersion !== latestUpdateVersion && activePage !== 'updates';
 
   function navLink(page, href, iconSvg, label, extraClass = '', badgeHtml = '') {
-    const cls = activePage === page ? 'nav-link active ' + extraClass : 'nav-link ' + extraClass;
-    return `<a href="${href}" class="${cls.trim()}">
-      <div class="nav-icon">${iconSvg}</div>
+    const isActive = activePage === page;
+    const cls = isActive ? 'nav-link active ' + extraClass : 'nav-link ' + extraClass;
+    const current = isActive ? ' aria-current="page"' : '';
+    return `<a href="${href}" class="${cls.trim()}" data-page="${page}"${current}>
+      <div class="nav-icon" aria-hidden="true">${iconSvg}</div>
       <span class="nav-label">${label}</span>
       ${badgeHtml}
     </a>`;
@@ -296,39 +298,54 @@ function renderHeader(activePage) {
 
   setTimeout(ensureOperatorChatModal, 60);
 
-  return `<aside class="sidebar">
+  return `<aside class="sidebar" aria-label="Основная навигация">
     <div class="logo">
-      <span class="logo-text">NEXUS</span>
+      <span class="logo-mark" aria-hidden="true"><span></span></span>
+      <span class="logo-copy">
+        <span class="logo-text">NEXUS</span>
+        <span class="logo-caption">Control center</span>
+      </span>
+      <span class="system-live" title="Система активна"><span></span>LIVE</span>
     </div>
-    <div class="nav-links">
-      ${navLink('files', 'index.html', iconDashboard, 'Воркеры')}
-      ${navLink('tokens', 'tokens.html', iconTokens, 'Аккаунты')}
-      ${navLink('bookmarks', 'bookmarks.html', iconBookmarks, 'Пометки')}
-      <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat('full')" title="Открыть служебный чат (полная версия)">
-        <div class="nav-icon" style="display:flex;align-items:center;justify-content:center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        </div>
-        <span class="nav-label">Чат</span>
-        <span class="chat-online-dot-badge" id="navChatOnlineDot" title="Канал связи"></span>
-      </button>
-      ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', badgeNew)}
-      ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
-      
-      <!-- Mobile only Profile Link -->
-      <a href="settings.html" class="nav-link mobile-profile-link ${activePage === 'settings' ? 'active' : ''}">
-        <div class="nav-icon user-avatar" style="width: 24px; height: 24px; font-size: 0.8rem;">${avatarHtml}</div>
-        <span class="nav-label">Профиль</span>
-      </a>
-    </div>
-    
-    <div class="sidebar-spacer" style="flex: 1; min-height: 12px;"></div>
 
-    <!-- Sidebar Widgets -->
+    <nav class="nav-links" aria-label="Разделы панели">
+      <div class="nav-group">
+        <div class="nav-group-label">Обзор</div>
+        ${navLink('files', 'index.html', iconDashboard, 'Воркеры')}
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Библиотека</div>
+        ${navLink('tokens', 'tokens.html', iconTokens, 'Аккаунты')}
+        ${navLink('bookmarks', 'bookmarks.html', iconBookmarks, 'Пометки')}
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Система</div>
+        <button type="button" class="nav-link nav-link-chat-btn" onclick="openOperatorChat('full')" title="Открыть служебный чат (полная версия)">
+          <div class="nav-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <span class="nav-label">Чат</span>
+          <span class="chat-online-dot-badge" id="navChatOnlineDot" title="Канал связи"></span>
+        </button>
+        ${navLink('updates', 'updates.html', iconUpdates, 'Обновления', '', badgeNew)}
+        ${navLink('settings', 'settings.html', iconSettings, 'Настройки', 'desktop-only')}
+        <a href="settings.html" class="nav-link mobile-profile-link ${activePage === 'settings' ? 'active' : ''}" ${activePage === 'settings' ? 'aria-current="page"' : ''}>
+          <div class="nav-icon user-avatar">${avatarHtml}</div>
+          <span class="nav-label">Профиль</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+
     <div class="sidebar-widgets desktop-only">
-      <!-- Extension Card -->
       <div class="sidebar-widget-card extension-card">
         <div class="ext-card-content">
-          <div class="ext-icon">🧩</div>
+          <div class="ext-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8.5 3.5h7v4h4v9h-4v4h-7v-4h-4v-9h4z"/><path d="M9 9h6v6H9z"/></svg>
+          </div>
           <div class="ext-info">
             <div class="ext-title">NEXUS Extension</div>
             <div class="ext-desc">Вход в 1 клик</div>
@@ -344,9 +361,13 @@ function renderHeader(activePage) {
     <div class="user-badge desktop-only">
       <span class="user-avatar">${avatarHtml}</span>
       <div class="user-info">
+        <span class="user-role">Оператор</span>
         <span class="user-name">${escapeHtml(name)}</span>
-        <button class="btn-logout" id="btnLogout">Выйти</button>
       </div>
+      <button class="btn-logout" id="btnLogout" title="Выйти" aria-label="Выйти">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
+        <span class="sr-only">Выйти</span>
+      </button>
     </div>
   </aside>`;
 }
@@ -2345,14 +2366,13 @@ async function spaNavigate(url, pushState = true) {
       history.pushState(null, '', url);
     }
 
-    // Обновляем подсветку активного пункта меню в сайдбаре
+    // Обновляем подсветку и accessibility-состояние активного пункта меню
     document.querySelectorAll('.sidebar .nav-link').forEach(nl => {
       const aHref = nl.getAttribute('href') || '';
-      if (aHref === targetFile || (targetFile === 'index.html' && aHref.includes('index.html'))) {
-        nl.classList.add('active');
-      } else {
-        nl.classList.remove('active');
-      }
+      const isActive = aHref === targetFile || (targetFile === 'index.html' && aHref.includes('index.html'));
+      nl.classList.toggle('active', isActive);
+      if (isActive) nl.setAttribute('aria-current', 'page');
+      else nl.removeAttribute('aria-current');
     });
 
     // Плавная замена основного контента
