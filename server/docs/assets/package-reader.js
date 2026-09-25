@@ -213,14 +213,17 @@
         };
       }
 
-      // 3. Check version vs installed version
-      if (currentInstalledVersion && compareVersions(targetVersion, currentInstalledVersion) <= 0) {
-        return {
-          valid: false,
-          error: 'Выбранная версия старее установленной.',
-          version: targetVersion,
-          currentVersion: currentInstalledVersion
-        };
+      // 3. Check version vs installed version (only reject if strictly older than installed)
+      if (currentInstalledVersion && currentInstalledVersion !== 'all' && currentInstalledVersion !== '0.0.0') {
+        const cmp = compareVersions(targetVersion, currentInstalledVersion);
+        if (cmp < 0) {
+          return {
+            valid: false,
+            error: `Выбранная версия (v${targetVersion}) старее установленной (v${currentInstalledVersion}).`,
+            version: targetVersion,
+            currentVersion: currentInstalledVersion
+          };
+        }
       }
 
       return {

@@ -687,9 +687,9 @@ function openUpdatePackageModal(filename, isAll = false) {
   // Determine current installed version of target
   if (filename) {
     const file = allFiles.find(f => f.name === filename);
-    currentUpdateContext.installedVersion = (file && file.version) || '8.0.2';
+    currentUpdateContext.installedVersion = (file && file.computer?.version) || (file && file.version) || '0.0.0';
   } else {
-    currentUpdateContext.installedVersion = '8.0.2';
+    currentUpdateContext.installedVersion = '0.0.0'; // For bulk update, accept any update package
   }
 
   const descEl = document.getElementById('updateModalTargetDesc');
@@ -713,7 +713,7 @@ function openUpdatePackageModal(filename, isAll = false) {
   if (confirmBtn) {
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = '0.5';
-    confirmBtn.textContent = 'Обновить';
+    confirmBtn.textContent = 'Применить обновление';
   }
 
   const modal = document.getElementById('updatePackageModal');
@@ -890,7 +890,64 @@ async function applyUpdatePackage() {
   } finally {
     if (confirmBtn) {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Обновить';
+      confirmBtn.textContent = 'Применить обновление';
+    }
+  }
+}
+
+async function applyDirectServerUpdate() {
+  const btn = document.getElementById('btnQuickServerUpdate');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Отправка команды...';
+  }
+
+  try {
+    const downloadUrl = getOperatorDownloadUrl();
+    let r, resp;
+
+    if (currentUpdateContext.isAll) {
+      r = await apiFetch('/request-update-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          downloadUrl: downloadUrl,
+          version: '8.0.2'
+        })
+      });
+      resp = await r.json();
+      if (resp.success) {
+        toast(`✅ Запрос на обновление отправлен на ${resp.count || 'все'} ПК!`);
+        closeUpdatePackageModal();
+        loadFiles();
+      } else {
+        toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      }
+    } else {
+      r = await apiFetch('/request-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          filename: currentUpdateContext.filename, 
+          downloadUrl: downloadUrl,
+          version: '8.0.2'
+        })
+      });
+      resp = await r.json();
+      if (resp.success) {
+        toast('✅ Команда на фоновое обновление отправлена!');
+        closeUpdatePackageModal();
+        loadFiles();
+      } else {
+        toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      }
+    }
+  } catch (e) {
+    if (e.message !== 'auth') toast('Ошибка отправки обновления: ' + e.message, 'err');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '⚡ Быстрое фоновое обновление через сервер (без файла)';
     }
   }
 }

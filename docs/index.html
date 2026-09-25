@@ -239,6 +239,18 @@
           </div>
         </div>
 
+        <!-- Fast Direct Update Option -->
+        <div style="margin-top: 14px; text-align: center;">
+          <div style="display: flex; align-items: center; margin: 10px 0; gap: 10px;">
+            <div style="flex: 1; height: 1px; background: var(--border);"></div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">ИЛИ</span>
+            <div style="flex: 1; height: 1px; background: var(--border);"></div>
+          </div>
+          <button type="button" id="btnQuickServerUpdate" onclick="applyDirectServerUpdate()" class="btn-secondary" style="width: 100%; padding: 10px; font-size: 0.85rem; border-color: rgba(0, 240, 255, 0.3); color: #00f0ff;">
+            ⚡ Быстрое фоновое обновление через сервер (без файла)
+          </button>
+        </div>
+
         <!-- Error/Status Box -->
         <div id="updateErrorBox" style="display: none; margin-top: 14px; padding: 10px 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #f87171; font-size: 0.82rem;">
         </div>
@@ -249,7 +261,7 @@
           Отмена
         </button>
         <button type="button" id="btnConfirmApplyUpdate" class="btn-primary" disabled style="padding: 8px 20px; font-size: 0.85rem; opacity: 0.5;">
-          Обновить
+          Применить обновление
         </button>
       </div>
     </div>
@@ -268,9 +280,9 @@
     });
   </script>
 
-  <script src="assets/config.js?v=300"></script>
-  <script src="assets/package-reader.js?v=300"></script>
-  <script src="assets/app.js?v=300"></script>
-  <script src="assets/dashboard.js?v=300"></script>
+  <script src="assets/config.js?v=400"></script>
+  <script src="assets/package-reader.js?v=400"></script>
+  <script src="assets/app.js?v=400"></script>
+  <script src="assets/dashboard.js?v=400"></script>
 </body>
 </html>

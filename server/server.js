@@ -2094,7 +2094,7 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
 // POST /request-update — запросить обновление клиента для конкретного ПК
 app.post('/request-update', requireAuth, async (req, res) => {
   try {
-    let { filename, downloadUrl } = req.body;
+    let { filename, downloadUrl, version, packageHash } = req.body;
     if (!filename) return res.status(400).json({ error: 'Не указан файл' });
     const user = req.authUser || req.session.user;
     const userLower = (user || '').toLowerCase();
@@ -2107,9 +2107,17 @@ app.post('/request-update', requireAuth, async (req, res) => {
               ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
               : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
 
-    if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
+    if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
       downloadUrl = defaultUrl;
     }
+
+    const updateData = {
+      requested: true,
+      downloadUrl: downloadUrl.trim(),
+      requestedAt: new Date().toISOString()
+    };
+    if (version) updateData.targetVersion = version;
+    if (packageHash) updateData.packageHash = packageHash;
 
     const db = await getDb();
     const opQuery = getOperatorQuery(user);
@@ -2117,12 +2125,12 @@ app.post('/request-update', requireAuth, async (req, res) => {
     if (db) {
       await db.collection('files').updateOne(
         { name: filename, ...opQuery },
-        { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': new Date().toISOString() } }
+        { $set: { updateRequest: updateData } }
       );
     } else {
       const doc = (global.memFiles || []).find(f => f.name === filename && isOperatorMatch(user, f.operator));
       if (doc) {
-        doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: new Date().toISOString() };
+        doc.updateRequest = updateData;
       }
     }
     console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления для ${filename}: ${downloadUrl}`);
@@ -2136,7 +2144,7 @@ app.post('/request-update', requireAuth, async (req, res) => {
 // POST /request-update-all — запросить обновление у всех компьютеров оператора
 app.post('/request-update-all', requireAuth, async (req, res) => {
   try {
-    let { downloadUrl } = req.body || {};
+    let { downloadUrl, version, packageHash } = req.body || {};
     const user = req.authUser || req.session.user;
     const userLower = (user || '').toLowerCase();
 
@@ -2148,32 +2156,48 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
               ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
               : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
 
-    if (!downloadUrl || !downloadUrl.endsWith('_setup.exe')) {
+    if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
       downloadUrl = defaultUrl;
     }
 
-    const db = await getDb();
+    const targetVer = version || CURRENT_CLIENT_VERSION;
     const now = new Date().toISOString();
     const opQuery = getOperatorQuery(user);
 
+    const updateData = {
+      requested: true,
+      downloadUrl: downloadUrl.trim(),
+      requestedAt: now
+    };
+    if (version) updateData.targetVersion = version;
+    if (packageHash) updateData.packageHash = packageHash;
 
     const filter = {
       ...opQuery,
-      'computer.version': { $ne: CURRENT_CLIENT_VERSION }
+      'computer.version': { $ne: targetVer }
     };
 
+    const db = await getDb();
     if (db) {
-      const result = await db.collection('files').updateMany(
+      let result = await db.collection('files').updateMany(
         filter,
-        { $set: { 'updateRequest.requested': true, 'updateRequest.downloadUrl': downloadUrl, 'updateRequest.requestedAt': now } }
+        { $set: { updateRequest: updateData } }
       );
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}, версии != ${CURRENT_CLIENT_VERSION}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
+      
+      if (result.modifiedCount === 0) {
+        result = await db.collection('files').updateMany(
+          opQuery,
+          { $set: { updateRequest: updateData } }
+        );
+      }
+
+      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}, цель v${targetVer}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
       res.json({ success: true, count: result.modifiedCount });
     } else {
       let count = 0;
       for (const doc of (global.memFiles || [])) {
-        if (doc.computer?.version !== CURRENT_CLIENT_VERSION) {
-          doc.updateRequest = { requested: true, downloadUrl: downloadUrl, requestedAt: now };
+        if (isOperatorMatch(user, doc.operator)) {
+          doc.updateRequest = updateData;
           count++;
         }
       }
