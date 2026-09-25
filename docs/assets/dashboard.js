@@ -257,25 +257,24 @@ function updateStats() {
       labelEl.style.color = "var(--danger)";
       labelEl.textContent = "Доступно обновление";
       if (unitEl) unitEl.style.color = "var(--text-secondary)";
-      subtextEl.style.color = "rgba(255,255,255,0.6)";
-      subtextEl.innerHTML = "⚡ Нажмите, чтобы обновить устаревшие";
+      subtextEl.style.color = "rgba(255,255,255,0.7)";
+      subtextEl.innerHTML = "📦 Нажмите для выбора .nupkg";
       cardEl.classList.add('active-action');
       cardEl.classList.remove('disabled-action');
       cardEl.onclick = function() {
-        updateAllClients(outdatedInfo.outdated);
+        openUpdatePackageModal(null, true);
       };
     } else {
       countEl.style.color = "#10b981"; // Success green
       labelEl.style.color = "#10b981";
-      labelEl.textContent = "Обновление";
+      labelEl.textContent = "Обновление (.nupkg)";
       if (unitEl) unitEl.style.color = "#10b981";
-      subtextEl.style.color = "rgba(255,255,255,0.4)";
-      subtextEl.innerHTML = "✅ Все клиенты актуальны";
-      cardEl.classList.remove('active-action');
-      cardEl.classList.add('disabled-action');
-      cardEl.onclick = function(e) {
-        e.stopPropagation();
-        toast("Все ваши клиенты уже обновлены до v7.2.2!", "info");
+      subtextEl.style.color = "rgba(255,255,255,0.5)";
+      subtextEl.innerHTML = "📦 Нажмите для загрузки .nupkg";
+      cardEl.classList.add('active-action');
+      cardEl.classList.remove('disabled-action');
+      cardEl.onclick = function() {
+        openUpdatePackageModal(null, true);
       };
     }
   }
