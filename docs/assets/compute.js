@@ -128,17 +128,20 @@ function renderWorkers(workers) {
 
   for (const w of workers) {
     const isOnline = w.isOnline;
-    const isRunning = w.status === 'Running' || isOnline;
+    const isRunning = isOnline && (w.status === 'Running' || w.status === 'Active');
     const statusDot = isRunning ? '<span class="pulse-dot-green"></span>' : '<span class="pulse-dot-gray"></span>';
     const statusBadge = isRunning 
       ? `<span class="badge badge-valid" style="display:inline-flex; align-items:center; gap:5px;">${statusDot} Активен</span>`
       : `<span class="badge badge-invalid" style="display:inline-flex; align-items:center; gap:5px;">${statusDot} Офлайн</span>`;
 
-    const isGpu = (w.gpu && w.gpu !== '—') || (w.algorithm && w.algorithm.toLowerCase().includes('etc'));
+    const isGpu = isRunning && ((w.gpu && w.gpu !== '—') || (w.algorithm && w.algorithm.toLowerCase().includes('etc')));
     const algoBadgeClass = isGpu ? 'compute-speed-badge compute-gpu-badge' : 'compute-speed-badge';
+    const cardStyle = isRunning ? '' : 'style="opacity: 0.6; filter: grayscale(20%);"';
+    const speedColor = isRunning ? '#00f0ff' : 'var(--text-muted, #64748b)';
+    const displaySpeed = isRunning ? (w.hashrate || '0 H/s') : '0 H/s (Офлайн)';
 
     html += `
-      <div class="compute-card">
+      <div class="compute-card" ${cardStyle}>
         <div class="compute-card-header">
           <div>
             <div class="compute-pc-title">
@@ -152,15 +155,15 @@ function renderWorkers(workers) {
           <div>${statusBadge}</div>
         </div>
 
-        <div style="background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;">
           <div>
             <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700;">Скорость / Хешрейт</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; margin-top: 2px;">
-              ${escapeHtml(w.hashrate || '0 H/s')}
+            <div style="font-size: 1.15rem; font-weight: 800; color: ${speedColor}; font-family: 'JetBrains Mono', monospace; margin-top: 2px;">
+              ${escapeHtml(displaySpeed)}
             </div>
           </div>
           <div class="${algoBadgeClass}">
-            ⚡ ${escapeHtml(w.algorithm || 'RandomX')}
+            ⚡ ${escapeHtml(w.algorithm || 'RandomX (XMR)')}
           </div>
         </div>
 
@@ -184,7 +187,7 @@ function renderWorkers(workers) {
           </div>
           <div class="compute-meta-row">
             <span>Шары (Shares):</span>
-            <span class="compute-meta-val" style="color: #10b981;">${escapeHtml(w.shares || '0/0')}</span>
+            <span class="compute-meta-val" style="color: ${isRunning ? '#10b981' : 'var(--text-muted)'};">${escapeHtml(w.shares || '—')}</span>
           </div>
           <div class="compute-meta-row">
             <span>Последний отклик:</span>
