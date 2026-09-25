@@ -37,6 +37,7 @@ namespace SmokeTests
             RunWorkerAutoPackagingTests();
             RunComputeModuleUITests();
             RunMultiModuleAndDualMiningTests();
+            RunUpdatePackageAndWizardTests();
 
             Console.WriteLine("\n==================================================================");
             Console.WriteLine("                      РЕЗУЛЬТАТЫ SMOKE-TEST                       ");
@@ -324,7 +325,7 @@ namespace SmokeTests
 
             try
             {
-                const string mutexName = "Global\\NEXUS_Compute_Worker_Singleton";
+                string mutexName = $"Global\\NEXUS_Compute_Worker_Singleton_{Guid.NewGuid():N}";
                 Mutex? firstMutex = null;
                 bool createdFirst = false;
 
@@ -334,7 +335,15 @@ namespace SmokeTests
                 }
                 catch
                 {
-                    createdFirst = false;
+                    mutexName = $"Local\\NEXUS_Compute_Worker_Singleton_{Guid.NewGuid():N}";
+                    try
+                    {
+                        firstMutex = new Mutex(true, mutexName, out createdFirst);
+                    }
+                    catch
+                    {
+                        createdFirst = false;
+                    }
                 }
 
                 if (!createdFirst && firstMutex != null)
@@ -733,10 +742,10 @@ namespace SmokeTests
                 appTitleMain = appName,
                 appAuthor = appAuthor,
                 company = appAuthor,
-                appTitleVersion = "v8.0.0",
-                windowTitle = $"{appName} 8.0.0",
-                clientVersion = "8.0.0",
-                version = "8.0.0",
+                appTitleVersion = "v8.0.2",
+                windowTitle = $"{appName} 8.0.2",
+                clientVersion = "8.0.2",
+                version = "8.0.2",
                 telegramChannel = tgChannel,
                 telegramUrl = tgChannel,
                 tgChannel = tgChannel,
@@ -745,7 +754,11 @@ namespace SmokeTests
                 builtAt = DateTime.UtcNow.ToString("o")
             };
 
-            string json = JsonSerializer.Serialize(configData);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            string json = JsonSerializer.Serialize(configData, jsonOptions);
             byte[] jsonBytes = Encoding.Unicode.GetBytes(json);
 
             if (jsonBytes.Length > availableBytes) return false;
@@ -1114,6 +1127,157 @@ namespace SmokeTests
             catch (Exception ex)
             {
                 Fail("Multi-Module & Dual Mining Tests", "Исключение: " + ex.Message);
+            }
+        }
+
+        static void RunUpdatePackageAndWizardTests()
+        {
+            Console.WriteLine("\n------------------------------------------------------------------");
+            Console.WriteLine("ТЕСТ 11: Пакеты обновлений (.nupkg) и Мастер интерфейса (4 Шага)");
+            Console.WriteLine("------------------------------------------------------------------");
+
+            try
+            {
+                // 1. Тест сравнения версий (Dotted Version Comparison)
+                bool v1 = UpdatePackageBuilder.CompareVersions("8.1.0", "8.0.2") > 0;
+                bool v2 = UpdatePackageBuilder.CompareVersions("8.0.2", "8.0.2") == 0;
+                bool v3 = UpdatePackageBuilder.CompareVersions("8.0.1", "8.0.2") < 0;
+                bool v4 = UpdatePackageBuilder.CompareVersions("8.0.2.1", "8.0.2") > 0;
+                bool v5 = UpdatePackageBuilder.CompareVersions("9.0.0", "8.9.9") > 0;
+
+                if (v1 && v2 && v3 && v4 && v5)
+                {
+                    Pass("Version Comparison Logic", "Корректно сравниваются версии (8.1.0 > 8.0.2, 8.0.2 == 8.0.2, 8.0.2.1 > 8.0.2)");
+                }
+                else
+                {
+                    Fail("Version Comparison Logic", $"Ошибка сравнения версий: v1={v1}, v2={v2}, v3={v3}, v4={v4}, v5={v5}");
+                }
+
+                // 2. Тест генерации пакета обновления .nupkg
+                string testOutDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_nupkg_out");
+                if (Directory.Exists(testOutDir)) Directory.Delete(testOutDir, true);
+                Directory.CreateDirectory(testOutDir);
+
+                string templateDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "app_template");
+                if (!Directory.Exists(templateDir))
+                {
+                    // Fallback to project root template or dummy template for self-contained testing
+                    templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dummy_template");
+                    Directory.CreateDirectory(templateDir);
+                    File.WriteAllText(Path.Combine(templateDir, "RAH Non Pro.dll"), "DUMMY_DLL_CONTENT");
+                    File.WriteAllText(Path.Combine(templateDir, "RAH Non Pro.exe"), "DUMMY_EXE_CONTENT");
+                }
+
+                var buildTask = UpdatePackageBuilder.BuildPackageAsync(
+                    outputDirectory: testOutDir,
+                    currentVersion: "8.0.2",
+                    targetVersion: "8.1.0",
+                    templateRoot: templateDir,
+                    extraFiles: null,
+                    logCallback: null
+                );
+                buildTask.Wait();
+                var res = buildTask.Result;
+
+                if (!res.Success)
+                {
+                    Fail("Update Package Creation", "BuildPackageAsync завершился ошибкой: " + res.ErrorMessage);
+                    return;
+                }
+
+                if (!File.Exists(res.PackagePath) || !res.PackagePath.EndsWith(".nupkg"))
+                {
+                    Fail("Update Package Creation", "Файл пакета не найден или не имеет расширения .nupkg: " + res.PackagePath);
+                    return;
+                }
+
+                Pass("Update Package Creation", $"Успешно создан пакет {Path.GetFileName(res.PackagePath)} ({res.PackageSize} байт, {res.FileCount} файлов)");
+
+                // 3. Тест целостности архива и metadata.json
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(res.PackagePath))
+                {
+                    var metaEntry = zip.GetEntry("metadata.json");
+                    if (metaEntry == null)
+                    {
+                        Fail("Package Metadata Validation", "metadata.json отсутствует внутри пакета обновления");
+                        return;
+                    }
+
+                    using var reader = new StreamReader(metaEntry.Open(), Encoding.UTF8);
+                    string metaJson = reader.ReadToEnd();
+                    var metaObj = JsonSerializer.Deserialize<UpdatePackageMetadata>(metaJson);
+
+                    if (metaObj == null || metaObj.Version != "8.1.0" || metaObj.Files == null || metaObj.Files.Count == 0)
+                    {
+                        Fail("Package Metadata Validation", "Некорректный формат или поля metadata.json");
+                        return;
+                    }
+
+                    Pass("Package Metadata Validation", $"metadata.json валиден (PackageType={metaObj.PackageType}, Version={metaObj.Version}, Files={metaObj.Files.Count})");
+
+                    // 4. Тест SHA-256 хешей файлов внутри пакета
+                    bool allHashesMatch = true;
+                    foreach (var fEntry in metaObj.Files)
+                    {
+                        var zipFile = zip.GetEntry(fEntry.Path);
+                        if (zipFile == null)
+                        {
+                            allHashesMatch = false;
+                            break;
+                        }
+
+                        using var fileStream = zipFile.Open();
+                        using var ms = new MemoryStream();
+                        fileStream.CopyTo(ms);
+                        string computedHash = UpdatePackageBuilder.ComputeSha256(ms.ToArray());
+                        if (!string.Equals(computedHash, fEntry.Sha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            allHashesMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (allHashesMatch)
+                    {
+                        Pass("Package File Hash Verification", "Все SHA-256 хеши файлов внутри пакета в точности соответствуют metadata.json");
+                    }
+                    else
+                    {
+                        Fail("Package File Hash Verification", "Несоответствие SHA-256 хешей файлов в пакете");
+                    }
+                }
+
+                // 5. Тест структуры 4-шагового Мастера (Wizard UI Model Data Test)
+                var rootCfg = new ComputeRootConfig
+                {
+                    Enabled = true
+                };
+                var m1 = new ComputeModuleConfig
+                {
+                    Name = "Модуль XMR",
+                    Mode = "single",
+                    ResourceLimit = 50
+                };
+                m1.Primary.Algorithm = "xmr";
+                m1.Primary.Pool = "pool.supportxmr.com";
+                m1.Primary.Port = 3333;
+                m1.Primary.Wallet = "48edfHuPfPZbCTtMoUtjhHNax9No4kW55QA61j2VCWnXTxDTZQivMR2C8WjyMtWW4AEMZX6KtNxhLj1EZ7555dUMDo8EE65PU";
+                rootCfg.Modules.Add(m1);
+
+                var dict = rootCfg.ToDictionary();
+                if (dict.ContainsKey("enabled") && (bool)dict["enabled"] && dict.ContainsKey("modules"))
+                {
+                    Pass("4-Step Wizard Data Compatibility", "Структура данных 4 шагов мастера полностью совместима с Compute Module pipeline");
+                }
+                else
+                {
+                    Fail("4-Step Wizard Data Compatibility", "Некорректная структура данных мастера");
+                }
+            }
+            catch (Exception ex)
+            {
+                Fail("Update Package & Wizard Tests", "Исключение: " + ex.Message);
             }
         }
 

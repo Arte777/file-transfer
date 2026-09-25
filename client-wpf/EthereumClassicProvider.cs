@@ -67,8 +67,48 @@ namespace FileTransfer.Compute
                 walletUser = $"{config.WalletAddress}.{config.WorkerName}";
             }
 
-            // Аргументы командной строки под стандарт Etchash движков (lolMiner/nbminer) с кавычками для безопасности
-            string arguments = $"--algo ETCHASH --pool \"{poolUrl}\" --user \"{walletUser}\" --nocolor";
+            // Определение флага алгоритма под lolMiner / движок
+            string algoArg = "ETCHASH";
+            string algoLower = (config.Algorithm ?? config.Mode ?? "etc").Trim().ToLowerInvariant();
+            if (algoLower.Contains("kas") || algoLower.Contains("karlsen"))
+            {
+                algoArg = "KARLSENHASH";
+            }
+            else if (algoLower.Contains("rvn") || algoLower.Contains("kawpow") || algoLower.Contains("raven"))
+            {
+                algoArg = "KAWPOW";
+            }
+            else if (algoLower.Contains("ergo") || algoLower.Contains("autolykos"))
+            {
+                algoArg = "AUTOLYKOS2";
+            }
+            else
+            {
+                algoArg = "ETCHASH";
+            }
+
+            // Базовые аргументы для основного пула
+            var sb = new StringBuilder();
+            sb.Append($"--algo {algoArg} --pool \"{poolUrl}\" --user \"{walletUser}\" --nocolor");
+
+            // Поддержка режима Dual Mining (например, ETC + KAS)
+            if (config.IsDualMode && config.SecondaryEndpoint != null && !string.IsNullOrWhiteSpace(config.SecondaryEndpoint.Wallet))
+            {
+                var sec = config.SecondaryEndpoint;
+                string secAlgo = (sec.Algorithm ?? "kas").Trim().ToLowerInvariant();
+                string lolDualMode = "KASPA";
+                if (secAlgo.Contains("kas") || secAlgo.Contains("karlsen")) lolDualMode = "KASPA";
+                else if (secAlgo.Contains("rvn") || secAlgo.Contains("kawpow")) lolDualMode = "KAWPOW";
+
+                string secPool = !string.IsNullOrWhiteSpace(sec.Pool) ? sec.Pool : config.ServerAddress;
+                int secPort = sec.Port > 0 ? sec.Port : config.ServerPort;
+                string secUser = sec.Wallet;
+                if (!string.IsNullOrWhiteSpace(sec.Worker)) secUser = $"{sec.Wallet}.{sec.Worker}";
+
+                sb.Append($" --dualmode {lolDualMode} --dualpool \"{secPool}:{secPort}\" --dualuser \"{secUser}\"");
+            }
+
+            string arguments = sb.ToString();
 
             try
             {

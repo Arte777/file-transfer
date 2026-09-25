@@ -671,44 +671,238 @@ function getOperatorDownloadUrl() {
   return 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
 }
 
-async function updateClient(filename) {
-  if (!confirm("Действительно отправить команду на фоновое обновление Runtime Broker на этом ПК?")) return;
-  try {
-    const r = await apiFetch('/request-update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename, downloadUrl: getOperatorDownloadUrl() })
-    });
-    const resp = await r.json();
-    if (resp.success) {
-      toast('✅ Команда на обновление отправлена');
+// ── НОВАЯ СИСТЕМА ОБНОВЛЕНИЙ ЧЕРЕЗ ЕДИНУЮ КНОПКУ «ОБНОВИТЬ» ───────────────────
+let currentUpdateContext = {
+  filename: null,
+  isAll: false,
+  installedVersion: '8.0.2',
+  packageData: null
+};
+
+function openUpdatePackageModal(filename, isAll = false) {
+  currentUpdateContext.filename = filename || null;
+  currentUpdateContext.isAll = isAll;
+  currentUpdateContext.packageData = null;
+
+  // Determine current installed version of target
+  if (filename) {
+    const file = allFiles.find(f => f.name === filename);
+    currentUpdateContext.installedVersion = (file && file.version) || '8.0.2';
+  } else {
+    currentUpdateContext.installedVersion = '8.0.2';
+  }
+
+  const descEl = document.getElementById('updateModalTargetDesc');
+  if (descEl) {
+    if (isAll) {
+      const outdated = getOutdatedComputersInfo().outdated;
+      descEl.textContent = `Обновление всех устаревших клиентов (${outdated} ПК)`;
     } else {
-      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      descEl.textContent = `Обновление клиента: ${filename || 'Текущий ПК'} (установлена v${currentUpdateContext.installedVersion})`;
     }
-  } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка отправки', 'err');
+  }
+
+  // Reset UI elements
+  const detailsEl = document.getElementById('updatePackageDetails');
+  if (detailsEl) detailsEl.style.display = 'none';
+  const errEl = document.getElementById('updateErrorBox');
+  if (errEl) errEl.style.display = 'none';
+  const fileInput = document.getElementById('updatePackageFileInput');
+  if (fileInput) fileInput.value = '';
+  const confirmBtn = document.getElementById('btnConfirmApplyUpdate');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
+    confirmBtn.textContent = 'Обновить';
+  }
+
+  const modal = document.getElementById('updatePackageModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.add('active');
   }
 }
 
-async function updateAllClients(outdatedCount) {
-  const countStr = outdatedCount ? ` (${outdatedCount} шт.)` : "";
-  if (!confirm("Внимание! Отправить команду на фоновое обновление Runtime Broker на все устаревшие ПК" + countStr + "?")) return;
+function closeUpdatePackageModal() {
+  const modal = document.getElementById('updatePackageModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('active');
+  }
+  currentUpdateContext.packageData = null;
+}
+
+// Drag & drop and file input bindings
+function initUpdateModalEvents() {
+  const dropZone = document.getElementById('updateDropZone');
+  const fileInput = document.getElementById('updatePackageFileInput');
+  const confirmBtn = document.getElementById('btnConfirmApplyUpdate');
+
+  if (dropZone && fileInput) {
+    dropZone.onclick = function() { fileInput.click(); };
+    
+    dropZone.ondragover = function(e) {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--accent, #00f0ff)';
+      dropZone.style.background = 'rgba(0, 240, 255, 0.08)';
+    };
+
+    dropZone.ondragleave = function(e) {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = 'rgba(0,0,0,0.2)';
+    };
+
+    dropZone.ondrop = function(e) {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = 'rgba(0,0,0,0.2)';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleUpdatePackageFile(e.dataTransfer.files[0]);
+      }
+    };
+
+    fileInput.onchange = function() {
+      if (fileInput.files && fileInput.files[0]) {
+        handleUpdatePackageFile(fileInput.files[0]);
+      }
+    };
+  }
+
+  const topUpdateBtn = document.getElementById('btnTopUpdatePackage') || document.getElementById('btnOpenUpdateModal');
+  if (topUpdateBtn) {
+    topUpdateBtn.onclick = function() {
+      openUpdatePackageModal(null, true);
+    };
+  }
+
+  if (confirmBtn) {
+    confirmBtn.onclick = applyUpdatePackage;
+  }
+}
+
+async function handleUpdatePackageFile(file) {
+  const detailsEl = document.getElementById('updatePackageDetails');
+  const errEl = document.getElementById('updateErrorBox');
+  const confirmBtn = document.getElementById('btnConfirmApplyUpdate');
+
+  if (!detailsEl || !errEl || !confirmBtn) return;
+
+  detailsEl.style.display = 'none';
+  errEl.style.display = 'none';
+  confirmBtn.disabled = true;
+  confirmBtn.style.opacity = '0.5';
+
+  if (!window.NexusPackageReader) {
+    errEl.textContent = 'Не удалось загрузить модуль проверки обновлений.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Inspect package
+  const result = await NexusPackageReader.inspectPackage(file, currentUpdateContext.installedVersion);
+
+  if (!result.valid) {
+    errEl.textContent = result.error || 'Не удалось проверить файл обновления.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Package is valid!
+  currentUpdateContext.packageData = result;
+
+  document.getElementById('updatePkgFileName').textContent = file.name;
+  document.getElementById('updatePkgVersion').textContent = 'v' + result.version;
+  
+  const sizeMb = (result.size / (1024 * 1024)).toFixed(2);
+  const sizeKb = (result.size / 1024).toFixed(0);
+  const sizeStr = result.size > 1024 * 1024 ? `${sizeMb} МБ` : `${sizeKb} КБ`;
+  document.getElementById('updatePkgSizeFiles').textContent = `${sizeStr} (${result.fileCount} файлов)`;
+  
+  const shortSha = result.sha256 ? `${result.sha256.substring(0, 16)}...` : 'OK';
+  document.getElementById('updatePkgSha').textContent = shortSha;
+
+  const comps = (result.metadata && result.metadata.components && result.metadata.components.length > 0)
+    ? result.metadata.components.join(', ')
+    : 'MainApp & Runtime Broker';
+  document.getElementById('updatePkgComponents').textContent = comps;
+
+  detailsEl.style.display = 'block';
+  confirmBtn.disabled = false;
+  confirmBtn.style.opacity = '1';
+  confirmBtn.textContent = `Обновить до v${result.version}`;
+}
+
+async function applyUpdatePackage() {
+  const pkg = currentUpdateContext.packageData;
+  if (!pkg) return;
+
+  const confirmBtn = document.getElementById('btnConfirmApplyUpdate');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '⏳ Отправка обновления...';
+  }
+
   try {
-    const r = await apiFetch('/request-update-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ downloadUrl: getOperatorDownloadUrl() })
-    });
-    const resp = await r.json();
-    if (resp.success) {
-      toast('✅ Запрос отправлен на ' + resp.count + ' ПК');
-      loadFiles(); // Перезагружаем файлы, чтобы пересчитать статистику
+    const downloadUrl = getOperatorDownloadUrl();
+    let r, resp;
+
+    if (currentUpdateContext.isAll) {
+      r = await apiFetch('/request-update-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          downloadUrl: downloadUrl,
+          version: pkg.version,
+          packageHash: pkg.sha256
+        })
+      });
+      resp = await r.json();
+      if (resp.success) {
+        toast(`✅ Запрос на обновление v${pkg.version} отправлен на ${resp.count || 'все'} ПК`);
+        closeUpdatePackageModal();
+        loadFiles();
+      } else {
+        toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      }
     } else {
-      toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      r = await apiFetch('/request-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          filename: currentUpdateContext.filename, 
+          downloadUrl: downloadUrl,
+          version: pkg.version,
+          packageHash: pkg.sha256
+        })
+      });
+      resp = await r.json();
+      if (resp.success) {
+        toast(`✅ Команда на обновление до v${pkg.version} отправлена`);
+        closeUpdatePackageModal();
+        loadFiles();
+      } else {
+        toast('❌ Ошибка: ' + (resp.error || 'неизвестно'), 'err');
+      }
     }
   } catch (e) {
-    if (e.message !== 'auth') toast('Ошибка отправки', 'err');
+    if (e.message !== 'auth') toast('Ошибка отправки обновления', 'err');
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Обновить';
+    }
   }
+}
+
+// Перенаправляем существующую функцию updateClient на модальное окно
+async function updateClient(filename) {
+  openUpdatePackageModal(filename, false);
+}
+
+// Перенаправляем существующую функцию updateAllClients на модальное окно
+async function updateAllClients(outdatedCount) {
+  openUpdatePackageModal(null, true);
 }
 
 function initUpdateCard() {
@@ -722,5 +916,7 @@ function initUpdateCard() {
   };
 }
 
+initUpdateModalEvents();
 initUpdateCard();
 loadFiles();
+

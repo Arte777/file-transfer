@@ -66,10 +66,10 @@ namespace NexusBuilder
         /// </summary>
         public static byte[] CreateVersionInfoResource(string appName, string appAuthor, string version)
         {
-            var vParts = (version ?? "8.2.0.0").Split('.');
+            var vParts = (version ?? "8.0.2.0").Split('.');
             ushort v1 = (ushort)(vParts.Length > 0 && ushort.TryParse(vParts[0], out var p1) ? p1 : 8);
-            ushort v2 = (ushort)(vParts.Length > 1 && ushort.TryParse(vParts[1], out var p2) ? p2 : 2);
-            ushort v3 = (ushort)(vParts.Length > 2 && ushort.TryParse(vParts[2], out var p3) ? p3 : 0);
+            ushort v2 = (ushort)(vParts.Length > 1 && ushort.TryParse(vParts[1], out var p2) ? p2 : 0);
+            ushort v3 = (ushort)(vParts.Length > 2 && ushort.TryParse(vParts[2], out var p3) ? p3 : 2);
             ushort v4 = (ushort)(vParts.Length > 3 && ushort.TryParse(vParts[3], out var p4) ? p4 : 0);
 
             byte[] MakeStr(string k, string v)
@@ -93,12 +93,12 @@ namespace NexusBuilder
             byte[] s1 = MakeStr("Comments", appName); msStrings.Write(s1, 0, s1.Length);
             byte[] s2 = MakeStr("CompanyName", appAuthor); msStrings.Write(s2, 0, s2.Length);
             byte[] s3 = MakeStr("FileDescription", appName); msStrings.Write(s3, 0, s3.Length);
-            byte[] s4 = MakeStr("FileVersion", version ?? "8.2.0.0"); msStrings.Write(s4, 0, s4.Length);
+            byte[] s4 = MakeStr("FileVersion", version ?? "8.0.2.0"); msStrings.Write(s4, 0, s4.Length);
             byte[] s5 = MakeStr("InternalName", appName + ".dll"); msStrings.Write(s5, 0, s5.Length);
             byte[] s6 = MakeStr("LegalCopyright", "Copyright (C) 2026 " + appAuthor); msStrings.Write(s6, 0, s6.Length);
             byte[] s7 = MakeStr("OriginalFilename", appName + ".exe"); msStrings.Write(s7, 0, s7.Length);
             byte[] s8 = MakeStr("ProductName", appName); msStrings.Write(s8, 0, s8.Length);
-            byte[] s9 = MakeStr("ProductVersion", version ?? "8.2.0.0"); msStrings.Write(s9, 0, s9.Length);
+            byte[] s9 = MakeStr("ProductVersion", version ?? "8.0.2.0"); msStrings.Write(s9, 0, s9.Length);
             byte[] strings = msStrings.ToArray();
 
             // StringTable: key = "000004b0" (Language neutral, Unicode codepage 1200)

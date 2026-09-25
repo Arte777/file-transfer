@@ -9,7 +9,7 @@ const http        = require('http');
 const crypto      = require('crypto');
 const { MongoClient } = require('mongodb');
 
-const CURRENT_CLIENT_VERSION = '8.0.0';
+const CURRENT_CLIENT_VERSION = '8.0.2';
 
 const app = express();
 app.set('trust proxy', 1);
