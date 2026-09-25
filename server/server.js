@@ -2302,7 +2302,12 @@ app.get('/api/compute-stats', requireAuth, async (req, res) => {
         seen.set(pc, f);
       }
     }
-    const pcList = [...seen.values()];
+    
+    // Показываем только компьютеры с актуальной версией 8.0.2 (исключая старые записи предыдущих сборок)
+    const pcList = [...seen.values()].filter(f => {
+      const ver = String(f.computer?.version || f.version || '');
+      return ver === '8.0.2' || ver.startsWith('8.0.2') || (f.compute && f.compute.status === 'Running');
+    });
 
     const now = Date.now();
     let totalOnline = 0;
