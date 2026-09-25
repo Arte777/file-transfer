@@ -691,16 +691,33 @@
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="⚡" FontSize="16" Foreground="#f59e0b" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                            <TextBlock Text="Настройка фоновой задачи" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            <TextBlock Text="Настройка фоновых задач" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0" />
                                             
                                             <Border x:Name="badgeModuleCount" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                                <TextBlock x:Name="txtModuleCount" Text="0 модулей" Foreground="#64748b" FontSize="10" FontWeight="Bold" />
+                                                 <TextBlock x:Name="txtModuleCount" Text="0 модулей" Foreground="#64748b" FontSize="10" FontWeight="Bold" />
                                             </Border>
                                         </StackPanel>
+
+                                        <Button Grid.Column="1" x:Name="btnAddComputeModuleHeader" Content="➕ Добавить модуль" Style="{StaticResource BtnPrimaryStyle}" Height="30" FontSize="11.5" FontWeight="SemiBold" Padding="14,0" Click="BtnAddComputeModule_Click" />
                                     </Grid>
 
                                     <!-- Dynamic Module Cards Container -->
                                     <StackPanel x:Name="pnlComputeModulesList" Margin="0,0,0,8" />
+
+                                    <!-- Add More Modules Action Row (when modules > 0) -->
+                                    <Border x:Name="pnlAddMoreComputeModules" Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,4,0,12" Visibility="Collapsed">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="Дополнительные фоновые задачи" Foreground="#f1f5f9" FontSize="12" FontWeight="SemiBold" />
+                                                <TextBlock Text="Добавьте вторую фоновую задачу или переключите «Что запустить» в карточке на «Две задачи» (Dual Mining)." Foreground="#64748b" FontSize="11" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" x:Name="btnAddComputeModuleBottom" Content="➕  Добавить вторую задачу" Style="{StaticResource BtnPrimaryStyle}" Height="32" FontSize="11.5" FontWeight="SemiBold" Padding="16,0" Click="BtnAddComputeModule_Click" />
+                                        </Grid>
+                                    </Border>
 
                                     <!-- Empty State -->
                                     <Border x:Name="pnlComputeEmptyState" Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,4,0,12" Visibility="Visible">

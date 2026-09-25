@@ -1798,10 +1798,14 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
                 txtComputeBadgeState.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
             }
 
-            // Empty state
+            // Empty state and add more button
             if (pnlComputeEmptyState != null)
             {
                 pnlComputeEmptyState.Visibility = moduleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (pnlAddMoreComputeModules != null)
+            {
+                pnlAddMoreComputeModules.Visibility = moduleCount > 0 ? Visibility.Visible : Visibility.Collapsed;
             }
 
             // Disable cards if global toggle is off
@@ -1837,6 +1841,11 @@ Filename: ""{{app}}\\{{#MyAppExeName}}""; Description: ""{{cm:LaunchProgram,{{#S
             if (pnlComputeEmptyState != null)
             {
                 pnlComputeEmptyState.Visibility = ComputeConfig.Modules.Count == 0
+                    ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (pnlAddMoreComputeModules != null)
+            {
+                pnlAddMoreComputeModules.Visibility = ComputeConfig.Modules.Count > 0
                     ? Visibility.Visible : Visibility.Collapsed;
             }
         }
