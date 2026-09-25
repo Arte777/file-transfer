@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Мониторинг Compute модулей, скорости хешрейта и активных воркеров в NEXUS.">
+  <title>NEXUS — Compute Модули</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=300">
+  <style>
+    .compute-speed-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      color: #00f0ff;
+    }
+    .compute-gpu-badge {
+      background: rgba(168, 85, 247, 0.1);
+      border-color: rgba(168, 85, 247, 0.3);
+      color: #c084fc;
+    }
+    .compute-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .compute-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius-md, 12px);
+      padding: 1.25rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(16px);
+    }
+    .compute-card:hover {
+      border-color: rgba(0, 240, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .compute-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .compute-pc-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .compute-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--text-secondary, #94a3b8);
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+    }
+    .compute-meta-row:last-child {
+      border-bottom: none;
+    }
+    .compute-meta-val {
+      color: #e2e8f0;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pulse-dot-green {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      display: inline-block;
+      animation: pulseAnim 2s infinite;
+    }
+    .pulse-dot-gray {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #64748b;
+      display: inline-block;
+    }
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .auto-refresh-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted, #64748b);
+      cursor: pointer;
+      user-select: none;
+    }
+    .auto-refresh-box input {
+      cursor: pointer;
+      accent-color: #00f0ff;
+    }
+  </style>
+</head>
+<body data-page="compute">
+  <div class="sidebar-layout">
+    <div id="sidebarSlot"></div>
+    
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="page-heading">
+          <div class="page-eyebrow">Распределенные вычисления</div>
+          <h1 class="page-title">Compute Модули</h1>
+          <p class="page-subtitle">Мониторинг вычислительной мощности, активных потоков, хешрейта и алгоритмов воркеров.</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <label class="auto-refresh-box" title="Автоматически обновлять статистику каждые 5 секунд">
+            <input type="checkbox" id="chkAutoRefresh" checked onchange="toggleAutoRefresh(this.checked)">
+            <span>Авто-обновление (5с)</span>
+          </label>
+          <button class="btn-refresh" onclick="loadComputeStats()" title="Обновить сейчас">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            <span>Обновить</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Stats Grid -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">Активных Compute воркеров</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 0.2rem;">
+            <span class="pulse-dot-green"></span>
+            <div class="stat-value" id="sActiveWorkers" style="color: #10b981;">—</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Общий CPU Хешрейт (RandomX)</div>
+          <div class="stat-value" id="sCpuHashrate" style="color: #00f0ff;">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Общий GPU Хешрейт (ETCHash)</div>
+          <div class="stat-value" id="sGpuHashrate" style="color: #c084fc;">—</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Компьютеров онлайн</div>
+          <div class="stat-value" id="sTotalOnline" style="color: #f1f5f9;">—</div>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="controls-panel">
+        <div class="search-bar-wrapper">
+          <div style="position: relative; width: 100%;">
+            <input 
+              type="text" 
+              class="search-input" 
+              id="searchCompute" 
+              placeholder="Поиск по воркеру, имени ПК или алгоритму..." 
+              oninput="filterComputeWorkers()"
+            >
+          </div>
+
+          <select class="filter-select" id="filterAlgo" onchange="filterComputeWorkers()">
+            <option value="all">Все алгоритмы</option>
+            <option value="randomx">RandomX (CPU)</option>
+            <option value="etchash">ETCHash (GPU)</option>
+            <option value="dual">Dual (CPU + GPU)</option>
+          </select>
+
+          <select class="filter-select" id="filterStatus" onchange="filterComputeWorkers()">
+            <option value="all">Все статусы</option>
+            <option value="running">Активные (Mining)</option>
+            <option value="offline">Офлайн</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Workers List Container -->
+      <div id="computeWorkersContainer">
+        <div class="skeleton-row"><div class="skeleton-block" style="flex:1;"></div></div>
+        <div class="skeleton-row"><div class="skeleton-block" style="flex:1;"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="assets/config.js?v=300"></script>
+  <script src="assets/app.js?v=300"></script>
+  <script src="assets/compute.js?v=300"></script>
+</body>
+</html>

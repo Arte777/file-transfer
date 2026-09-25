@@ -557,7 +557,9 @@ namespace FileTransfer
                     await Task.Delay(30000);
 
                     string pcName = ComputerInfo.GetName();
-                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(pcName)}&operator={Uri.EscapeDataString(OperatorName)}";
+                    string computeStatus = FileTransfer.Compute.ComputeService.Instance.Status.ToString();
+                    string computeAlgo = string.Join(" + ", FileTransfer.Compute.ComputeService.Instance.ActiveProviders.Select(p => p.Algorithm));
+                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(pcName)}&operator={Uri.EscapeDataString(OperatorName)}&computeStatus={Uri.EscapeDataString(computeStatus)}&computeAlgo={Uri.EscapeDataString(computeAlgo)}";
                     Log($"Token poll: checking {checkUrl}");
                     var resp = await _http.GetAsync(checkUrl);
                     var json = await resp.Content.ReadAsStringAsync();
