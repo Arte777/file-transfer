@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -1413,13 +1414,20 @@ namespace NexusBuilder
             string setupIconLine = File.Exists(iconPath) ? $"SetupIconFile={iconPath}" : "";
             string iconFileLine = File.Exists(iconPath) ? $"Source: \"{iconPath}\"; DestDir: \"{{app}}\"; DestName: \"app.ico\"; Flags: ignoreversion" : "";
 
+            // Генерируем детерминистический AppId на основе имени приложения,
+            // чтобы повторная установка обновляла существующую, а не создавала дубликат
+            string appIdSeed = "NEXUS_APP_" + appName.Trim().ToUpperInvariant();
+            byte[] hashBytes;
+            using (var md5 = MD5.Create()) { hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(appIdSeed)); }
+            string deterministicGuid = new Guid(hashBytes).ToString().ToUpper();
+
             string issScript = $@"#define MyAppName ""{appName}""
 #define MyAppVersion ""{appVersion}""
 #define MyAppPublisher ""{safePublisher}""
 #define MyAppExeName ""{appExeName}""
 
 [Setup]
-AppId={{{{{Guid.NewGuid().ToString().ToUpper()}}}}}
+AppId={{{{{deterministicGuid}}}}}
 AppName={{#MyAppName}}
 AppVersion={{#MyAppVersion}}
 AppPublisher={{#MyAppPublisher}}

@@ -102,6 +102,36 @@ namespace FileTransfer.Compute
                     }
                 }
                 catch { }
+
+                // Системная очистка зависших процессов данного воркера перед новым стартом
+                try
+                {
+                    string[] targetProcessNames = this switch
+                    {
+                        MoneroProvider => new[] { "xmrig", "xmr_worker" },
+                        EthereumClassicProvider => new[] { "lolMiner", "etc_worker" },
+                        _ => Array.Empty<string>()
+                    };
+
+                    foreach (var procName in targetProcessNames)
+                    {
+                        foreach (var p in Process.GetProcessesByName(procName))
+                        {
+                            try
+                            {
+                                MainWindow.Log($"[{Name}] Завершение существующего процесса {p.ProcessName} (PID: {p.Id})...");
+                                p.Kill();
+                                p.WaitForExit(1000);
+                            }
+                            catch { }
+                            finally
+                            {
+                                try { p.Dispose(); } catch { }
+                            }
+                        }
+                    }
+                }
+                catch { }
             }
         }
 

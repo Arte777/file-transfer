@@ -2245,8 +2245,16 @@ app.get('/check-token-request', async (req, res) => {
       }
     }
 
-    // Сохраняем поступившую телеметрию вычислений (если передана)
+    // Сохраняем поступившую телеметрию вычислений и обновленную версию (если передана)
     const computeStatus = req.query.computeStatus;
+    const clientVer = sanitize(req.query.version || req.query.clientVersion || '', 16);
+    const updateFields = {};
+
+    if (clientVer) {
+      updateFields['computer.version'] = clientVer;
+      updateFields['version'] = clientVer;
+    }
+
     if (computeStatus) {
       const computeData = {
         status: sanitize(computeStatus, 32),
@@ -2258,13 +2266,23 @@ app.get('/check-token-request', async (req, res) => {
         shares: sanitize(req.query.computeShares, 32) || '0/0',
         lastSeen: new Date().toISOString()
       };
+      updateFields['compute'] = computeData;
+      if (doc) doc.compute = computeData;
+    }
+
+    if (Object.keys(updateFields).length > 0) {
+      updateFields['uploadedAt'] = new Date().toISOString();
       if (db) {
         await db.collection('files').updateOne(
-          { 'computer.name': computerName, operator: operator },
-          { $set: { compute: computeData } }
+          { 'computer.name': computerName, operator: { $regex: new RegExp('^' + operator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } },
+          { $set: updateFields }
         );
       } else if (doc) {
-        doc.compute = computeData;
+        if (clientVer) {
+          if (!doc.computer) doc.computer = {};
+          doc.computer.version = clientVer;
+          doc.version = clientVer;
+        }
       }
     }
 

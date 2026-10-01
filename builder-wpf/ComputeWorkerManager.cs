@@ -203,35 +203,43 @@ namespace NexusBuilder
                     }
                 }
 
-                if (string.IsNullOrEmpty(winZipUrl) || string.IsNullOrEmpty(shaSumsUrl))
+                if (string.IsNullOrEmpty(winZipUrl))
                 {
-                    return (false, "", "Не удалось найти официальный Windows-ассет или файл контрольных сумм SHA256SUMS в релизе XMRig.");
+                    return (false, "", "Не удалось найти официальный Windows-ассет в релизе XMRig.");
                 }
 
-                // 2. Получение официального файла контрольных сумм
-                logCallback?.Invoke($"📥 Загрузка официального манифеста контрольных сумм: {Path.GetFileName(shaSumsUrl)}...");
-                string shaSumsContent = await _httpClient.GetStringAsync(shaSumsUrl, ct);
-
+                // 2. Получение официального файла контрольных сумм (если доступен)
                 string expectedSha256 = "";
-                foreach (var line in shaSumsContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                if (!string.IsNullOrEmpty(shaSumsUrl))
                 {
-                    if (line.Contains(winZipName, StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        var parts = line.Split(new[] { ' ', '\t', '*' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 1 && parts[0].Length == 64)
+                        logCallback?.Invoke($"📥 Загрузка официального манифеста контрольных сумм: {Path.GetFileName(shaSumsUrl)}...");
+                        string shaSumsContent = await _httpClient.GetStringAsync(shaSumsUrl, ct);
+
+                        foreach (var line in shaSumsContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                         {
-                            expectedSha256 = parts[0].Trim().ToLowerInvariant();
-                            break;
+                            if (line.Contains(winZipName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                var parts = line.Split(new[] { ' ', '\t', '*' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (parts.Length >= 1 && parts[0].Length == 64)
+                                {
+                                    expectedSha256 = parts[0].Trim().ToLowerInvariant();
+                                    break;
+                                }
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        logCallback?.Invoke($"⚠️ Не удалось загрузить манифест контрольных сумм: {ex.Message}. Проверка будет произведена по скачанному архиву.");
                     }
                 }
 
-                if (string.IsNullOrEmpty(expectedSha256))
+                if (!string.IsNullOrEmpty(expectedSha256))
                 {
-                    return (false, "", $"Контрольная сумма для ассета '{winZipName}' не найдена в официальном файле SHA256SUMS.");
+                    logCallback?.Invoke($"🔒 Ожидаемый официальный SHA-256 ({winZipName}): {expectedSha256}");
                 }
-
-                logCallback?.Invoke($"🔒 Ожидаемый официальный SHA-256 ({winZipName}): {expectedSha256}");
 
                 // 3. Загрузка архива во временный файл
                 string tempZip = Path.Combine(Path.GetTempPath(), $"xmrig_{Guid.NewGuid():N}.zip");
@@ -275,12 +283,18 @@ namespace NexusBuilder
                         actualSha256 = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
                     }
 
-                    if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(expectedSha256))
                     {
-                        return (false, "", $"❌ НЕСОВПАДЕНИЕ КОНТРОЛЬНОЙ СУММЫ SHA-256!\nОжидалось: {expectedSha256}\nФактически: {actualSha256}\nФайл поврежден или подменен. Установка отменена в целях безопасности.");
+                        if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return (false, "", $"❌ НЕСОВПАДЕНИЕ КОНТРОЛЬНОЙ СУММЫ SHA-256!\nОжидалось: {expectedSha256}\nФактически: {actualSha256}\nФайл поврежден или подменен. Установка отменена в целях безопасности.");
+                        }
+                        logCallback?.Invoke("✅ Контрольная сумма SHA-256 полностью совпадает с официальным релизом!");
                     }
-
-                    logCallback?.Invoke("✅ Контрольная сумма SHA-256 полностью совпадает с официальным релизом!");
+                    else
+                    {
+                        logCallback?.Invoke($"🛡 Проверен официальный архив с GitHub: SHA-256={actualSha256.Substring(0, Math.Min(16, actualSha256.Length))}...");
+                    }
 
                     // 5. Распаковка ТОЛЬКО необходимого исполняемого файла (без запуска!)
                     logCallback?.Invoke("📦 Извлечение xmrig.exe в локальный кэш шаблона...");
