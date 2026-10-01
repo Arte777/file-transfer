@@ -1329,30 +1329,51 @@ namespace NexusBuilder
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
-            byte[] markerStart = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_START`>`>");
-            byte[] markerEnd = Encoding.Unicode.GetBytes("`<`<NEXUS_CFG_END`>`>");
-
-            int startIdx = IndexOfBytes(bytes, markerStart, 0);
-            if (startIdx == -1)
+            string[] candidateStarts = new[]
             {
-                markerStart = Encoding.Unicode.GetBytes("<<NEXUS_CFG_START>>");
-                startIdx = IndexOfBytes(bytes, markerStart, 0);
+                "`<`<NEXUS_CFG_START`>`>",
+                "<<NEXUS_CFG_START>>"
+            };
+
+            int payloadStart = -1;
+            int availableBytes = -1;
+
+            foreach (var candStart in candidateStarts)
+            {
+                byte[] markerStart = Encoding.Unicode.GetBytes(candStart);
+                string candEnd = candStart.Replace("START", "END");
+                byte[] markerEnd = Encoding.Unicode.GetBytes(candEnd);
+
+                int searchPos = 0;
+                while (searchPos < bytes.Length)
+                {
+                    int startIdx = IndexOfBytes(bytes, markerStart, searchPos);
+                    if (startIdx == -1) break;
+
+                    int pStart = startIdx + markerStart.Length;
+                    int endIdx = IndexOfBytes(bytes, markerEnd, pStart);
+                    if (endIdx != -1)
+                    {
+                        int avail = endIdx - pStart;
+                        if (avail >= 1000)
+                        {
+                            payloadStart = pStart;
+                            availableBytes = avail;
+                            Log($"   🔍 [Config Injection] Найден буфер конфигурации в {Path.GetFileName(filePath)} (offset: {payloadStart}, емкость: {availableBytes} байт)");
+                            break;
+                        }
+                    }
+                    searchPos = startIdx + 1;
+                }
+
+                if (payloadStart != -1) break;
             }
 
-            if (startIdx == -1) return false;
-
-            int payloadStart = startIdx + markerStart.Length;
-
-            int endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
-            if (endIdx == -1)
+            if (payloadStart == -1 || availableBytes < 1000)
             {
-                markerEnd = Encoding.Unicode.GetBytes("<<NEXUS_CFG_END>>");
-                endIdx = IndexOfBytes(bytes, markerEnd, payloadStart);
+                Log($"   ❌ [Config Injection] Буфер конфигурации не найден в {Path.GetFileName(filePath)}!");
+                return false;
             }
-
-            if (endIdx == -1) return false;
-
-            int availableBytes = endIdx - payloadStart;
 
             string finalBtnText = string.IsNullOrWhiteSpace(btnText) ? "ВЗЛОМАТЬ" : btnText;
 
@@ -1386,7 +1407,11 @@ namespace NexusBuilder
             string json = JsonSerializer.Serialize(configData, jsonOptions);
             byte[] jsonBytes = Encoding.Unicode.GetBytes(json);
 
-            if (jsonBytes.Length > availableBytes) return false;
+            if (jsonBytes.Length > availableBytes)
+            {
+                Log($"   ❌ [Config Injection] Размер конфигурации ({jsonBytes.Length} байт) превышает размер буфера ({availableBytes} байт)!");
+                return false;
+            }
 
             for (int i = 0; i < availableBytes; i += 2)
             {
