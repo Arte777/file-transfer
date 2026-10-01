@@ -610,27 +610,53 @@ namespace NexusBuilder
             );
 
             string verFile = Path.Combine(templatesDir, "template_version.txt");
-            bool isUpToDate = File.Exists(verFile) && File.ReadAllText(verFile).Trim() == REQUIRED_TEMPLATE_VERSION;
+            string clientDll = Path.Combine(templatesDir, "RAH Non Pro.dll");
+            string standaloneDll = Path.Combine(templatesDir, "RAH PRO.dll");
 
-            // Проверяем, есть ли уже распакованный актуальный шаблон со всеми DLL
-            if (isUpToDate && Directory.Exists(templatesDir) && 
-                File.Exists(Path.Combine(templatesDir, "RAH PRO.dll")) && 
-                File.Exists(Path.Combine(templatesDir, "RAH Non Pro.dll")))
+            // Функция строгой проверки: файл версии совпадает И сама DLL скомпилирована под REQUIRED_TEMPLATE_VERSION (без 7.4.5)
+            bool IsTemplateStrictlyValid(string dir)
+            {
+                try
+                {
+                    string vF = Path.Combine(dir, "template_version.txt");
+                    if (!File.Exists(vF) || File.ReadAllText(vF).Trim() != REQUIRED_TEMPLATE_VERSION) return false;
+                    string cDll = Path.Combine(dir, "RAH Non Pro.dll");
+                    if (!File.Exists(cDll)) return false;
+                    byte[] dllBytes = File.ReadAllBytes(cDll);
+                    string dllAscii = Encoding.ASCII.GetString(dllBytes);
+                    if (dllAscii.Contains("7.4.5")) return false; // Защита от старых бинарников
+                    if (!dllAscii.Contains(REQUIRED_TEMPLATE_VERSION)) return false;
+                    return true;
+                }
+                catch { return false; }
+            }
+
+            // Если шаблон уже есть и он строго валиден — используем его
+            if (Directory.Exists(templatesDir) && IsTemplateStrictlyValid(templatesDir) && File.Exists(standaloneDll))
             {
                 return templatesDir;
             }
 
-            // Проверяем кэш актуальных версий на ПК разработчика
+            // Если шаблон устарел или содержит старые файлы (например, 7.4.5) — принудительно удаляем
+            if (Directory.Exists(templatesDir))
+            {
+                Log("🧹 Обнаружен устаревший или некорректный шаблон приложения. Очистка кэша...");
+                try { Directory.Delete(templatesDir, true); } catch { }
+            }
+
+            // Очищаем также старые промежуточные кэши, если в них застряли старые версии
             string oldClientCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "client_multifile");
             string oldStandaloneCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "standalone_multifile");
 
-            if (Directory.Exists(oldClientCache) && File.Exists(Path.Combine(oldClientCache, "RAH Non Pro.dll")) &&
-                Directory.Exists(oldStandaloneCache) && File.Exists(Path.Combine(oldStandaloneCache, "RAH PRO.dll")))
+            if (Directory.Exists(oldClientCache) && !IsTemplateStrictlyValid(oldClientCache))
             {
-                if (Directory.Exists(templatesDir))
-                {
-                    try { Directory.Delete(templatesDir, true); } catch { }
-                }
+                try { Directory.Delete(oldClientCache, true); } catch { }
+            }
+
+            if (Directory.Exists(oldClientCache) && File.Exists(Path.Combine(oldClientCache, "RAH Non Pro.dll")) &&
+                Directory.Exists(oldStandaloneCache) && File.Exists(Path.Combine(oldStandaloneCache, "RAH PRO.dll")) &&
+                IsTemplateStrictlyValid(oldClientCache))
+            {
                 Directory.CreateDirectory(templatesDir);
                 CopyDirectory(oldClientCache, templatesDir);
                 foreach (var f in Directory.GetFiles(oldStandaloneCache, "RAH PRO.*"))
@@ -638,7 +664,7 @@ namespace NexusBuilder
                     File.Copy(f, Path.Combine(templatesDir, Path.GetFileName(f)), true);
                 }
                 File.WriteAllText(verFile, REQUIRED_TEMPLATE_VERSION);
-                if (File.Exists(Path.Combine(templatesDir, "RAH PRO.dll")))
+                if (IsTemplateStrictlyValid(templatesDir))
                 {
                     return templatesDir;
                 }

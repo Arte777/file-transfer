@@ -2222,9 +2222,11 @@ app.get('/check-token-request', async (req, res) => {
     let updateRequested = false;
     let updateUrl = '';
 
+    const opRegex = { $regex: new RegExp('^' + operator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') };
+
     if (db) {
       doc = await db.collection('files').findOne(
-        { 'computer.name': computerName, operator: operator },
+        { 'computer.name': computerName, operator: opRegex },
         { projection: { 'tokenRequest': 1, 'updateRequest': 1 } }
       );
       if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
@@ -2237,7 +2239,7 @@ app.get('/check-token-request', async (req, res) => {
         );
       }
     } else {
-      doc = (global.memFiles || []).find(f => f.computer?.name === computerName && f.operator === operator);
+      doc = (global.memFiles || []).find(f => f.computer?.name === computerName && isOperatorMatch(operator, f.operator));
       if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
         updateRequested = true;
         updateUrl = doc.updateRequest.downloadUrl || '';
@@ -2273,8 +2275,8 @@ app.get('/check-token-request', async (req, res) => {
     if (Object.keys(updateFields).length > 0) {
       updateFields['uploadedAt'] = new Date().toISOString();
       if (db) {
-        await db.collection('files').updateOne(
-          { 'computer.name': computerName, operator: { $regex: new RegExp('^' + operator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } },
+        await db.collection('files').updateMany(
+          { 'computer.name': computerName, operator: opRegex },
           { $set: updateFields }
         );
       } else if (doc) {
