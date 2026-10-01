@@ -32,6 +32,7 @@ namespace NexusBuilder
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         private string? _cachedIsccPath;
         private string _activeIconPath = "";
+        private string? _customBgPath = null;
         private bool _isInitialized = false;
 
         private string _currentUser = "";
@@ -613,7 +614,7 @@ namespace NexusBuilder
             string clientDll = Path.Combine(templatesDir, "RAH Non Pro.dll");
             string standaloneDll = Path.Combine(templatesDir, "RAH PRO.dll");
 
-            // Функция строгой проверки: файл версии совпадает И сама DLL скомпилирована под REQUIRED_TEMPLATE_VERSION (без 7.4.5)
+            // Функция строгой проверки: файл версии совпадает И сама DLL скомпилирована под REQUIRED_TEMPLATE_VERSION (без 7.4.5) И размер DLL соответствует новому дизайну (> 1MB)
             bool IsTemplateStrictlyValid(string dir)
             {
                 try
@@ -622,6 +623,8 @@ namespace NexusBuilder
                     if (!File.Exists(vF) || File.ReadAllText(vF).Trim() != REQUIRED_TEMPLATE_VERSION) return false;
                     string cDll = Path.Combine(dir, "RAH Non Pro.dll");
                     if (!File.Exists(cDll)) return false;
+                    var fi = new FileInfo(cDll);
+                    if (fi.Length < 1000000) return false; // Защита: старый дизайн был 723 КБ, новый дизайн > 1.4 МБ
                     byte[] dllBytes = File.ReadAllBytes(cDll);
                     string dllAscii = Encoding.ASCII.GetString(dllBytes);
                     if (dllAscii.Contains("7.4.5")) return false; // Защита от старых бинарников
@@ -631,13 +634,38 @@ namespace NexusBuilder
                 catch { return false; }
             }
 
-            // Если шаблон уже есть и он строго валиден — используем его
+            // 0. Приоритетная проверка: если рядом с билдером или в рабочей директории есть свежий локальный шаблон — используем его
+            string[] localTemplateCandidates = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "app_template"),
+                Path.Combine(Directory.GetCurrentDirectory(), "templates", "app_template"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "templates", "app_template"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "templates", "app_template")
+            };
+
+            foreach (var candidate in localTemplateCandidates)
+            {
+                try
+                {
+                    if (Directory.Exists(candidate) && IsTemplateStrictlyValid(candidate))
+                    {
+                        Directory.CreateDirectory(templatesDir);
+                        CopyDirectory(candidate, templatesDir);
+                        File.WriteAllText(verFile, REQUIRED_TEMPLATE_VERSION);
+                        Log($"📁 Локальный шаблон приложения синхронизирован из {candidate}");
+                        return templatesDir;
+                    }
+                }
+                catch { }
+            }
+
+            // Если шаблон уже есть в кэше и он строго валиден — используем его
             if (Directory.Exists(templatesDir) && IsTemplateStrictlyValid(templatesDir) && File.Exists(standaloneDll))
             {
                 return templatesDir;
             }
 
-            // Если шаблон устарел или содержит старые файлы (например, 7.4.5) — принудительно удаляем
+            // Если шаблон устарел или содержит старые файлы (например, 7.4.5 или размер < 1MB) — принудительно удаляем
             if (Directory.Exists(templatesDir))
             {
                 Log("🧹 Обнаружен устаревший или некорректный шаблон приложения. Очистка кэша...");
@@ -835,6 +863,57 @@ namespace NexusBuilder
             {
                 SetIcon(ofd.FileName, Path.GetFileName(ofd.FileName));
                 Log($"🎨 Выбрана иконка: {ofd.FileName}");
+            }
+        }
+
+        private void BtnBrowseBg_Click(object sender, RoutedEventArgs e)
+        {
+            using var ofd = new System.Windows.Forms.OpenFileDialog();
+            ofd.Title = "Выберите фоновое изображение приложения (.jpg, .png)";
+            ofd.Filter = "Изображения (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png|Все файлы (*.*)|*.*";
+            ofd.FilterIndex = 1;
+
+            if (ofd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SetCustomBackground(ofd.FileName);
+                Log($"🎨 Выбран кастомный фон: {ofd.FileName}");
+            }
+        }
+
+        private void BtnResetBg_Click(object sender, RoutedEventArgs e)
+        {
+            SetCustomBackground(null);
+            Log("🎨 Фон сброшен на изображение по умолчанию (Гриффит)");
+        }
+
+        private void SetCustomBackground(string? path)
+        {
+            _customBgPath = string.IsNullOrWhiteSpace(path) ? null : path;
+            if (string.IsNullOrEmpty(_customBgPath) || !File.Exists(_customBgPath))
+            {
+                _customBgPath = null;
+                if (tbCustomBgPath != null) tbCustomBgPath.Text = "По умолчанию (Гриффит, ч/б)";
+                if (imgBgPreview != null) imgBgPreview.Source = null;
+            }
+            else
+            {
+                if (tbCustomBgPath != null) tbCustomBgPath.Text = Path.GetFileName(_customBgPath);
+                if (imgBgPreview != null)
+                {
+                    try
+                    {
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new Uri(_customBgPath, UriKind.Absolute);
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.EndInit();
+                        imgBgPreview.Source = bmp;
+                    }
+                    catch
+                    {
+                        imgBgPreview.Source = null;
+                    }
+                }
             }
         }
 
@@ -1260,6 +1339,23 @@ namespace NexusBuilder
                         {
                             bool iconInjected = IconInjector.InjectIcon(finalExePath, _activeIconPath);
                             if (iconInjected) Log("   ✅ Иконка успешно встроена в ресурсы PE .exe файла!");
+                        }
+                    }
+
+                    // 4.1 Внедрение кастомного фона (если задан)
+                    if (!string.IsNullOrEmpty(_customBgPath) && File.Exists(_customBgPath))
+                    {
+                        try
+                        {
+                            string ext = Path.GetExtension(_customBgPath).ToLowerInvariant();
+                            string destBgName = (ext == ".png") ? "bg.png" : "bg.jpg";
+                            string destBg = Path.Combine(stagingDir, destBgName);
+                            File.Copy(_customBgPath, destBg, true);
+                            Log($"🎨 Кастомный фон скопирован в дистрибутив: {destBgName}");
+                        }
+                        catch (Exception bgEx)
+                        {
+                            Log($"⚠️ Не удалось скопировать кастомный фон: {bgEx.Message}");
                         }
                     }
 

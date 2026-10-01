@@ -625,7 +625,7 @@
                                         <!-- Button Text -->
                                         <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                             <TextBlock Text="Текст кнопки в интерфейсе:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbButtonText" Text="Открыть" Height="34" Style="{StaticResource ModernInput}" />
+                                            <TextBox x:Name="tbButtonText" Text="ВЗЛОМАТЬ" Height="34" Style="{StaticResource ModernInput}" />
                                             <TextBlock Text="Надпись на главной кнопке запуска." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
                                         </StackPanel>
 
@@ -636,6 +636,29 @@
                                             <TextBlock Text="Ссылка на канал или поддержку." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
                                         </StackPanel>
                                     </Grid>
+
+                                    <!-- Custom Background Image Picker -->
+                                    <StackPanel Margin="0,4,0,4">
+                                        <TextBlock Text="Фоновое изображение программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Mini Preview Box -->
+                                            <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#0f1117" BorderBrush="#2d3342" BorderThickness="1" Margin="0,0,8,0">
+                                                <Image x:Name="imgBgPreview" Width="32" Height="32" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <TextBox x:Name="tbCustomBgPath" Grid.Column="1" Height="34" Style="{StaticResource ModernInput}" Text="По умолчанию (Гриффит, ч/б)" IsReadOnly="True" />
+                                            <Button x:Name="btnBrowseBg" Grid.Column="2" Content="Выбрать фон..." Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="12,0" Click="BtnBrowseBg_Click" ToolTip="Выбрать своё фоновое изображение (.jpg, .png)" />
+                                            <Button x:Name="btnResetBg" Grid.Column="3" Content="✕ Сброс" Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="10,0" Click="BtnResetBg_Click" ToolTip="Сбросить на фон по умолчанию (Гриффит)" />
+                                        </Grid>
+                                        <TextBlock Text="Кастомный фон для главного экрана (.jpg, .png). По умолчанию используется арт с Гриффитом." Foreground="#64748b" FontSize="10.5" Margin="42,4,0,0" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

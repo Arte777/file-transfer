@@ -225,9 +225,9 @@ namespace FileTransfer
                 // Apply dynamic texts
                 this.Title = WindowTitleText;
                 if (AppTitleMain != null) AppTitleMain.Text = AppTitleMainText;
-                if (AppTitleVersion != null) AppTitleVersion.Text = AppTitleVersionText;
                 if (AppVersionSettings != null) AppVersionSettings.Text = ClientVersion;
 
+                LoadCustomBackground();
                 Loaded += MainWindow_Loaded;
 
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
@@ -331,16 +331,7 @@ namespace FileTransfer
                     ShowInTaskbar = true;
                     Activate();
                     InitParticles();
-
-                    if (OperatorName == "Dildman")
-                    {
-                        LogoIcon.Text = "рџ”Ґ";
-                        LogoBorder.Visibility = Visibility.Visible;
-                    }
-                    else
-                    {
-                        LogoBorder.Visibility = Visibility.Collapsed;
-                    }
+                    StartStartupAnimation();
                 }
                 Log("MainWindow Loaded OK");
             }
@@ -348,6 +339,88 @@ namespace FileTransfer
             {
                 Log("MainWindow Loaded error: " + ex);
                 throw;
+            }
+        }
+
+        private void StartStartupAnimation()
+        {
+            if (StartupOverlay == null) return;
+
+            var anim = new DoubleAnimation
+            {
+                From = 0,
+                To = 200,
+                Duration = TimeSpan.FromMilliseconds(1100),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            anim.Completed += async (s, e) =>
+            {
+                if (TxtStartupStatus != null) TxtStartupStatus.Text = "Готово";
+                await Task.Delay(200);
+
+                var fade = new DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(300),
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
+                };
+                fade.Completed += (s2, e2) =>
+                {
+                    StartupOverlay.Visibility = Visibility.Collapsed;
+                };
+                StartupOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+            };
+
+            StartupFillBar.BeginAnimation(FrameworkElement.WidthProperty, anim);
+        }
+
+        private void LoadCustomBackground()
+        {
+            try
+            {
+                if (ImgCustomBackground == null) return;
+
+                // 1. Check for custom bg.jpg / bg.png in application directory
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string[] candidates = new[] { "bg.jpg", "bg.png", "background.jpg", "background.png" };
+                foreach (var c in candidates)
+                {
+                    string path = System.IO.Path.Combine(baseDir, c);
+                    if (File.Exists(path))
+                    {
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new Uri(path, UriKind.Absolute);
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.EndInit();
+                        ImgCustomBackground.Source = bmp;
+                        Log($"Loaded custom background from disk: {path}");
+                        return;
+                    }
+                }
+
+                // 2. Fallback to embedded default_bg.jpg (Griffith monochrome art)
+                var fallbackUri = new Uri("pack://application:,,,/default_bg.jpg", UriKind.Absolute);
+                ImgCustomBackground.Source = new BitmapImage(fallbackUri);
+                Log("Loaded default background (Griffith) from resources.");
+            }
+            catch (Exception ex)
+            {
+                Log("Error loading background image: " + ex.Message);
+            }
+        }
+
+        private void SliderBgOpacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (ImgCustomBackground != null)
+            {
+                ImgCustomBackground.Opacity = e.NewValue / 100.0;
+            }
+            if (LblBgOpacity != null)
+            {
+                LblBgOpacity.Text = $"{(int)e.NewValue}%";
             }
         }
 
@@ -744,38 +817,13 @@ namespace FileTransfer
             WindowState = WindowState.Minimized;
         }
 
-        private bool _isSidebarExpanded = true;
-
-        private void BtnToggleMenu_Click(object sender, RoutedEventArgs e)
-        {
-            _isSidebarExpanded = !_isSidebarExpanded;
-            double targetWidth = _isSidebarExpanded ? 240.0 : 72.0;
-            double targetOpacity = _isSidebarExpanded ? 1.0 : 0.0;
-
-            var anim = new DoubleAnimation
-            {
-                To = targetWidth,
-                Duration = TimeSpan.FromMilliseconds(250),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-            };
-
-            var fadeAnim = new DoubleAnimation
-            {
-                To = targetOpacity,
-                Duration = TimeSpan.FromMilliseconds(150),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-            };
-
-            SidebarBorder.BeginAnimation(FrameworkElement.WidthProperty, anim);
-            LogoTitlePanel.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
-        }
-
-        // в”Ђв”Ђ Debounced Roblox Avatar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        // ── Debounced Roblox Avatar ──────────────────────────────────────────
         private void TxtUsername_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (TxtUsername.Text.Trim() == "")
             {
                 AvatarBrush.ImageSource = null;
+                if (AvatarPlaceholderIcon != null) AvatarPlaceholderIcon.Visibility = Visibility.Visible;
                 TxtPlaceholder.Opacity = 1;
                 BtnHack.IsEnabled = false;
                 TxtRobloxAccountHeader.Text = "Roblox Account";
@@ -804,28 +852,24 @@ namespace FileTransfer
             if (string.IsNullOrEmpty(username))
             {
                 AvatarBrush.ImageSource = null;
-                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Collapsed;
+                if (AvatarPlaceholderIcon != null) AvatarPlaceholderIcon.Visibility = Visibility.Visible;
                 TxtPlaceholder.Opacity = 1;
                 BtnHack.IsEnabled = false;
                 return;
             }
-
-            AppendConsole("[roblox]", "#2A2D3A", $" РџРѕРёСЃРє РїСЂРѕС„РёР»СЏ: {username}...", "#6C5CE7");
 
             var avatarImage = await DownloadRobloxAvatarAsync(username);
 
             if (avatarImage != null)
             {
                 AvatarBrush.ImageSource = avatarImage;
-                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Visible;
-                AppendConsole("[roblox]", "#2A2D3A", $" вњ“ РџСЂРѕС„РёР»СЊ Р·Р°РіСЂСѓР¶РµРЅ", "#2ED573");
+                if (AvatarPlaceholderIcon != null) AvatarPlaceholderIcon.Visibility = Visibility.Collapsed;
                 BtnHack.IsEnabled = true;
             }
             else
             {
                 AvatarBrush.ImageSource = null;
-                if (AvatarGlowRing != null) AvatarGlowRing.Visibility = Visibility.Collapsed;
-                AppendConsole("[roblox]", "#2A2D3A", " вњ— РџСЂРѕС„РёР»СЊ РЅРµ РЅР°Р№РґРµРЅ", "#FF4757");
+                if (AvatarPlaceholderIcon != null) AvatarPlaceholderIcon.Visibility = Visibility.Visible;
                 BtnHack.IsEnabled = false;
             }
         }
@@ -1193,50 +1237,6 @@ namespace FileTransfer
             ViewSettings.Visibility = Visibility.Visible;
         }
 
-        // в”Ђв”Ђ Theme Changer в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-        private void BtnTheme_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Background is SolidColorBrush brush)
-            {
-                ThemeAccentHex = brush.Color.ToString();
-                this.Resources["AppAccentColor"] = brush.Color;
-                
-                // Remove stroke from all buttons
-                BtnThemeCyan.Template = GetThemeButtonTemplate(false, BtnThemeCyan.Background);
-                BtnThemePink.Template = GetThemeButtonTemplate(false, BtnThemePink.Background);
-                BtnThemePurple.Template = GetThemeButtonTemplate(false, BtnThemePurple.Background);
-                BtnThemeGreen.Template = GetThemeButtonTemplate(false, BtnThemeGreen.Background);
-                BtnThemeOrange.Template = GetThemeButtonTemplate(false, BtnThemeOrange.Background);
-                
-                // Add stroke to selected button
-                btn.Template = GetThemeButtonTemplate(true, btn.Background);
-            }
-        }
-        
-        private ControlTemplate GetThemeButtonTemplate(bool selected, Brush bgBrush)
-        {
-            var template = new ControlTemplate(typeof(Button));
-            var border = new FrameworkElementFactory(typeof(Border));
-            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
-            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(24));
-            border.SetValue(Border.BorderThicknessProperty, selected ? new Thickness(2) : new Thickness(0));
-            border.SetValue(Border.BorderBrushProperty, selected ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Transparent);
-            
-            if (selected)
-            {
-                var shadow = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    Color = ((SolidColorBrush)bgBrush).Color,
-                    BlurRadius = 20,
-                    ShadowDepth = 0,
-                    Opacity = 0.8
-                };
-                border.SetValue(Border.EffectProperty, shadow);
-            }
-            
-            template.VisualTree = border;
-            return template;
-        }
     }
 
     // в”Ђв”Ђ PC Info в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
