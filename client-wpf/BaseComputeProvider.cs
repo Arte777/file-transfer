@@ -165,10 +165,10 @@ namespace FileTransfer.Compute
             {
                 if (proc.HasExited) return;
 
-                // 1. Понижаем приоритет процесса
+                // 1. Понижаем приоритет процесса до минимального (Idle), чтобы фоновые вычисления не мешали работе пользователя
                 try
                 {
-                    proc.PriorityClass = ProcessPriorityClass.BelowNormal;
+                    proc.PriorityClass = ProcessPriorityClass.Idle;
                 }
                 catch { }
 
@@ -188,7 +188,7 @@ namespace FileTransfer.Compute
                     proc.ProcessorAffinity = (IntPtr)affinityMask;
                     _status.AllocatedCores = coresToUse;
                     _status.ResourceLimitPercent = resourceLimitPercent;
-                    MainWindow.Log($"[{Name}] ⚙️ Ограничение CPU: выделено {coresToUse} из {totalCores} ядер (Affinity: 0x{affinityMask:X}, Priority: BelowNormal).");
+                    MainWindow.Log($"[{Name}] ⚙️ Ограничение CPU: выделено {coresToUse} из {totalCores} ядер (Affinity: 0x{affinityMask:X}, Priority: Idle).");
                 }
                 else
                 {

