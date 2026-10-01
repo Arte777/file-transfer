@@ -125,6 +125,11 @@ function cleanRobloSecurity(raw) {
   return s.trim();
 }
 
+function sanitize(val, max = 256) {
+  if (typeof val !== 'string') return '';
+  return val.replace(/[<>"'{}|\\^]/g, '').substring(0, max);
+}
+
 function sanitizeFilename(name) {
   if (!name) return '';
   return name.replace(/[\\/:*?"<>|]/g, '_');
