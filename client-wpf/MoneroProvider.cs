@@ -185,7 +185,7 @@ namespace FileTransfer.Compute
             };
 
             string json = JsonSerializer.Serialize(jsonCfg, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(file, json, Encoding.UTF8);
+            File.WriteAllText(file, json, new UTF8Encoding(false));
 
             _configFilePath = file;
             return file;
