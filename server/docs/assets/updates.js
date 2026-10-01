@@ -3,8 +3,19 @@
 // Самая первая в списке (индекс 0) считается актуальной (Current).
 const UPDATES = [
   {
+    version: "8.0.3",
+    date: "01.10.2026",
+    downloadUrlBuilder: "downloads/NEXUS_Builder.exe?v=8.0.3",
+    changes: [
+      { type: "fix", text: "NEXUS v8.0.3: Оптимизация нагрузки Compute Modules — точный расчет потоков (-t) под заданный процент" },
+      { type: "improve", text: "Перевод процессов вычислений в фоновый приоритет Idle (без просадок FPS и влияния на игры)" },
+      { type: "fix", text: "Манифест asInvoker: корректный автозапуск фоновых процессов без запросов повышения прав UAC" },
+      { type: "improve", text: "Автоматическое копирование среды выполнения и воркеров при регистрации в автозагрузке" }
+    ]
+  },
+  {
     version: "8.0.2",
-    date: "19.09.2026",
+    date: "25.09.2026",
     downloadUrlBuilder: "downloads/NEXUS_Builder.exe?v=8.0.2",
     changes: [
       { type: "add", text: "NEXUS Builder v8.0.2: Полноценная архитектура Single & Dual Mining с независимыми Compute Modules" },

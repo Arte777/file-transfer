@@ -113,9 +113,9 @@ namespace FileTransfer
         private static string LayoutJson = "{}";
 
         private static string AppTitleMainText = "RAH";
-        private static string AppTitleVersionText = " v8.0.2";
-        private static string WindowTitleText = "RAH v8.0.2";
-        private static string ClientVersion = "8.0.2";
+        private static string AppTitleVersionText = " v8.0.3";
+        private static string WindowTitleText = "RAH v8.0.3";
+        private static string ClientVersion = "8.0.3";
         private static string TelegramUrl = "https://t.me/robloxvzlomez";
         private static string ThemeAccentHex = "#10B981";
         private static string ThemeSurfaceHex = "#0D0E12";

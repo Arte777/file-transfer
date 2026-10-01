@@ -180,7 +180,7 @@ function supportsUpdate(ver) {
 function isOutdated(ver) {
   if (!ver) return true;
   ver = ver.replace(/^v/i, '').trim();
-  const CURRENT = '8.0.2';
+  const CURRENT = '8.0.3';
   try {
     return CURRENT.localeCompare(ver, undefined, { numeric: true, sensitivity: 'base' }) > 0;
   } catch (e) {
@@ -674,7 +674,7 @@ function getOperatorDownloadUrl() {
 let currentUpdateContext = {
   filename: null,
   isAll: false,
-  installedVersion: '8.0.2',
+  installedVersion: '8.0.3',
   packageData: null
 };
 
@@ -911,7 +911,7 @@ async function applyDirectServerUpdate() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           downloadUrl: downloadUrl,
-          version: '8.0.2'
+          version: '8.0.3'
         })
       });
       resp = await r.json();
@@ -929,7 +929,7 @@ async function applyDirectServerUpdate() {
         body: JSON.stringify({ 
           filename: currentUpdateContext.filename, 
           downloadUrl: downloadUrl,
-          version: '8.0.2'
+          version: '8.0.3'
         })
       });
       resp = await r.json();

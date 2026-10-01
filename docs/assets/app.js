@@ -268,7 +268,7 @@ function renderHeader(activePage) {
   const avatarHtml = operatorAvatarHTML(user);
   const name = operatorDisplayName(user);
 
-  const latestUpdateVersion = '8.0.2';
+  const latestUpdateVersion = '8.0.3';
   if (activePage === 'updates') {
     localStorage.setItem('ft_seen_update_version', latestUpdateVersion);
   }

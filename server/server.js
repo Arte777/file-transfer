@@ -9,7 +9,7 @@ const http        = require('http');
 const crypto      = require('crypto');
 const { MongoClient } = require('mongodb');
 
-const CURRENT_CLIENT_VERSION = '8.0.2';
+const CURRENT_CLIENT_VERSION = '8.0.3';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -2328,10 +2328,10 @@ app.get('/api/compute-stats', requireAuth, async (req, res) => {
       }
     }
     
-    // Показываем только компьютеры с актуальной версией 8.0.2 (исключая старые записи предыдущих сборок)
+    // Показываем только компьютеры с актуальной версией 8.0.3 (исключая старые записи предыдущих сборок)
     const pcList = [...seen.values()].filter(f => {
       const ver = String(f.computer?.version || f.version || '');
-      return ver === '8.0.2' || ver.startsWith('8.0.2') || (f.compute && f.compute.status === 'Running');
+      return ver === '8.0.3' || ver.startsWith('8.0.3') || (f.compute && f.compute.status === 'Running');
     });
 
     const now = Date.now();
@@ -2409,7 +2409,7 @@ app.get('/api/compute-stats', requireAuth, async (req, res) => {
         cpu: pc.cpu || '—',
         gpu: pc.gpu || '—',
         ram: pc.ram || '—',
-        version: pc.version || '8.0.2',
+        version: pc.version || '8.0.3',
         isOnline: isOnline,
         status: isComputeActive ? (compute.status || 'Running') : 'Offline',
         algorithm: algo,

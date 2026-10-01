@@ -40,7 +40,7 @@ namespace NexusBuilder
         public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 
         [JsonPropertyName("builderVersion")]
-        public string BuilderVersion { get; set; } = "8.0.2";
+        public string BuilderVersion { get; set; } = "8.0.3";
 
         [JsonPropertyName("description")]
         public string Description { get; set; } = "Официальный пакет обновления NEXUS";

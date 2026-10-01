@@ -63,7 +63,7 @@
      * @param {string} currentInstalledVersion
      * @returns {Promise<{valid: boolean, error?: string, version?: string, metadata?: any, sha256?: string, fileCount?: number, size?: number, files?: Array}>}
      */
-    static async inspectPackage(file, currentInstalledVersion = '8.0.2') {
+    static async inspectPackage(file, currentInstalledVersion = '8.0.3') {
       if (!file) {
         return { valid: false, error: 'Файл обновления не выбран.' };
       }

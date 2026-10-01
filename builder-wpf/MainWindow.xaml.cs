@@ -28,7 +28,7 @@ namespace NexusBuilder
 {
     public partial class MainWindow : Window
     {
-        private const string AppVersion = "8.0.2";
+        private const string AppVersion = "8.0.3";
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         private string? _cachedIsccPath;
         private string _activeIconPath = "";
@@ -61,7 +61,7 @@ namespace NexusBuilder
             
             string defaultOut = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                "NEXUS_Builds_v8.0.2"
+                "NEXUS_Builds_v8.0.3"
             );
             tbOutputPath.Text = defaultOut;
 
@@ -166,7 +166,7 @@ namespace NexusBuilder
                 lblSummaryAppName.Text = string.IsNullOrWhiteSpace(tbAppName?.Text) ? "RAH" : tbAppName.Text.Trim();
 
             if (lblSummaryVersion != null)
-                lblSummaryVersion.Text = string.IsNullOrWhiteSpace(tbVersion?.Text) ? "8.0.2" : tbVersion.Text.Trim();
+                lblSummaryVersion.Text = string.IsNullOrWhiteSpace(tbVersion?.Text) ? "8.0.3" : tbVersion.Text.Trim();
 
             if (lblSummaryComputeStatus != null)
             {
@@ -233,7 +233,7 @@ namespace NexusBuilder
                 string outDir = tbOutputPath.Text.Trim();
                 if (string.IsNullOrWhiteSpace(outDir))
                 {
-                    outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.2");
+                    outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.3");
                 }
 
                 string currentVer = AppVersion;
@@ -600,7 +600,7 @@ namespace NexusBuilder
             return null;
         }
 
-        private const string REQUIRED_TEMPLATE_VERSION = "8.0.2";
+        private const string REQUIRED_TEMPLATE_VERSION = "8.0.3";
 
         private async Task<string> EnsureAppTemplate()
         {
@@ -990,7 +990,7 @@ namespace NexusBuilder
             string outDir = tbOutputPath.Text.Trim();
             if (string.IsNullOrWhiteSpace(outDir))
             {
-                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.2");
+                outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.3");
             }
 
             string cleanExeBaseName = string.Concat(appName.Split(Path.GetInvalidFileNameChars())).Trim();
