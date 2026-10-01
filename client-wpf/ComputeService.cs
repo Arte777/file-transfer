@@ -464,9 +464,14 @@ namespace FileTransfer.Compute
                     {
                         var provStatus = provider.GetStatus();
                         _lastError = string.IsNullOrEmpty(provStatus.ErrorMessage) ? "Не удалось запустить внешний компонент." : provStatus.ErrorMessage;
+                        _status = ComputeStatus.Error;
                         MainWindow.Log($"[ComputeService] ⚠️ ДИАГНОСТИКА ({provider.Name}): {_lastError}. Повторная попытка через 20 сек...");
                         await Task.Delay(20000, ct);
                         continue;
+                    }
+                    else
+                    {
+                        _status = ComputeStatus.Running;
                     }
 
                     // Мониторинг работы провайдера
