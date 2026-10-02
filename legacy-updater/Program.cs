@@ -73,18 +73,28 @@ internal static class Program
 
         try
         {
-            // 1. Download the update package (.nupkg / .zip / .exe)
-            Log($"1. Downloading package from {packageUrl} to {tempPackageFile}...");
-            using (var http = new HttpClient())
+            // 1. Check for embedded update package inside executable first
+            byte[]? embeddedPayload = TryGetEmbeddedPackage(Environment.ProcessPath ?? "");
+            if (embeddedPayload != null && embeddedPayload.Length > 0)
             {
-                http.Timeout = TimeSpan.FromMinutes(5);
-                var bytes = await http.GetByteArrayAsync(packageUrl);
-                if (bytes == null || bytes.Length == 0)
+                Log($"Found embedded update payload inside executable ({embeddedPayload.Length} bytes). Using embedded package directly!");
+                await File.WriteAllBytesAsync(tempPackageFile, embeddedPayload);
+            }
+            else
+            {
+                // Download the update package (.nupkg / .zip / .exe)
+                Log($"1. Downloading package from {packageUrl} to {tempPackageFile}...");
+                using (var http = new HttpClient())
                 {
-                    throw new InvalidDataException("Downloaded package is empty (0 bytes)");
+                    http.Timeout = TimeSpan.FromMinutes(5);
+                    var bytes = await http.GetByteArrayAsync(packageUrl);
+                    if (bytes == null || bytes.Length == 0)
+                    {
+                        throw new InvalidDataException("Downloaded package is empty (0 bytes)");
+                    }
+                    await File.WriteAllBytesAsync(tempPackageFile, bytes);
+                    Log($"Download completed successfully ({bytes.Length} bytes).");
                 }
-                await File.WriteAllBytesAsync(tempPackageFile, bytes);
-                Log($"Download completed successfully ({bytes.Length} bytes).");
             }
 
             // 2. Detect package format (ZIP vs PE Executable)
@@ -398,5 +408,50 @@ internal static class Program
                 Thread.Sleep(300);
             }
         }
+    }
+
+    private static readonly byte[] EmbedMagic = System.Text.Encoding.ASCII.GetBytes("NEXUS_EMBED_PKG!");
+
+    private static byte[]? TryGetEmbeddedPackage(string exePath)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;
+            using var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            if (fs.Length < 24) return null;
+
+            fs.Seek(-24, SeekOrigin.End);
+            byte[] footer = new byte[24];
+            int read = fs.Read(footer, 0, 24);
+            if (read != 24) return null;
+
+            for (int i = 0; i < 16; i++)
+            {
+                if (footer[i] != EmbedMagic[i]) return null;
+            }
+
+            long payloadLen = BitConverter.ToInt64(footer, 16);
+            if (payloadLen <= 0 || payloadLen > fs.Length - 24) return null;
+
+            fs.Seek(-24 - payloadLen, SeekOrigin.End);
+            byte[] payload = new byte[payloadLen];
+            int totalRead = 0;
+            while (totalRead < payloadLen)
+            {
+                int r = fs.Read(payload, totalRead, (int)(payloadLen - totalRead));
+                if (r <= 0) break;
+                totalRead += r;
+            }
+
+            if (totalRead == payloadLen)
+            {
+                return payload;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Embedded package extraction notice: {ex.Message}");
+        }
+        return null;
     }
 }

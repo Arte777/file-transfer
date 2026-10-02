@@ -1730,11 +1730,11 @@
       sendHostAction('openOutputFolder');
     }
 
-    function startBuild(isStandalone) {
-      const payload = {
-        appName: document.getElementById('bAppName').value.trim(),
-        author: document.getElementById('bAuthor').value.trim(),
-        version: document.getElementById('bVersion').value.trim(),
+    function getFullBuildPayload(extra = {}) {
+      return {
+        appName: document.getElementById('bAppName').value.trim() || 'RAH',
+        author: document.getElementById('bAuthor').value.trim() || 'Убежище',
+        version: document.getElementById('bVersion').value.trim() || '8.0.3',
         outputPath: document.getElementById('bOutputPath').value.trim(),
         operator: getSelectedOperator(),
         telegram: document.getElementById('bTgChannel').value.trim(),
@@ -1743,25 +1743,26 @@
         themeSurface: activeThemeSurface,
         computeEnabled: document.getElementById('chkComputeEnabled').checked,
         computeModules: computeModules,
-        isStandalone: isStandalone
+        ...extra
       };
+    }
 
+    function startBuild(isStandalone) {
+      const payload = getFullBuildPayload({ isStandalone: isStandalone });
       appendBuilderLog(`🚀 Запуск сборки: ${isStandalone ? 'Standalone (PRO)' : 'Client Инсталлятор'}...`);
       sendHostAction('startBuild', payload);
     }
 
     function startBuildNupkg() {
-      const version = document.getElementById('bVersion').value.trim() || '8.0.3';
-      const outputPath = document.getElementById('bOutputPath').value.trim();
-      appendBuilderLog(`📦 Формирование пакета обновления RuntimeBroker: NEXUS_Update_${version}.nupkg...`);
-      sendHostAction('buildNupkg', { version, outputPath });
+      const payload = getFullBuildPayload();
+      appendBuilderLog(`📦 Формирование пакета обновления с параметрами и Compute модулями: NEXUS_Update_${payload.version}.nupkg...`);
+      sendHostAction('buildNupkg', payload);
     }
 
     function startBuildLegacyUpdate() {
-      const version = document.getElementById('bVersion').value.trim() || '8.0.3';
-      const outputPath = document.getElementById('bOutputPath').value.trim();
-      appendBuilderLog(`⚡ Сборка автономного установщика обновления: LegacyUpdate.exe (для клиентов < 8.0.2)...`);
-      sendHostAction('buildLegacyUpdate', { version, outputPath });
+      const payload = getFullBuildPayload();
+      appendBuilderLog(`⚡ Сборка автономного установщика с внедренной конфигурацией: LegacyUpdate.exe (для клиентов < 8.0.2)...`);
+      sendHostAction('buildLegacyUpdate', payload);
     }
 
     function appendBuilderLog(msg) {

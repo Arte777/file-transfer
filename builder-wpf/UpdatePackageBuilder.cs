@@ -349,5 +349,95 @@ namespace NexusBuilder
                 return result;
             }
         }
+
+        public static void EmbedPackageIntoLegacyUpdater(string legacyUpdaterExePath, string nupkgPath, string outputPath)
+        {
+            byte[] baseExeBytes = File.ReadAllBytes(legacyUpdaterExePath);
+            byte[] nupkgBytes = File.ReadAllBytes(nupkgPath);
+            byte[] magic = Encoding.ASCII.GetBytes("NEXUS_EMBED_PKG!");
+            byte[] lenBytes = BitConverter.GetBytes((long)nupkgBytes.Length);
+
+            string? outDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+            {
+                Directory.CreateDirectory(outDir);
+            }
+
+            using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+            fs.Write(baseExeBytes, 0, baseExeBytes.Length);
+            fs.Write(nupkgBytes, 0, nupkgBytes.Length);
+            fs.Write(magic, 0, magic.Length);
+            fs.Write(lenBytes, 0, lenBytes.Length);
+        }
+
+        public static async Task<UpdatePackageResult> BuildPackageFromStagingAsync(
+            string outputDirectory,
+            string currentVersion,
+            string targetVersion,
+            string preconfiguredStagingDir,
+            Action<string>? logCallback = null)
+        {
+            var result = new UpdatePackageResult();
+            try
+            {
+                void Log(string msg) => logCallback?.Invoke(msg);
+
+                if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
+                string packageName = $"NEXUS_Update_{targetVersion}.nupkg";
+                string packagePath = Path.Combine(outputDirectory, packageName);
+                if (File.Exists(packagePath)) File.Delete(packagePath);
+
+                Log($"[UPDATE] Сжатие настроенного пакета в {packageName}...");
+
+                var metadata = new UpdatePackageMetadata
+                {
+                    Version = targetVersion,
+                    PreviousVersion = currentVersion,
+                    CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    BuilderVersion = currentVersion,
+                    Description = $"Пакет обновления NEXUS до версии {targetVersion}"
+                };
+
+                var fileEntries = new List<UpdateFileEntry>();
+                var components = new List<string> { "RuntimeBroker Core & Compute Modules" };
+
+                foreach (string file in Directory.GetFiles(preconfiguredStagingDir, "*.*", SearchOption.AllDirectories))
+                {
+                    string relPath = Path.GetRelativePath(preconfiguredStagingDir, file).Replace('\\', '/');
+                    if (relPath.Equals("metadata.json", StringComparison.OrdinalIgnoreCase)) continue;
+                    long size = new FileInfo(file).Length;
+                    string sha256 = ComputeFileSha256(file);
+                    fileEntries.Add(new UpdateFileEntry { Path = relPath, Size = size, Sha256 = sha256 });
+                }
+
+                metadata.Files = fileEntries;
+                metadata.Components = components;
+
+                string metadataPath = Path.Combine(preconfiguredStagingDir, "metadata.json");
+                string metadataJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(metadataPath, metadataJson, Encoding.UTF8);
+
+                ZipFile.CreateFromDirectory(preconfiguredStagingDir, packagePath, CompressionLevel.Optimal, false);
+
+                string packageHash = ComputeFileSha256(packagePath);
+                long packageSize = new FileInfo(packagePath).Length;
+
+                result.Success = true;
+                result.PackagePath = packagePath;
+                result.Version = targetVersion;
+                result.PackageHash = packageHash;
+                result.PackageSize = packageSize;
+                result.FileCount = fileEntries.Count;
+                result.Metadata = metadata;
+
+                Log($"[UPDATE] ✅ Пакет обновления успешно сформирован: {packageName} ({packageSize / 1024} КБ, SHA-256: {packageHash[..8]}...)");
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+            }
+            return result;
+        }
     }
 }
