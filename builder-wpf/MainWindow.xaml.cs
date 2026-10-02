@@ -100,23 +100,20 @@ namespace NexusBuilder
                 }
 
                 string htmlFile = Path.Combine(webUiDir, "index.html");
-                if (!File.Exists(htmlFile))
+                // Extract embedded WebUI resources to ensure latest UI is used
+                var asm = Assembly.GetExecutingAssembly();
+                foreach (var resName in asm.GetManifestResourceNames())
                 {
-                    // Extract embedded if not exists
-                    var asm = Assembly.GetExecutingAssembly();
-                    foreach (var resName in asm.GetManifestResourceNames())
+                    if (resName.Contains("WebUI", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (resName.Contains("WebUI", StringComparison.OrdinalIgnoreCase))
+                        string fileName = resName.Substring(resName.LastIndexOf('.') + 1);
+                        if (resName.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) fileName = "index.html";
+                        else if (resName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)) fileName = "griffith.jpg";
+                        using var stream = asm.GetManifestResourceStream(resName);
+                        if (stream != null)
                         {
-                            string fileName = resName.Substring(resName.LastIndexOf('.') + 1);
-                            if (resName.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) fileName = "index.html";
-                            else if (resName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)) fileName = "griffith.jpg";
-                            using var stream = asm.GetManifestResourceStream(resName);
-                            if (stream != null)
-                            {
-                                using var fs = File.Create(Path.Combine(webUiDir, fileName));
-                                await stream.CopyToAsync(fs);
-                            }
+                            using var fs = File.Create(Path.Combine(webUiDir, fileName));
+                            await stream.CopyToAsync(fs);
                         }
                     }
                 }

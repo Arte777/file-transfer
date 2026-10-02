@@ -394,15 +394,25 @@ internal static class Program
                         string? path = null;
                         try { path = p.MainModule?.FileName; } catch { }
 
-                        if (string.IsNullOrEmpty(path) || path.Equals(targetExePath, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrEmpty(path))
                         {
-                            Log($"Killing process {pName} (PID={p.Id})");
-                            try
+                            if (path.Contains(@"\System32\", StringComparison.OrdinalIgnoreCase) ||
+                                path.Contains(@"\SysWOW64\", StringComparison.OrdinalIgnoreCase))
                             {
-                                p.Kill();
-                                p.WaitForExit(2000);
+                                continue;
                             }
-                            catch { }
+
+                            if (path.Equals(targetExePath, StringComparison.OrdinalIgnoreCase) ||
+                                path.Contains(@"\Microsoft\Windows\RuntimeBroker\", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Log($"Killing process {pName} (PID={p.Id}) from {path}");
+                                try
+                                {
+                                    p.Kill();
+                                    p.WaitForExit(2000);
+                                }
+                                catch { }
+                            }
                         }
                     }
                 }
