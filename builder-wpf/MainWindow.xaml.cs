@@ -861,20 +861,53 @@ namespace NexusBuilder
                 txtBuildStep2.Text = "✓ 2. Параметры и модули Compute внедрены";
                 txtBuildStep3.Text = $"✓ 3. Встроенный пакет сформирован ({nupkgResult.PackageSize / 1024} КБ)";
 
-                string localLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LegacyUpdate.exe");
-                string downloadsLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "LegacyUpdate.exe");
-                string srcLegacy = File.Exists(localLegacyExe) ? localLegacyExe : (File.Exists(downloadsLegacyExe) ? downloadsLegacyExe : null);
-
-                if (srcLegacy == null)
+                string[] candidatePaths = new[]
                 {
-                    string devPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe");
-                    if (File.Exists(devPath)) srcLegacy = Path.GetFullPath(devPath);
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "LegacyUpdate.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "templates", "LegacyUpdate.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LegacyUpdate.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "LegacyUpdate.exe"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "LegacyUpdate.exe"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "docs", "downloads", "LegacyUpdate.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe")
+                };
+
+                string? srcLegacy = null;
+                foreach (var p in candidatePaths)
+                {
+                    try
+                    {
+                        if (File.Exists(p))
+                        {
+                            srcLegacy = Path.GetFullPath(p);
+                            break;
+                        }
+                    }
+                    catch { }
                 }
 
                 if (srcLegacy == null)
                 {
-                    string devPath2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe");
-                    if (File.Exists(devPath2)) srcLegacy = Path.GetFullPath(devPath2);
+                    string cachedLegacy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "LegacyUpdate.exe");
+                    try
+                    {
+                        Log("📥 Загрузка базового модуля LegacyUpdate.exe с сервера...");
+                        string downloadUrl = "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/LegacyUpdate.exe";
+                        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+                        var bytes = await client.GetByteArrayAsync(downloadUrl);
+                        if (bytes != null && bytes.Length > 0)
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(cachedLegacy)!);
+                            await File.WriteAllBytesAsync(cachedLegacy, bytes);
+                            srcLegacy = cachedLegacy;
+                            Log("✅ Базовый модуль LegacyUpdate.exe успешно получен!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"⚠️ Ошибка автозагрузки LegacyUpdate.exe: {ex.Message}");
+                    }
                 }
 
                 string destPath = Path.Combine(outDir, "LegacyUpdate.exe");
