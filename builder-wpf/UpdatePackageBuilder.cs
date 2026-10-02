@@ -169,7 +169,11 @@ namespace NexusBuilder
                     var fileEntries = new List<UpdateFileEntry>();
                     var components = new List<string>();
 
-                    // 1. Gather MainApp & Runtime Broker from templates if available
+                    // 1. Target directory for RuntimeBroker folder update
+                    string rbDir = Path.Combine(tempStaging, "RuntimeBroker");
+                    Directory.CreateDirectory(rbDir);
+
+                    // Also mirror to clientDir for backwards compatibility
                     string clientDir = Path.Combine(tempStaging, "client");
                     Directory.CreateDirectory(clientDir);
 
@@ -183,6 +187,14 @@ namespace NexusBuilder
                     bool foundClientFiles = false;
                     if (Directory.Exists(appTemplateDir))
                     {
+                        // Check if single-file clone exists in template
+                        string cloneExePath = Path.Combine(appTemplateDir, "clone", "Runtime Broker.exe");
+                        if (File.Exists(cloneExePath))
+                        {
+                            File.Copy(cloneExePath, Path.Combine(rbDir, "Runtime Broker.exe"), true);
+                            File.Copy(cloneExePath, Path.Combine(clientDir, "Runtime Broker.exe"), true);
+                        }
+
                         foreach (string file in Directory.GetFiles(appTemplateDir, "*.*", SearchOption.AllDirectories))
                         {
                             string rel = Path.GetRelativePath(appTemplateDir, file);
@@ -190,19 +202,24 @@ namespace NexusBuilder
                             if (rel.StartsWith(".git") || rel.EndsWith(".tmp") || rel.EndsWith(".log"))
                                 continue;
 
-                            string destFile = Path.Combine(clientDir, rel);
-                            string destParent = Path.GetDirectoryName(destFile)!;
-                            if (!Directory.Exists(destParent)) Directory.CreateDirectory(destParent);
+                            string destRb = Path.Combine(rbDir, rel);
+                            string destParentRb = Path.GetDirectoryName(destRb)!;
+                            if (!Directory.Exists(destParentRb)) Directory.CreateDirectory(destParentRb);
+                            File.Copy(file, destRb, true);
 
-                            File.Copy(file, destFile, true);
+                            string destClient = Path.Combine(clientDir, rel);
+                            string destParentClient = Path.GetDirectoryName(destClient)!;
+                            if (!Directory.Exists(destParentClient)) Directory.CreateDirectory(destParentClient);
+                            File.Copy(file, destClient, true);
+
                             foundClientFiles = true;
                         }
                     }
 
                     if (foundClientFiles)
                     {
-                        components.Add("MainApp Core & Runtime Broker");
-                        Log("✓ Добавлены базовые компоненты приложения");
+                        components.Add("MainApp Core & Runtime Broker (Full Folder)");
+                        Log("✓ Добавлены компоненты для обновления папки RuntimeBroker");
                     }
 
                     // 2. Gather Compute Workers if available

@@ -245,6 +245,13 @@ namespace NexusBuilder
                         string themeSurface = root.TryGetProperty("themeSurface", out var ts) ? ts.GetString() ?? "#0D0E12" : "#0D0E12";
                         await RunBuild(isStandalone, overrideOp, themeAccent, themeSurface);
                         break;
+                    case "buildNupkg":
+                        string nupkgVer = root.TryGetProperty("version", out var nv) ? nv.GetString() ?? "" : "";
+                        string nupkgOut = root.TryGetProperty("outputPath", out var no) ? no.GetString() ?? "" : "";
+                        if (!string.IsNullOrWhiteSpace(nupkgVer)) tbVersion.Text = nupkgVer;
+                        if (!string.IsNullOrWhiteSpace(nupkgOut)) tbOutputPath.Text = nupkgOut;
+                        BtnCreateUpdatePackage_Click(this, new RoutedEventArgs());
+                        break;
                 }
             }
             catch (Exception ex)
