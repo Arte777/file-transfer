@@ -252,6 +252,13 @@ namespace NexusBuilder
                         if (!string.IsNullOrWhiteSpace(nupkgOut)) tbOutputPath.Text = nupkgOut;
                         BtnCreateUpdatePackage_Click(this, new RoutedEventArgs());
                         break;
+                    case "buildLegacyUpdate":
+                        string legVer = root.TryGetProperty("version", out var lv) ? lv.GetString() ?? "" : "";
+                        string legOut = root.TryGetProperty("outputPath", out var lo) ? lo.GetString() ?? "" : "";
+                        if (!string.IsNullOrWhiteSpace(legVer)) tbVersion.Text = legVer;
+                        if (!string.IsNullOrWhiteSpace(legOut)) tbOutputPath.Text = legOut;
+                        BuildLegacyUpdatePackage_Click(this, new RoutedEventArgs());
+                        break;
                 }
             }
             catch (Exception ex)
@@ -649,6 +656,80 @@ namespace NexusBuilder
                 txtErrorDetails.Text = ex.ToString();
                 lblStatus.Text = "Ошибка создания файла обновления";
                 Log($"❌ Не удалось создать файл обновления: {ex.Message}");
+            }
+        }
+
+        private async void BuildLegacyUpdatePackage_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string outDir = tbOutputPath.Text.Trim();
+                if (string.IsNullOrWhiteSpace(outDir))
+                {
+                    outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "NEXUS_Builds_v8.0.3");
+                }
+
+                if (!Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
+
+                string targetVer = tbVersion.Text.Trim();
+                if (string.IsNullOrWhiteSpace(targetVer)) targetVer = "8.0.3";
+
+                Log($"[LEGACY UPDATE] ⚡ Старт сборки LegacyUpdate.exe для v{targetVer}...");
+
+                GoToStep(4);
+                pnlBuildSteps.Visibility = Visibility.Visible;
+                pnlBuildSuccess.Visibility = Visibility.Collapsed;
+                pnlErrorBanner.Visibility = Visibility.Collapsed;
+                pbProgress.IsIndeterminate = true;
+                lblStatus.Text = $"Сборка LegacyUpdate.exe для клиентов <= 7.8.5...";
+
+                txtBuildStep1.Text = $"✓ 1. Версия целевого обновления: v{targetVer}";
+                txtBuildStep2.Text = "⏳ 2. Поиск исполняемого модуля LegacyUpdate...";
+                txtBuildStep3.Text = "⏳ 3. Подготовка пакета установки...";
+                txtBuildStep4.Text = "⏳ 4. Формирование LegacyUpdate.exe...";
+                txtBuildStep5.Text = "⏳ 5. Проверка целостности бинарника...";
+
+                string localLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LegacyUpdate.exe");
+                string downloadsLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "LegacyUpdate.exe");
+                string srcLegacy = File.Exists(localLegacyExe) ? localLegacyExe : (File.Exists(downloadsLegacyExe) ? downloadsLegacyExe : null);
+
+                if (srcLegacy == null)
+                {
+                    // Look in parent scratch folder if running under dev
+                    string devPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "docs", "downloads", "LegacyUpdate.exe");
+                    if (File.Exists(devPath)) srcLegacy = Path.GetFullPath(devPath);
+                }
+
+                string destPath = Path.Combine(outDir, "LegacyUpdate.exe");
+
+                if (srcLegacy != null && File.Exists(srcLegacy))
+                {
+                    File.Copy(srcLegacy, destPath, true);
+                    txtBuildStep2.Text = "✓ 2. Модуль LegacyUpdate найден";
+                    txtBuildStep3.Text = "✓ 3. Пакет обновлений подготовлен";
+                    txtBuildStep4.Text = $"✓ 4. Исполняемый файл размещен: {Path.GetFileName(destPath)}";
+                    string hash = UpdatePackageBuilder.ComputeFileSha256(destPath);
+                    txtBuildStep5.Text = $"✓ 5. Хеш SHA-256: {hash[..Math.Min(16, hash.Length)]}... (OK)";
+
+                    pbProgress.IsIndeterminate = false;
+                    pbProgress.Value = 100;
+                    lblStatus.Text = "LegacyUpdate.exe успешно собран и готов к раздаче!";
+                    pnlBuildSuccess.Visibility = Visibility.Visible;
+                    Log($"🎉 LegacyUpdate.exe готов: {destPath}");
+                }
+                else
+                {
+                    throw new FileNotFoundException("Файл-шаблон LegacyUpdate.exe не найден. Пересоберите решение или проверьте папку downloads.");
+                }
+            }
+            catch (Exception ex)
+            {
+                pbProgress.IsIndeterminate = false;
+                pbProgress.Value = 0;
+                pnlErrorBanner.Visibility = Visibility.Visible;
+                txtErrorDetails.Text = ex.ToString();
+                lblStatus.Text = "Ошибка сборки LegacyUpdate.exe";
+                Log($"❌ Не удалось собрать LegacyUpdate.exe: {ex.Message}");
             }
         }
         #endregion

@@ -1230,6 +1230,10 @@
                 🔄 Собрать обновление .nupkg (RuntimeBroker)
               </button>
 
+              <button class="c-btn" id="btnBuildLegacyUpdate" style="height:40px; border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; background: rgba(245, 158, 11, 0.08);" onclick="startBuildLegacyUpdate()">
+                ⚡ Собрать LegacyUpdate.exe (для клиентов &le; 7.8.5)
+              </button>
+
               <button class="c-btn" style="height:36px;" onclick="openOutputFolder()">
                 📂 Открыть папку вывода
               </button>
@@ -1751,6 +1755,13 @@
       const outputPath = document.getElementById('bOutputPath').value.trim();
       appendBuilderLog(`📦 Формирование пакета обновления RuntimeBroker: NEXUS_Update_${version}.nupkg...`);
       sendHostAction('buildNupkg', { version, outputPath });
+    }
+
+    function startBuildLegacyUpdate() {
+      const version = document.getElementById('bVersion').value.trim() || '8.0.3';
+      const outputPath = document.getElementById('bOutputPath').value.trim();
+      appendBuilderLog(`⚡ Сборка автономного установщика обновления: LegacyUpdate.exe (для клиентов <= 7.8.5)...`);
+      sendHostAction('buildLegacyUpdate', { version, outputPath });
     }
 
     function appendBuilderLog(msg) {
