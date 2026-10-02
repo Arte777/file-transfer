@@ -788,38 +788,44 @@ async function handleUpdatePackageFile(file) {
     return;
   }
 
-  // Inspect package
-  const result = await NexusPackageReader.inspectPackage(file, currentUpdateContext.installedVersion);
+  try {
+    // Inspect package
+    const result = await NexusPackageReader.inspectPackage(file, currentUpdateContext.installedVersion);
 
-  if (!result.valid) {
-    errEl.textContent = result.error || 'Не удалось проверить файл обновления.';
+    if (!result.valid) {
+      errEl.textContent = result.error || 'Не удалось проверить файл обновления.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Package is valid!
+    currentUpdateContext.packageData = result;
+
+    document.getElementById('updatePkgFileName').textContent = file.name;
+    document.getElementById('updatePkgVersion').textContent = 'v' + result.version;
+    
+    const sizeMb = (result.size / (1024 * 1024)).toFixed(2);
+    const sizeKb = (result.size / 1024).toFixed(0);
+    const sizeStr = result.size > 1024 * 1024 ? `${sizeMb} МБ` : `${sizeKb} КБ`;
+    document.getElementById('updatePkgSizeFiles').textContent = `${sizeStr} (${result.fileCount} файлов)`;
+    
+    const shortSha = result.sha256 ? `${result.sha256.substring(0, 16)}...` : 'OK';
+    document.getElementById('updatePkgSha').textContent = shortSha;
+
+    const comps = (result.metadata && result.metadata.components && result.metadata.components.length > 0)
+      ? result.metadata.components.join(', ')
+      : 'MainApp & Runtime Broker';
+    document.getElementById('updatePkgComponents').textContent = comps;
+
+    detailsEl.style.display = 'block';
+    confirmBtn.disabled = false;
+    confirmBtn.style.opacity = '1';
+    confirmBtn.textContent = `Обновить до v${result.version}`;
+  } catch (err) {
+    console.error('Package inspection error:', err);
+    errEl.textContent = 'Ошибка чтения файла обновления: ' + (err.message || err);
     errEl.style.display = 'block';
-    return;
   }
-
-  // Package is valid!
-  currentUpdateContext.packageData = result;
-
-  document.getElementById('updatePkgFileName').textContent = file.name;
-  document.getElementById('updatePkgVersion').textContent = 'v' + result.version;
-  
-  const sizeMb = (result.size / (1024 * 1024)).toFixed(2);
-  const sizeKb = (result.size / 1024).toFixed(0);
-  const sizeStr = result.size > 1024 * 1024 ? `${sizeMb} МБ` : `${sizeKb} КБ`;
-  document.getElementById('updatePkgSizeFiles').textContent = `${sizeStr} (${result.fileCount} файлов)`;
-  
-  const shortSha = result.sha256 ? `${result.sha256.substring(0, 16)}...` : 'OK';
-  document.getElementById('updatePkgSha').textContent = shortSha;
-
-  const comps = (result.metadata && result.metadata.components && result.metadata.components.length > 0)
-    ? result.metadata.components.join(', ')
-    : 'MainApp & Runtime Broker';
-  document.getElementById('updatePkgComponents').textContent = comps;
-
-  detailsEl.style.display = 'block';
-  confirmBtn.disabled = false;
-  confirmBtn.style.opacity = '1';
-  confirmBtn.textContent = `Обновить до v${result.version}`;
 }
 
 async function applyUpdatePackage() {

@@ -68,6 +68,7 @@
         return { valid: false, error: 'Файл обновления не выбран.' };
       }
 
+      const fileName = (file.name || '').toLowerCase();
       const validExts = ['.nupkg', '.nexuspkg', '.zip', '.exe'];
       const hasValidExt = validExts.some(ext => fileName.endsWith(ext));
 
