@@ -1264,6 +1264,8 @@ namespace NexusBuilder
                     string dllAscii = Encoding.ASCII.GetString(dllBytes);
                     if (dllAscii.Contains("7.4.5")) return false; // Защита от старых бинарников
                     if (!dllAscii.Contains(REQUIRED_TEMPLATE_VERSION)) return false;
+                    string wv2Dll = Path.Combine(dir, "Microsoft.Web.WebView2.Wpf.dll");
+                    if (!File.Exists(wv2Dll)) return false;
                     return true;
                 }
                 catch { return false; }
@@ -1923,21 +1925,21 @@ namespace NexusBuilder
                     string origExeName = isStandalone ? "RAH PRO.exe" : "RAH Non Pro.exe";
                     string origExePath = Path.Combine(stagingDir, origExeName);
 
-                    // Переименовываем целевую DLL
+                    // Копируем целевую DLL под выбранное имя (сохраняя оригинал для корректного разрешения Assembly identity в CoreCLR)
                     if (File.Exists(targetDllPath) && !string.Equals(targetDllPath, finalDllPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Move(targetDllPath, finalDllPath, true);
-                        Log($"🔄 Библиотека переименована: {Path.GetFileName(targetDllPath)} -> {finalDllName}");
+                        File.Copy(targetDllPath, finalDllPath, true);
+                        Log($"🔄 Библиотека подготовлена: {Path.GetFileName(targetDllPath)} -> {finalDllName}");
                     }
 
-                    // Переименовываем конфигурационные файлы .NET
+                    // Конфигурационные файлы .NET копируем под новое имя, сохраняя оригинал
                     string origConfigName = isStandalone ? "RAH PRO.runtimeconfig.json" : "RAH Non Pro.runtimeconfig.json";
                     string finalConfigName = $"{cleanExeBaseName}.runtimeconfig.json";
                     string origConfigPath = Path.Combine(stagingDir, origConfigName);
                     string finalConfigPath = Path.Combine(stagingDir, finalConfigName);
                     if (File.Exists(origConfigPath) && !string.Equals(origConfigPath, finalConfigPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Move(origConfigPath, finalConfigPath, true);
+                        File.Copy(origConfigPath, finalConfigPath, true);
                     }
 
                     string origDepsName = isStandalone ? "RAH PRO.deps.json" : "RAH Non Pro.deps.json";
@@ -1946,7 +1948,7 @@ namespace NexusBuilder
                     string finalDepsPath = Path.Combine(stagingDir, finalDepsName);
                     if (File.Exists(origDepsPath) && !string.Equals(origDepsPath, finalDepsPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Move(origDepsPath, finalDepsPath, true);
+                        File.Copy(origDepsPath, finalDepsPath, true);
                     }
 
                     // Переименовываем исполняемый файл
