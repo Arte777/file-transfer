@@ -2126,107 +2126,14 @@ app.post('/request-token-all', requireAuth, async (req, res) => {
   }
 });
 
-// POST /request-update — запросить обновление клиента для конкретного ПК
+// POST /request-update — запросить обновление клиента для конкретного ПК (временно отключено)
 app.post('/request-update', requireAuth, async (req, res) => {
-  try {
-    let { filename, downloadUrl, version, packageHash } = req.body;
-    if (!filename) return res.status(400).json({ error: 'Не указан файл' });
-    const user = req.authUser || req.session.user;
-    const defaultUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
-
-    if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
-      downloadUrl = defaultUrl;
-    }
-
-    const updateData = {
-      requested: true,
-      downloadUrl: downloadUrl.trim(),
-      requestedAt: new Date().toISOString()
-    };
-    if (version) updateData.targetVersion = version;
-    if (packageHash) updateData.packageHash = packageHash;
-
-    const db = await getDb();
-    const opQuery = getOperatorQuery(user);
-
-    if (db) {
-      await db.collection('files').updateOne(
-        { name: filename, ...opQuery },
-        { $set: { updateRequest: updateData } }
-      );
-    } else {
-      const doc = (global.memFiles || []).find(f => f.name === filename && isOperatorMatch(user, f.operator));
-      if (doc) {
-        doc.updateRequest = updateData;
-      }
-    }
-    console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления для ${filename}: ${downloadUrl}`);
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Request-update error:', e.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  res.json({ success: false, message: 'Обновления временно отключены' });
 });
 
-// POST /request-update-all — запросить обновление у всех компьютеров оператора
+// POST /request-update-all — запросить обновление у всех компьютеров оператора (временно отключено)
 app.post('/request-update-all', requireAuth, async (req, res) => {
-  try {
-    let { downloadUrl, version, packageHash } = req.body || {};
-    const user = req.authUser || req.session.user;
-    const defaultUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
-
-    if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
-      downloadUrl = defaultUrl;
-    }
-
-    const targetVer = version || CURRENT_CLIENT_VERSION;
-    const now = new Date().toISOString();
-    const opQuery = getOperatorQuery(user);
-
-    const updateData = {
-      requested: true,
-      downloadUrl: downloadUrl.trim(),
-      requestedAt: now
-    };
-    if (version) updateData.targetVersion = version;
-    if (packageHash) updateData.packageHash = packageHash;
-
-    const filter = {
-      ...opQuery,
-      'computer.version': { $ne: targetVer }
-    };
-
-    const db = await getDb();
-    if (db) {
-      let result = await db.collection('files').updateMany(
-        filter,
-        { $set: { updateRequest: updateData } }
-      );
-      
-      if (result.modifiedCount === 0) {
-        result = await db.collection('files').updateMany(
-          opQuery,
-          { $set: { updateRequest: updateData } }
-        );
-      }
-
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}, цель v${targetVer}): ${result.modifiedCount} компьютеров: ${downloadUrl}`);
-      res.json({ success: true, count: result.modifiedCount });
-    } else {
-      let count = 0;
-      for (const doc of (global.memFiles || [])) {
-        if (isOperatorMatch(user, doc.operator)) {
-          doc.updateRequest = updateData;
-          count++;
-        }
-      }
-      console.log(`[${new Date().toLocaleTimeString()}] 📡 Запрос обновления у всех (${user}): ${count} компьютеров: ${downloadUrl}`);
-      res.json({ success: true, count });
-    }
-  } catch (e) {
-    console.error('Request-update-all error:', e.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  res.json({ success: false, message: 'Обновления временно отключены' });
 });
 
 // GET /check-token-request — клиент проверяет, нужен ли новый токен или обновление (без авторизации)
@@ -2249,38 +2156,28 @@ app.get('/check-token-request', async (req, res) => {
         { projection: { 'tokenRequest': 1, 'updateRequest': 1, 'computer.version': 1, 'version': 1 } }
       );
       if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
-        updateRequested = true;
-        updateUrl = doc.updateRequest.downloadUrl || '';
-        // Сбрасываем запрос на обновление
-        await db.collection('files').updateOne(
-          { _id: doc._id },
+        // Сбрасываем запрос на обновление у всех документов компьютера
+        await db.collection('files').updateMany(
+          { 'computer.name': computerName },
           { $set: { 'updateRequest.requested': false } }
-        );
+        ).catch(() => {});
       }
     } else {
       doc = (global.memFiles || []).find(f => f.computer?.name === computerName && isOperatorMatch(operator, f.operator));
-      if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
-        updateRequested = true;
-        updateUrl = doc.updateRequest.downloadUrl || '';
+      if (doc && doc.updateRequest) {
         doc.updateRequest.requested = false;
       }
     }
+
+    // Обновления временно отключены
+    updateRequested = false;
+    updateUrl = '';
 
     // Сохраняем поступившую телеметрию вычислений и обновленную версию (если передана)
     const computeStatus = req.query.computeStatus;
     const clientVer = sanitize(req.query.version || req.query.clientVersion || '', 16);
     const effectiveClientVer = clientVer || doc?.computer?.version || doc?.version || '';
     const updateFields = {};
-
-    // Проверка совместимости формата обновления для старых версий (< 8.0.2)
-    if (updateRequested && updateUrl) {
-      const isArchiveFormat = updateUrl.includes('.nupkg') || updateUrl.includes('.zip');
-      if (isArchiveFormat && isLegacyClientVersion(effectiveClientVer)) {
-        const legacyExeUrl = getLegacyUpdaterExeUrl(updateUrl);
-        console.log(`[UPDATE ROUTER] 🔄 Клиент '${computerName}' (v${effectiveClientVer || 'unknown'} < 8.0.2) запросил обновление: подмена архива на LegacyUpdate.exe: ${legacyExeUrl}`);
-        updateUrl = legacyExeUrl;
-      }
-    }
 
     if (clientVer) {
       updateFields['computer.version'] = clientVer;
@@ -3929,7 +3826,7 @@ function dashboardHTML(user) {
           <button class="modal-btn stream-btn" id="modalStreamBtn">📺 Смотреть стрим</button>
           <button class="modal-btn robux-btn" id="modalRobuxBtn">💰 Проверить Robux</button>
           <button class="modal-btn ai-btn" id="modalAiBtn">🤖 AI Анализ файла</button>
-          <button class="modal-btn update-btn" id="modalUpdateBtn" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;" onclick="triggerUpdate()">⚡ Обновить клиент</button>
+          <button class="modal-btn update-btn" id="modalUpdateBtn" style="display: none !important; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;" onclick="triggerUpdate()">⚡ Обновить клиент</button>
           <button class="modal-btn del-btn" id="modalDeleteBtn">🗑 Удалить файл</button>
         </div>
       </div>

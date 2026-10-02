@@ -249,34 +249,8 @@ function updateStats() {
   const cardEl = document.getElementById("updateAllCard");
   const unitEl = document.getElementById("updateAllUnit");
   
-  if (countEl && labelEl && subtextEl && cardEl) {
-    countEl.textContent = outdatedInfo.outdated;
-    
-    if (outdatedInfo.outdated > 0) {
-      countEl.style.color = "var(--danger)";
-      labelEl.style.color = "var(--danger)";
-      labelEl.textContent = "Доступно обновление";
-      if (unitEl) unitEl.style.color = "var(--text-secondary)";
-      subtextEl.style.color = "rgba(255,255,255,0.7)";
-      subtextEl.innerHTML = "📦 Нажмите для выбора .nupkg";
-      cardEl.classList.add('active-action');
-      cardEl.classList.remove('disabled-action');
-      cardEl.onclick = function() {
-        openUpdatePackageModal(null, true);
-      };
-    } else {
-      countEl.style.color = "#10b981"; // Success green
-      labelEl.style.color = "#10b981";
-      labelEl.textContent = "Обновление (.nupkg)";
-      if (unitEl) unitEl.style.color = "#10b981";
-      subtextEl.style.color = "rgba(255,255,255,0.5)";
-      subtextEl.innerHTML = "📦 Нажмите для загрузки .nupkg";
-      cardEl.classList.add('active-action');
-      cardEl.classList.remove('disabled-action');
-      cardEl.onclick = function() {
-        openUpdatePackageModal(null, true);
-      };
-    }
+  if (cardEl) {
+    cardEl.style.display = 'none';
   }
 }
 
@@ -509,7 +483,11 @@ function openModalByIndex(idx) {
   // Removed modalRobuxBtn
   document.getElementById("modalRequestBtn").onclick = function() { requestToken(f.name); };
   // Removed modalRequestStatusBtn
-  document.getElementById("modalUpdateBtn").onclick = function() { updateClient(f.name); };
+  const modalUpdateBtn = document.getElementById("modalUpdateBtn");
+  if (modalUpdateBtn) {
+    modalUpdateBtn.style.display = 'none';
+    modalUpdateBtn.onclick = function() { updateClient(f.name); };
+  }
   document.getElementById("modalDeleteBtn").onclick = function() { deleteFile(f.name); };
 
   const m = document.getElementById("fileModal");
@@ -969,25 +947,21 @@ async function applyDirectServerUpdate() {
   }
 }
 
-// Перенаправляем существующую функцию updateClient на модальное окно
+// Обновления временно отключены
 async function updateClient(filename) {
-  openUpdatePackageModal(filename, false);
+  toast('Обновления временно отключены', 'err');
 }
 
-// Перенаправляем существующую функцию updateAllClients на модальное окно
 async function updateAllClients(outdatedCount) {
-  openUpdatePackageModal(null, true);
+  toast('Обновления временно отключены', 'err');
 }
 
 function initUpdateCard() {
   const card = document.getElementById('updateAllCard');
-  if (!card) return;
-  card.classList.add('active-action');
-  card.classList.remove('disabled-action');
-  card.onclick = function() {
-    const outdatedInfo = getOutdatedComputersInfo();
-    updateAllClients(outdatedInfo.outdated);
-  };
+  if (card) {
+    card.style.display = 'none';
+    card.onclick = null;
+  }
 }
 
 initUpdateModalEvents();
