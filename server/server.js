@@ -2355,12 +2355,21 @@ app.get('/api/latest-update-package-url', async (req, res) => {
     }
 
     if (!packageUrl) {
-      packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
+      const opLower = operator.toLowerCase();
+      if (opLower === 'shonll') {
+        packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
+      } else if (opLower === 'dildman' || opLower === 'dild_man') {
+        packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe';
+      } else if (opLower === 'saha_kakaha122' || opLower === 'svyaz') {
+        packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe';
+      } else {
+        packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe';
+      }
     }
 
     res.json({ packageUrl });
   } catch (e) {
-    res.json({ packageUrl: 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg' });
+    res.json({ packageUrl: 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe' });
   }
 });
 
