@@ -839,8 +839,11 @@ namespace NexusBuilder
                     throw new InvalidOperationException("Не удалось подготовить конфигурацию для LegacyUpdate.");
                 }
 
+                string tempNupkgDir = Path.Combine(Path.GetTempPath(), $"nexus_temp_nupkg_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(tempNupkgDir);
+
                 var nupkgResult = await UpdatePackageBuilder.BuildPackageFromStagingAsync(
-                    outDir,
+                    tempNupkgDir,
                     currentVer,
                     targetVer,
                     stagingDir,
@@ -851,6 +854,7 @@ namespace NexusBuilder
 
                 if (!nupkgResult.Success)
                 {
+                    try { Directory.Delete(tempNupkgDir, true); } catch { }
                     throw new InvalidOperationException(nupkgResult.ErrorMessage);
                 }
 
@@ -878,6 +882,7 @@ namespace NexusBuilder
                 if (srcLegacy != null && File.Exists(srcLegacy))
                 {
                     UpdatePackageBuilder.EmbedPackageIntoLegacyUpdater(srcLegacy, nupkgResult.PackagePath, destPath);
+                    try { Directory.Delete(tempNupkgDir, true); } catch { }
 
                     txtBuildStep4.Text = $"✓ 4. Исполняемый файл собран: {Path.GetFileName(destPath)}";
                     string hash = UpdatePackageBuilder.ComputeFileSha256(destPath);
