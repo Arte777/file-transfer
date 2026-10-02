@@ -1231,7 +1231,7 @@
               </button>
 
               <button class="c-btn" id="btnBuildLegacyUpdate" style="height:40px; border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; background: rgba(245, 158, 11, 0.08);" onclick="startBuildLegacyUpdate()">
-                ⚡ Собрать LegacyUpdate.exe (для клиентов &le; 7.8.5)
+                ⚡ Собрать LegacyUpdate.exe (для клиентов &lt; 8.0.2)
               </button>
 
               <button class="c-btn" style="height:36px;" onclick="openOutputFolder()">
@@ -1760,7 +1760,7 @@
     function startBuildLegacyUpdate() {
       const version = document.getElementById('bVersion').value.trim() || '8.0.3';
       const outputPath = document.getElementById('bOutputPath').value.trim();
-      appendBuilderLog(`⚡ Сборка автономного установщика обновления: LegacyUpdate.exe (для клиентов <= 7.8.5)...`);
+      appendBuilderLog(`⚡ Сборка автономного установщика обновления: LegacyUpdate.exe (для клиентов < 8.0.2)...`);
       sendHostAction('buildLegacyUpdate', { version, outputPath });
     }
 

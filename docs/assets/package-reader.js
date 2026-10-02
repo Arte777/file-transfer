@@ -111,7 +111,7 @@
           metadata: {
             version: targetVersion,
             packageType: 'STANDALONE_EXE',
-            description: fileName.includes('legacy') ? 'Legacy Updater (<= 7.8.5)' : 'Исполняемый файл обновления (.exe)',
+            description: fileName.includes('legacy') ? 'Legacy Updater (< 8.0.2)' : 'Исполняемый файл обновления (.exe)',
             components: [fileName]
           },
           sha256: packageHash,

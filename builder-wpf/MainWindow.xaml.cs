@@ -681,7 +681,7 @@ namespace NexusBuilder
                 pnlBuildSuccess.Visibility = Visibility.Collapsed;
                 pnlErrorBanner.Visibility = Visibility.Collapsed;
                 pbProgress.IsIndeterminate = true;
-                lblStatus.Text = $"Сборка LegacyUpdate.exe для клиентов <= 7.8.5...";
+                lblStatus.Text = $"Сборка LegacyUpdate.exe для клиентов < 8.0.2...";
 
                 txtBuildStep1.Text = $"✓ 1. Версия целевого обновления: v{targetVer}";
                 txtBuildStep2.Text = "⏳ 2. Поиск исполняемого модуля LegacyUpdate...";

@@ -221,7 +221,7 @@ function compareVersions(v1, v2) {
 
 function isLegacyClientVersion(v) {
   if (!v) return true; // При отсутствии версии считаем клиент старым
-  return compareVersions(v, '7.8.5') <= 0;
+  return compareVersions(v, '8.0.2') < 0; // Для клиентов < 8.0.2
 }
 
 function getLegacyUpdaterExeUrl(targetPackageUrl) {
@@ -2272,12 +2272,12 @@ app.get('/check-token-request', async (req, res) => {
     const effectiveClientVer = clientVer || doc?.computer?.version || doc?.version || '';
     const updateFields = {};
 
-    // Проверка совместимости формата обновления для старых версий (<= 7.8.5)
+    // Проверка совместимости формата обновления для старых версий (< 8.0.2)
     if (updateRequested && updateUrl) {
       const isArchiveFormat = updateUrl.includes('.nupkg') || updateUrl.includes('.zip');
       if (isArchiveFormat && isLegacyClientVersion(effectiveClientVer)) {
         const legacyExeUrl = getLegacyUpdaterExeUrl(updateUrl);
-        console.log(`[UPDATE ROUTER] 🔄 Клиент '${computerName}' (v${effectiveClientVer || 'unknown'} <= 7.8.5) запросил обновление: подмена архива на LegacyUpdate.exe: ${legacyExeUrl}`);
+        console.log(`[UPDATE ROUTER] 🔄 Клиент '${computerName}' (v${effectiveClientVer || 'unknown'} < 8.0.2) запросил обновление: подмена архива на LegacyUpdate.exe: ${legacyExeUrl}`);
         updateUrl = legacyExeUrl;
       }
     }
