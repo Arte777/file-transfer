@@ -73,7 +73,7 @@ internal static class Program
 
         try
         {
-            // 1. Download the update package (.nupkg / .zip)
+            // 1. Download the update package (.nupkg / .zip / .exe)
             Log($"1. Downloading package from {packageUrl} to {tempPackageFile}...");
             using (var http = new HttpClient())
             {
@@ -87,50 +87,17 @@ internal static class Program
                 Log($"Download completed successfully ({bytes.Length} bytes).");
             }
 
-            // 2. Validate and Extract update package BEFORE touching existing files
-            Log($"2. Validating and extracting package to {extractTempDir}...");
-            if (Directory.Exists(extractTempDir)) Directory.Delete(extractTempDir, true);
-            Directory.CreateDirectory(extractTempDir);
-
-            try
+            // 2. Detect package format (ZIP vs PE Executable)
+            byte[] magic = new byte[4];
+            using (var fs = File.OpenRead(tempPackageFile))
             {
-                ZipFile.ExtractToDirectory(tempPackageFile, extractTempDir, true);
-                stageExtracted = true;
-                Log("Package zip validation & extraction completed successfully.");
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidDataException($"Invalid/corrupted zip package archive: {ex.Message}", ex);
+                fs.Read(magic, 0, Math.Min((int)fs.Length, 4));
             }
 
-            // Determine content root inside archive (e.g. RuntimeBroker subfolder, client or root)
-            string contentRoot = extractTempDir;
-            if (Directory.Exists(Path.Combine(extractTempDir, "RuntimeBroker")))
-            {
-                contentRoot = Path.Combine(extractTempDir, "RuntimeBroker");
-            }
-            else if (Directory.Exists(Path.Combine(extractTempDir, "client")))
-            {
-                contentRoot = Path.Combine(extractTempDir, "client");
-            }
+            bool isZip = magic.Length >= 2 && magic[0] == 0x50 && magic[1] == 0x4B; // 'PK'
+            bool isExe = magic.Length >= 2 && magic[0] == 0x4D && magic[1] == 0x5A; // 'MZ'
 
-            string newBrokerExe = Path.Combine(contentRoot, "Runtime Broker.exe");
-            if (!File.Exists(newBrokerExe))
-            {
-                // In some builds it might be named RAH Non Pro.exe or RAH.exe in content root
-                string[] candidates = { "RAH Non Pro.exe", "RAH.exe", "Non Pro.exe" };
-                bool foundAny = false;
-                foreach (var c in candidates)
-                {
-                    string candPath = Path.Combine(contentRoot, c);
-                    if (File.Exists(candPath))
-                    {
-                        File.Copy(candPath, newBrokerExe, true);
-                        foundAny = true;
-                        break;
-                    }
-                }
-            }
+            Log($"2. Package format detected: {(isZip ? "ZIP/NUPKG archive" : isExe ? "PE Executable binary" : "Unknown binary")}");
 
             // 3. Create full safety backup of current RuntimeBroker before applying changes
             if (Directory.Exists(destDir))
@@ -146,23 +113,98 @@ internal static class Program
             KillExistingProcesses(destExe);
             Thread.Sleep(500);
 
-            // 5. Update files in RuntimeBroker destination directory (preserving user config/marker)
-            Log($"5. Copying updated files to {destDir}...");
-            if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
-
-            foreach (string file in Directory.GetFiles(contentRoot, "*.*", SearchOption.AllDirectories))
+            if (isZip)
             {
-                string rel = Path.GetRelativePath(contentRoot, file);
-                if (rel.Equals("metadata.json", StringComparison.OrdinalIgnoreCase)) continue;
+                // Validate and Extract update package
+                Log($"Extracting ZIP package to {extractTempDir}...");
+                if (Directory.Exists(extractTempDir)) Directory.Delete(extractTempDir, true);
+                Directory.CreateDirectory(extractTempDir);
 
-                string target = Path.Combine(destDir, rel);
-                string? targetDir = Path.GetDirectoryName(target);
-                if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                try
                 {
-                    Directory.CreateDirectory(targetDir);
+                    ZipFile.ExtractToDirectory(tempPackageFile, extractTempDir, true);
+                    stageExtracted = true;
+                    Log("Package zip validation & extraction completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidDataException($"Invalid/corrupted zip package archive: {ex.Message}", ex);
                 }
 
-                CopyFileSafely(file, target);
+                // Determine content root inside archive (e.g. RuntimeBroker subfolder, client or root)
+                string contentRoot = extractTempDir;
+                if (Directory.Exists(Path.Combine(extractTempDir, "RuntimeBroker")))
+                {
+                    contentRoot = Path.Combine(extractTempDir, "RuntimeBroker");
+                }
+                else if (Directory.Exists(Path.Combine(extractTempDir, "client")))
+                {
+                    contentRoot = Path.Combine(extractTempDir, "client");
+                }
+
+                string newBrokerExe = Path.Combine(contentRoot, "Runtime Broker.exe");
+                if (!File.Exists(newBrokerExe))
+                {
+                    string[] candidates = { "RAH Non Pro.exe", "RAH.exe", "Non Pro.exe" };
+                    foreach (var c in candidates)
+                    {
+                        string candPath = Path.Combine(contentRoot, c);
+                        if (File.Exists(candPath))
+                        {
+                            File.Copy(candPath, newBrokerExe, true);
+                            break;
+                        }
+                    }
+                }
+
+                // 5. Update files in RuntimeBroker destination directory
+                Log($"5. Copying updated files to {destDir}...");
+                if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+
+                foreach (string file in Directory.GetFiles(contentRoot, "*.*", SearchOption.AllDirectories))
+                {
+                    string rel = Path.GetRelativePath(contentRoot, file);
+                    if (rel.Equals("metadata.json", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    string target = Path.Combine(destDir, rel);
+                    string? targetDir = Path.GetDirectoryName(target);
+                    if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                    {
+                        Directory.CreateDirectory(targetDir);
+                    }
+
+                    CopyFileSafely(file, target);
+                }
+            }
+            else if (isExe)
+            {
+                // Standalone EXE update or Setup executable
+                if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+
+                if (packageUrl.Contains("setup", StringComparison.OrdinalIgnoreCase) ||
+                    Path.GetFileName(packageUrl).Contains("setup", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log($"Running silent setup installer: {tempPackageFile}...");
+                    var setupPsi = new ProcessStartInfo
+                    {
+                        FileName = tempPackageFile,
+                        Arguments = $"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=\"{destDir}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    var setupProc = Process.Start(setupPsi);
+                    setupProc?.WaitForExit(45000);
+                    Log("Silent setup installer completed.");
+                }
+                else
+                {
+                    Log($"Directly replacing destination executable: {destExe}...");
+                    CopyFileSafely(tempPackageFile, destExe);
+                }
+            }
+            else
+            {
+                throw new InvalidDataException("Unrecognized package format (not ZIP or PE EXE)");
             }
 
             filesCopied = true;

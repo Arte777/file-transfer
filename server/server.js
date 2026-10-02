@@ -2132,15 +2132,7 @@ app.post('/request-update', requireAuth, async (req, res) => {
     let { filename, downloadUrl, version, packageHash } = req.body;
     if (!filename) return res.status(400).json({ error: 'Не указан файл' });
     const user = req.authUser || req.session.user;
-    const userLower = (user || '').toLowerCase();
-    
-    const defaultUrl = userLower === 'shonll'
-      ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
-      : (userLower === 'dildman' || userLower === 'dild_man'
-          ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
-          : (userLower === 'singer1isss'
-              ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
-              : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
+    const defaultUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
 
     if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
       downloadUrl = defaultUrl;
@@ -2181,15 +2173,7 @@ app.post('/request-update-all', requireAuth, async (req, res) => {
   try {
     let { downloadUrl, version, packageHash } = req.body || {};
     const user = req.authUser || req.session.user;
-    const userLower = (user || '').toLowerCase();
-
-    const defaultUrl = userLower === 'shonll'
-      ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/RAH_Non_Pro_setup.exe'
-      : (userLower === 'dildman' || userLower === 'dild_man'
-          ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NON_PRO_setup.exe'
-          : (userLower === 'singer1isss'
-              ? 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SINGER_NON_PRO_setup.exe'
-              : 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/SVYAZ_NON_PRO_setup.exe'));
+    const defaultUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
 
     if (!downloadUrl || typeof downloadUrl !== 'string' || downloadUrl.trim().length === 0) {
       downloadUrl = defaultUrl;
@@ -2356,7 +2340,17 @@ app.get('/api/latest-update-package-url', async (req, res) => {
         { sort: { uploadedAt: -1 }, projection: { 'updateRequest': 1 } }
       );
       if (docWithUpdate?.updateRequest?.downloadUrl) {
-        packageUrl = docWithUpdate.updateRequest.downloadUrl;
+        const dUrl = docWithUpdate.updateRequest.downloadUrl;
+        if (dUrl.includes('LegacyUpdate.exe') && dUrl.includes('pkg=')) {
+          try {
+            const parsed = new URL(dUrl);
+            packageUrl = parsed.searchParams.get('pkg') || '';
+          } catch {
+            packageUrl = '';
+          }
+        } else if (!dUrl.includes('LegacyUpdate.exe')) {
+          packageUrl = dUrl;
+        }
       }
     }
 

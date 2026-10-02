@@ -68,14 +68,13 @@
         return { valid: false, error: 'Файл обновления не выбран.' };
       }
 
-      const fileName = file.name.toLowerCase();
-      const validExts = ['.nupkg', '.nexuspkg', '.zip'];
+      const validExts = ['.nupkg', '.nexuspkg', '.zip', '.exe'];
       const hasValidExt = validExts.some(ext => fileName.endsWith(ext));
 
       if (!hasValidExt) {
         return {
           valid: false,
-          error: 'Этот файл не является корректным обновлением NEXUS Builder.'
+          error: 'Этот файл не является корректным обновлением NEXUS Builder (.nupkg, .nexuspkg, .zip, .exe).'
         };
       }
 
@@ -86,8 +85,8 @@
         return { valid: false, error: 'Не удалось прочитать файл обновления.' };
       }
 
-      if (arrayBuffer.byteLength < 22) {
-        return { valid: false, error: 'Этот файл не является корректным обновлением NEXUS Builder.' };
+      if (arrayBuffer.byteLength < 4) {
+        return { valid: false, error: 'Этот файл пуст или повреждён.' };
       }
 
       // 1. Calculate SHA-256 integrity hash
@@ -98,9 +97,33 @@
         console.error('SHA-256 calc failed:', e);
       }
 
+      const uint8 = new Uint8Array(arrayBuffer);
+      const isExe = fileName.endsWith('.exe') || (uint8[0] === 0x4D && uint8[1] === 0x5A);
+
+      if (isExe) {
+        let targetVersion = '8.0.3';
+        const match = fileName.match(/([0-9]+(?:\.[0-9]+)+)/);
+        if (match) targetVersion = match[1];
+
+        return {
+          valid: true,
+          version: targetVersion,
+          metadata: {
+            version: targetVersion,
+            packageType: 'STANDALONE_EXE',
+            description: fileName.includes('legacy') ? 'Legacy Updater (<= 7.8.5)' : 'Исполняемый файл обновления (.exe)',
+            components: [fileName]
+          },
+          sha256: packageHash,
+          fileCount: 1,
+          size: arrayBuffer.byteLength,
+          files: [{ path: file.name, size: arrayBuffer.byteLength, compressedSize: arrayBuffer.byteLength, isDir: false }],
+          fileName: file.name
+        };
+      }
+
       // 2. Parse ZIP Central Directory
       const view = new DataView(arrayBuffer);
-      const uint8 = new Uint8Array(arrayBuffer);
       let eocdOffset = -1;
 
       // Find End of Central Directory signature (0x06054b50)
