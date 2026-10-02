@@ -47,11 +47,17 @@ internal static class Program
         try
         {
             // 1. Check for embedded update package inside executable FIRST
-            byte[]? embeddedPayload = TryGetEmbeddedPackage(Environment.ProcessPath ?? "");
-            if (embeddedPayload != null && embeddedPayload.Length > 0)
+            string currentExe = Environment.ProcessPath ?? "";
+            if (string.IsNullOrEmpty(currentExe) || !File.Exists(currentExe))
             {
-                Log($"Found embedded update payload inside executable ({embeddedPayload.Length} bytes). Using embedded package directly!");
-                await File.WriteAllBytesAsync(tempPackageFile, embeddedPayload);
+                try { currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? ""; } catch { }
+            }
+            Log($"Current executable resolved: {currentExe}");
+
+            bool hasEmbedded = TryExtractEmbeddedPackage(currentExe, tempPackageFile);
+            if (hasEmbedded && File.Exists(tempPackageFile) && new FileInfo(tempPackageFile).Length > 0)
+            {
+                Log($"Found and extracted embedded update payload directly ({new FileInfo(tempPackageFile).Length} bytes). Using embedded package!");
             }
             else
             {
@@ -449,46 +455,74 @@ internal static class Program
 
     private static readonly byte[] EmbedMagic = System.Text.Encoding.ASCII.GetBytes("NEXUS_EMBED_PKG!");
 
-    private static byte[]? TryGetEmbeddedPackage(string exePath)
+    private static bool TryExtractEmbeddedPackage(string exePath, string destinationZipPath)
     {
         try
         {
-            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;
+            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            {
+                Log($"Embedded check: file not found or empty path: {exePath}");
+                return false;
+            }
+
             using var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            if (fs.Length < 24) return null;
+            if (fs.Length < 24) return false;
 
             fs.Seek(-24, SeekOrigin.End);
             byte[] footer = new byte[24];
             int read = fs.Read(footer, 0, 24);
-            if (read != 24) return null;
+            if (read != 24) return false;
 
             for (int i = 0; i < 16; i++)
             {
-                if (footer[i] != EmbedMagic[i]) return null;
+                if (footer[i] != EmbedMagic[i]) return false;
             }
 
             long payloadLen = BitConverter.ToInt64(footer, 16);
-            if (payloadLen <= 0 || payloadLen > fs.Length - 24) return null;
-
-            fs.Seek(-24 - payloadLen, SeekOrigin.End);
-            byte[] payload = new byte[payloadLen];
-            int totalRead = 0;
-            while (totalRead < payloadLen)
+            if (payloadLen <= 0 || payloadLen > fs.Length - 24)
             {
-                int r = fs.Read(payload, totalRead, (int)(payloadLen - totalRead));
-                if (r <= 0) break;
-                totalRead += r;
+                Log($"Embedded check: invalid payload length {payloadLen}");
+                return false;
             }
 
-            if (totalRead == payloadLen)
+            Log($"Embedded check: detected package of {payloadLen} bytes. Extracting stream...");
+            fs.Seek(-24 - payloadLen, SeekOrigin.End);
+
+            string? destDir = Path.GetDirectoryName(destinationZipPath);
+            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
             {
-                return payload;
+                Directory.CreateDirectory(destDir);
+            }
+
+            using (var outFs = new FileStream(destinationZipPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                byte[] buffer = new byte[65536];
+                long remaining = payloadLen;
+                while (remaining > 0)
+                {
+                    int toRead = (int)Math.Min(remaining, buffer.Length);
+                    int r = fs.Read(buffer, 0, toRead);
+                    if (r <= 0) break;
+                    outFs.Write(buffer, 0, r);
+                    remaining -= r;
+                }
+
+                if (remaining == 0)
+                {
+                    Log($"✓ Embedded payload successfully extracted to {destinationZipPath} ({payloadLen} bytes).");
+                    return true;
+                }
+                else
+                {
+                    Log($"⚠️ Embedded extraction incomplete: read {payloadLen - remaining} of {payloadLen} bytes.");
+                    return false;
+                }
             }
         }
         catch (Exception ex)
         {
-            Log($"Embedded package extraction notice: {ex.Message}");
+            Log($"❌ Embedded package extraction error: {ex.Message}");
+            return false;
         }
-        return null;
     }
 }
