@@ -1,0 +1,7 @@
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\NEXUS Builder.pdb
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\WebUI\griffith.jpg
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\WebUI\index.html
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\Microsoft.Web.WebView2.Core.xml
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\Microsoft.Web.WebView2.WinForms.xml
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\Microsoft.Web.WebView2.Wpf.xml
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\docs\downloads\NEXUS Builder.exe

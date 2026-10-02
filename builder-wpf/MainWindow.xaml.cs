@@ -85,22 +85,343 @@ namespace NexusBuilder
             Log("• Облачная синхронизация шаблонов: Активна (автоматическая загрузка).");
 
             TryAutoLogin();
+            _ = InitializeWebEngineAsync();
+        }
+
+        private async Task InitializeWebEngineAsync()
+        {
+            try
+            {
+                string webUiDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebUI");
+                if (!Directory.Exists(webUiDir))
+                {
+                    webUiDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NEXUS_Builder", "WebUI");
+                    Directory.CreateDirectory(webUiDir);
+                }
+
+                string htmlFile = Path.Combine(webUiDir, "index.html");
+                if (!File.Exists(htmlFile))
+                {
+                    // Extract embedded if not exists
+                    var asm = Assembly.GetExecutingAssembly();
+                    foreach (var resName in asm.GetManifestResourceNames())
+                    {
+                        if (resName.Contains("WebUI", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string fileName = resName.Substring(resName.LastIndexOf('.') + 1);
+                            if (resName.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) fileName = "index.html";
+                            else if (resName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)) fileName = "griffith.jpg";
+                            using var stream = asm.GetManifestResourceStream(resName);
+                            if (stream != null)
+                            {
+                                using var fs = File.Create(Path.Combine(webUiDir, fileName));
+                                await stream.CopyToAsync(fs);
+                            }
+                        }
+                    }
+                }
+
+                string userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXUS_Builder", "WebView2");
+                var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                await webEngine.EnsureCoreWebView2Async(env);
+
+                webEngine.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                webEngine.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                webEngine.CoreWebView2.Settings.AreDevToolsEnabled = true;
+
+                webEngine.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
+
+                if (File.Exists(htmlFile))
+                {
+                    webEngine.CoreWebView2.Navigate(new Uri(htmlFile).AbsoluteUri);
+                }
+                else
+                {
+                    // Fallback to legacy WPF UI
+                    webEngine.Visibility = Visibility.Collapsed;
+                    legacyWpfGrid.Visibility = Visibility.Visible;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("WebView2 init exception: " + ex.Message + ". Falling back to WPF view.");
+                webEngine.Visibility = Visibility.Collapsed;
+                legacyWpfGrid.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void CoreWebView2_WebMessageReceived(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            try
+            {
+                string json = e.WebMessageAsJson;
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                string action = root.TryGetProperty("action", out var a) ? a.GetString() ?? "" : "";
+
+                switch (action)
+                {
+                    case "minimize":
+                        WindowState = WindowState.Minimized;
+                        break;
+                    case "close":
+                        Close();
+                        break;
+                    case "dragWindow":
+                        try { DragMove(); } catch { }
+                        break;
+                    case "domReady":
+                        SendInitDataToWeb();
+                        break;
+                    case "chooseOutputFolder":
+                        ChooseOutputFolderFromWeb();
+                        break;
+                    case "chooseCustomBg":
+                        ChooseCustomBgFromWeb();
+                        break;
+                    case "resetCustomBg":
+                        SetCustomBackground(null);
+                        SendWebLog("Фон сброшен на стандартный арт Griffith.");
+                        break;
+                    case "chooseCustomIco":
+                        ChooseCustomIcoFromWeb();
+                        break;
+                    case "selectIconPreset":
+                        if (root.TryGetProperty("preset", out var p))
+                        {
+                            string preset = p.GetString() ?? "rah";
+                            SelectIconPresetByName(preset);
+                        }
+                        break;
+                    case "login":
+                        if (root.TryGetProperty("login", out var l) && root.TryGetProperty("pass", out var pw))
+                        {
+                            string login = l.GetString() ?? "";
+                            string pass = pw.GetString() ?? "";
+                            bool remember = root.TryGetProperty("remember", out var r) && r.GetBoolean();
+                            await HandleWebLogin(login, pass, remember);
+                        }
+                        break;
+                    case "logout":
+                        BtnLogout_Click(this, new RoutedEventArgs());
+                        break;
+                    case "openOutputFolder":
+                        BtnOpenFolder_Click(this, new RoutedEventArgs());
+                        break;
+                    case "startBuild":
+                        bool isStandalone = root.TryGetProperty("isStandalone", out var sa) && sa.GetBoolean();
+                        if (root.TryGetProperty("appName", out var an)) tbAppName.Text = an.GetString();
+                        if (root.TryGetProperty("author", out var au) && tbAuthor != null) tbAuthor.Text = au.GetString();
+                        if (root.TryGetProperty("version", out var vr)) tbVersion.Text = vr.GetString();
+                        if (root.TryGetProperty("outputPath", out var op)) tbOutputPath.Text = op.GetString();
+                        if (root.TryGetProperty("telegram", out var tg) && tbTelegramChannel != null) tbTelegramChannel.Text = tg.GetString();
+                        if (root.TryGetProperty("buttonText", out var bt) && tbButtonText != null) tbButtonText.Text = bt.GetString();
+                        if (root.TryGetProperty("computeEnabled", out var ce))
+                        {
+                            bool isComp = ce.GetBoolean();
+                            if (chkComputeEnabled != null) chkComputeEnabled.IsChecked = isComp;
+                            ComputeConfig.Enabled = isComp;
+                        }
+
+                        if (root.TryGetProperty("computeModules", out var cms) && cms.ValueKind == JsonValueKind.Array)
+                        {
+                            try
+                            {
+                                var deserialized = JsonSerializer.Deserialize<List<ComputeModuleConfig>>(cms.GetRawText());
+                                if (deserialized != null && deserialized.Count > 0)
+                                {
+                                    ComputeConfig.Modules = deserialized;
+                                    SaveComputeModuleConfig();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log("⚠️ Ошибка разбора модулей: " + ex.Message);
+                            }
+                        }
+
+                        string overrideOp = root.TryGetProperty("operator", out var opr) ? opr.GetString() ?? "" : "";
+                        string themeAccent = root.TryGetProperty("themeAccent", out var ta) ? ta.GetString() ?? "#ffffff" : "#ffffff";
+                        string themeSurface = root.TryGetProperty("themeSurface", out var ts) ? ts.GetString() ?? "#0D0E12" : "#0D0E12";
+                        await RunBuild(isStandalone, overrideOp, themeAccent, themeSurface);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("WebMessage error: " + ex.Message);
+            }
+        }
+
+        private void SendInitDataToWeb()
+        {
+            try
+            {
+                string bgBase64 = "";
+                if (!string.IsNullOrEmpty(_customBgPath) && File.Exists(_customBgPath))
+                {
+                    try
+                    {
+                        byte[] bgBytes = File.ReadAllBytes(_customBgPath);
+                        string mime = _customBgPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+                        bgBase64 = $"data:{mime};base64," + Convert.ToBase64String(bgBytes);
+                    }
+                    catch { }
+                }
+
+                var data = new
+                {
+                    appName = tbAppName.Text.Trim(),
+                    author = tbAuthor?.Text.Trim() ?? "Убежище",
+                    version = tbVersion.Text.Trim(),
+                    outputPath = tbOutputPath.Text.Trim(),
+                    customBgPath = _customBgPath,
+                    customBgBase64 = bgBase64,
+                    iconName = Path.GetFileName(_activeIconPath),
+                    user = _currentUser,
+                    isAdmin = _isUserAdmin,
+                    computeConfig = new
+                    {
+                        enabled = ComputeConfig.Enabled,
+                        modules = ComputeConfig.Modules
+                    }
+                };
+                string jsonMsg = JsonSerializer.Serialize(new { type = "initData", data });
+                webEngine.CoreWebView2.PostWebMessageAsJson(jsonMsg);
+            }
+            catch { }
+        }
+
+        public void SendWebLog(string text)
+        {
+            try
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (webEngine?.CoreWebView2 != null)
+                    {
+                        string jsonMsg = JsonSerializer.Serialize(new { type = "log", text });
+                        webEngine.CoreWebView2.PostWebMessageAsJson(jsonMsg);
+                    }
+                });
+            }
+            catch { }
+        }
+
+        private void ChooseOutputFolderFromWeb()
+        {
+            using var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            dialog.Description = "Выберите папку для сохранения собранных приложений";
+            dialog.UseDescriptionForTitle = true;
+            dialog.SelectedPath = tbOutputPath.Text;
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                tbOutputPath.Text = dialog.SelectedPath;
+                SendWebLog($"📁 Папка назначения: {dialog.SelectedPath}");
+                SendInitDataToWeb();
+            }
+        }
+
+        private void ChooseCustomBgFromWeb()
+        {
+            using var ofd = new System.Windows.Forms.OpenFileDialog();
+            ofd.Title = "Выберите фоновое изображение (.jpg, .png)";
+            ofd.Filter = "Изображения (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png";
+            if (ofd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SetCustomBackground(ofd.FileName);
+                SendWebLog($"🎨 Выбран кастомный фон: {ofd.FileName}");
+                SendInitDataToWeb();
+            }
+        }
+
+        private void ChooseCustomIcoFromWeb()
+        {
+            using var ofd = new System.Windows.Forms.OpenFileDialog();
+            ofd.Title = "Выберите иконку приложения (.ico)";
+            ofd.Filter = "Иконки (*.ico)|*.ico";
+            if (ofd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SetIcon(ofd.FileName, Path.GetFileName(ofd.FileName));
+                SendWebLog($"🎨 Выбрана иконка: {ofd.FileName}");
+                SendInitDataToWeb();
+            }
+        }
+
+        private void SelectIconPresetByName(string preset)
+        {
+            for (int i = 0; i < cbIconPresets.Items.Count; i++)
+            {
+                if (cbIconPresets.Items[i] is ComboBoxItem cbi && cbi.Tag?.ToString()?.Equals(preset, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    cbIconPresets.SelectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        private async Task HandleWebLogin(string username, string password, bool remember)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { username, password });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var resp = await _http.PostAsync($"{API_BASE}/api/login", content);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    string errJson = JsonSerializer.Serialize(new { type = "loginResult", success = false, message = "Неверный логин или пароль" });
+                    webEngine.CoreWebView2.PostWebMessageAsJson(errJson);
+                    return;
+                }
+
+                string respBody = await resp.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(respBody);
+                var root = doc.RootElement;
+                string user = root.TryGetProperty("user", out var u) ? u.GetString() ?? username : username;
+                string token = root.TryGetProperty("token", out var t) ? t.GetString() ?? "" : "";
+
+                if (remember)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(_authFilePath)!);
+                        string saveJson = JsonSerializer.Serialize(new { user, token, savedAt = DateTime.UtcNow });
+                        await File.WriteAllTextAsync(_authFilePath, saveJson);
+                    }
+                    catch { }
+                }
+
+                ApplyUserSession(user, token);
+
+                string okJson = JsonSerializer.Serialize(new { type = "loginResult", success = true, user = _currentUser, isAdmin = _isUserAdmin });
+                webEngine.CoreWebView2.PostWebMessageAsJson(okJson);
+                SendInitDataToWeb();
+            }
+            catch (Exception ex)
+            {
+                string errJson = JsonSerializer.Serialize(new { type = "loginResult", success = false, message = "Ошибка сети: " + ex.Message });
+                webEngine.CoreWebView2.PostWebMessageAsJson(errJson);
+            }
         }
 
         #region Wizard Navigation & Summary
+        private int _currentStep = 1;
+
         public void GoToStep(int stepIndex)
         {
             if (viewStep1 == null || viewStep2 == null || viewStep3 == null || viewStep4 == null) return;
+            _currentStep = stepIndex;
 
             viewStep1.Visibility = stepIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
             viewStep2.Visibility = stepIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
             viewStep3.Visibility = stepIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
             viewStep4.Visibility = stepIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
 
-            if (navStep1 != null) navStep1.IsChecked = stepIndex == 1;
-            if (navStep2 != null) navStep2.IsChecked = stepIndex == 2;
-            if (navStep3 != null) navStep3.IsChecked = stepIndex == 3;
-            if (navStep4 != null) navStep4.IsChecked = stepIndex == 4;
+            if (navStep1 != null && navStep1.IsChecked != (stepIndex == 1)) navStep1.IsChecked = stepIndex == 1;
+            if (navStep2 != null && navStep2.IsChecked != (stepIndex == 2)) navStep2.IsChecked = stepIndex == 2;
+            if (navStep3 != null && navStep3.IsChecked != (stepIndex == 3)) navStep3.IsChecked = stepIndex == 3;
+            if (navStep4 != null && navStep4.IsChecked != (stepIndex == 4)) navStep4.IsChecked = stepIndex == 4;
 
             if (stepIndex == 4)
             {
@@ -112,7 +433,10 @@ namespace NexusBuilder
         {
             if (sender is WpfRadioButton rb && rb.Tag != null && int.TryParse(rb.Tag.ToString(), out int step))
             {
-                GoToStep(step);
+                if (rb.IsChecked == true && _currentStep != step)
+                {
+                    GoToStep(step);
+                }
             }
         }
 
@@ -203,6 +527,22 @@ namespace NexusBuilder
         private void BtnClearLog_Click(object sender, RoutedEventArgs e)
         {
             txtConsole.Clear();
+        }
+
+        private void BtnCopyLog_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(txtConsole.Text))
+                {
+                    System.Windows.Clipboard.SetText(txtConsole.Text);
+                    Log("Журнал скопирован в буфер обмена.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Ошибка копирования в буфер: " + ex.Message);
+            }
         }
 
         private void BtnAddParam_Click(object sender, RoutedEventArgs e)
@@ -624,7 +964,7 @@ namespace NexusBuilder
                     string cDll = Path.Combine(dir, "RAH Non Pro.dll");
                     if (!File.Exists(cDll)) return false;
                     var fi = new FileInfo(cDll);
-                    if (fi.Length < 1000000) return false; // Защита: старый дизайн был 723 КБ, новый дизайн > 1.4 МБ
+                    if (fi.Length < 500000) return false;
                     byte[] dllBytes = File.ReadAllBytes(cDll);
                     string dllAscii = Encoding.ASCII.GetString(dllBytes);
                     if (dllAscii.Contains("7.4.5")) return false; // Защита от старых бинарников
@@ -764,18 +1104,19 @@ namespace NexusBuilder
 
         private void InitializeDefaultIcon()
         {
-            SelectPresetIcon("thunder");
+            SelectPresetIcon("rah");
         }
 
         private string GetPresetIconPath(string tag)
         {
             string fileName = tag switch
             {
+                "rah" => "rah.ico",
                 "fire" => "fire.ico",
                 "singer" => "singer.ico",
                 "svyaz" => "svyaz.ico",
                 "cyber" => "cyber.ico",
-                _ => "thunder.ico"
+                _ => "rah.ico"
             };
 
             string appDataIcons = Path.Combine(
@@ -785,12 +1126,15 @@ namespace NexusBuilder
             string iconPath = Path.Combine(appDataIcons, fileName);
             if (File.Exists(iconPath)) return iconPath;
 
-            string fallback = Path.Combine(appDataIcons, "app.ico");
-            if (File.Exists(fallback)) return fallback;
-
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string localRes = Path.Combine(baseDir, "Resources", "Icons", fileName);
+            if (File.Exists(localRes)) return localRes;
+
             string localFallback = Path.Combine(baseDir, fileName);
             if (File.Exists(localFallback)) return localFallback;
+
+            string fallback = Path.Combine(appDataIcons, "app.ico");
+            if (File.Exists(fallback)) return fallback;
 
             return iconPath;
         }
@@ -941,7 +1285,8 @@ namespace NexusBuilder
             {
                 string time = DateTime.Now.ToString("HH:mm:ss");
                 txtConsole.AppendText($"[{time}] {msg}\n");
-                scrollConsole.ScrollToEnd();
+                txtConsole.ScrollToEnd();
+                SendWebLog(msg);
             });
         }
 
@@ -1045,7 +1390,7 @@ namespace NexusBuilder
             await RunBuild(isStandalone: false);
         }
 
-        private async Task RunBuild(bool isStandalone)
+        private async Task RunBuild(bool isStandalone, string overrideOperator = "", string themeAccent = "#ffffff", string themeSurface = "#0D0E12")
         {
             if (string.IsNullOrWhiteSpace(_currentUser))
             {
@@ -1054,7 +1399,7 @@ namespace NexusBuilder
                 return;
             }
 
-            string opName = GetSelectedOperator();
+            string opName = !string.IsNullOrWhiteSpace(overrideOperator) ? overrideOperator.Trim() : GetSelectedOperator();
             string appName = tbAppName.Text.Trim();
             if (string.IsNullOrWhiteSpace(appName)) appName = "RAH";
             string appAuthor = tbAuthor?.Text.Trim() ?? "";
@@ -1251,7 +1596,7 @@ namespace NexusBuilder
                     }
 
                     Log($"💉 Внедрение параметров оператора в {Path.GetFileName(targetDllPath)}...");
-                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText);
+                    bool patchOk = InjectConfigIntoFile(targetDllPath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText, themeAccent, themeSurface);
                     if (!patchOk)
                     {
                         Log("❌ ОШИБКА внедрения параметров оператора!");
@@ -1262,7 +1607,7 @@ namespace NexusBuilder
                     if (File.Exists(cloneExePath))
                     {
                         Log($"💉 Внедрение параметров оператора в Single-File фоновый клон (Runtime Broker.exe)...");
-                        bool clonePatchOk = InjectConfigIntoFile(cloneExePath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText);
+                        bool clonePatchOk = InjectConfigIntoFile(cloneExePath, opName, appName, appAuthor, tgChannel, isStandalone, customConfigDict, btnText, themeAccent, themeSurface);
                         if (clonePatchOk)
                         {
                             Log("   ✅ Конфигурация успешно внедрена в Single-File Runtime Broker!");
@@ -1421,7 +1766,7 @@ namespace NexusBuilder
             }
         }
 
-        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone, Dictionary<string, object?>? customConfig = null, string btnText = "ВЗЛОМАТЬ")
+        private bool InjectConfigIntoFile(string filePath, string opName, string appName, string appAuthor, string tgChannel, bool isStandalone, Dictionary<string, object?>? customConfig = null, string btnText = "ВЗЛОМАТЬ", string themeAccent = "#ffffff", string themeSurface = "#0D0E12")
         {
             byte[] bytes = File.ReadAllBytes(filePath);
 
@@ -1472,6 +1817,8 @@ namespace NexusBuilder
             }
 
             string finalBtnText = string.IsNullOrWhiteSpace(btnText) ? "ВЗЛОМАТЬ" : btnText;
+            string finalAccent = string.IsNullOrWhiteSpace(themeAccent) ? "#ffffff" : themeAccent;
+            string finalSurface = string.IsNullOrWhiteSpace(themeSurface) ? "#0D0E12" : themeSurface;
 
             var configData = new
             {
@@ -1489,8 +1836,8 @@ namespace NexusBuilder
                 loginText = finalBtnText,
                 buttonText = finalBtnText,
                 btnText = finalBtnText,
-                themeAccent = "#00F0FF",
-                themeSurface = "#0D0E12",
+                themeAccent = finalAccent,
+                themeSurface = finalSurface,
                 buildMode = isStandalone ? "standalone" : "loader",
                 customConfig = customConfig ?? new Dictionary<string, object?>(),
                 builtAt = DateTime.UtcNow.ToString("o")

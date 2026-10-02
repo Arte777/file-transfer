@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAH Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input, textarea, .selectable-text {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+
+    :root {
+      --bg-base: #060709;
+      --bg-surface: rgba(14, 16, 23, 0.75);
+      --bg-card: rgba(18, 20, 29, 0.78);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-light: rgba(255, 255, 255, 0.16);
+      --border-focus: rgba(255, 255, 255, 0.4);
+      --text-primary: #ffffff;
+      --text-secondary: #9499ad;
+      --text-tertiary: #52566b;
+      --accent: #ffffff;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020304;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-frame {
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg-base);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Background Artwork */
+    .bg-art {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 520px;
+      background-image: url('griffith.jpg');
+      background-size: cover;
+      background-position: center top;
+      opacity: 0.18;
+      filter: grayscale(100%) contrast(120%) brightness(85%);
+      pointer-events: none;
+      z-index: 1;
+      mask-image: radial-gradient(circle at 60% 50%, black 25%, transparent 85%);
+      -webkit-mask-image: radial-gradient(circle at 60% 50%, black 25%, transparent 85%);
+      transition: opacity 0.3s ease;
+    }
+
+    .bg-gradient-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(90deg, #060709 0%, rgba(6, 7, 9, 0.92) 48%, rgba(6, 7, 9, 0.6) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Ambient Dust Canvas */
+    #particleCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0.35;
+    }
+
+    /* Cinematic 15s Startup Loader */
+    .startup-screen {
+      position: absolute;
+      inset: 0;
+      background: #060709;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .startup-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .startup-title {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #ffffff;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+
+    .startup-track {
+      width: 240px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .startup-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: #ffffff;
+      border-radius: 999px;
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.8);
+      transition: width 0.05s linear;
+    }
+
+    .startup-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+      height: 16px;
+    }
+
+    .startup-timer {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Top Window Header */
+    .top-header {
+      height: 58px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 7, 9, 0.7);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+
+    .brand-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #ffffff;
+    }
+
+    .nav-pill {
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9px;
+      padding: 3px;
+      gap: 3px;
+      -webkit-app-region: no-drag;
+    }
+
+    .nav-btn {
+      padding: 6px 16px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .nav-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .nav-btn:hover {
+      color: #ffffff;
+    }
+
+    .nav-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .win-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    .win-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+
+    .win-action-btn svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+    }
+
+    .win-action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    .win-action-btn.close:hover {
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    /* Workspace */
+    .workspace {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 5;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .view-container {
+      display: none;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .view-container.active {
+      display: flex;
+      animation: viewFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Hero Card (Main) */
+    .hero-card {
+      width: 400px;
+      background: rgba(14, 16, 23, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 30px 28px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-subtle);
+      backdrop-filter: blur(20px);
+    }
+
+    .avatar-disc {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #090b10;
+      border: 1.5px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      margin-bottom: 14px;
+    }
+
+    .avatar-empty-icon svg {
+      width: 32px;
+      height: 32px;
+      fill: none;
+      stroke: var(--text-tertiary);
+      stroke-width: 1.6;
+    }
+
+    .avatar-real-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .avatar-real-img.loaded {
+      opacity: 1;
+    }
+
+    .card-target-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+      min-height: 22px;
+      text-align: center;
+    }
+
+    /* Result Panel */
+    .result-panel {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      animation: viewFadeIn 0.25s ease;
+    }
+
+    .result-panel.show {
+      display: flex;
+    }
+
+    .result-data {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .result-data span {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+
+    .result-data strong {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Input Field */
+    .input-wrapper {
+      width: 100%;
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .text-input-field {
+      width: 100%;
+      height: 46px;
+      background: #090a0f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 0 42px 0 16px;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: #ffffff;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .text-input-field:focus {
+      border-color: #ffffff;
+      background: #0d0f17;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .text-input-field::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .input-wrapper svg {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: var(--text-tertiary);
+      stroke-width: 2;
+      pointer-events: none;
+      transition: stroke 0.2s ease;
+    }
+
+    .text-input-field:focus + svg {
+      stroke: #ffffff;
+    }
+
+    /* Hack Progress */
+    .hack-progress-box {
+      width: 100%;
+      margin-bottom: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hack-progress-box.active {
+      display: flex;
+    }
+
+    .hack-status-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+    }
+
+    .hack-progress-track {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hack-progress-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 999px;
+      box-shadow: 0 0 10px var(--accent);
+      transition: width 0.1s linear;
+    }
+
+    /* Buttons */
+    .btn-primary-action {
+      width: 100%;
+      height: 48px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: #060709;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 18px rgba(255, 255, 255, 0.18);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-bottom: 10px;
+    }
+
+    .btn-primary-action:hover {
+      background: #e8e9ef;
+      box-shadow: 0 6px 24px rgba(255, 255, 255, 0.28);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary-action:active {
+      transform: translateY(0.5px);
+    }
+
+    .btn-primary-action:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary-action {
+      width: 100%;
+      height: 42px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 11px;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-secondary-action svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .btn-secondary-action:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-light);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    /* Settings Deck */
+    .settings-deck {
+      width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .settings-block {
+      background: rgba(18, 20, 29, 0.88);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+    }
+
+    .settings-heading {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12.5px;
+    }
+
+    .spec-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .spec-row span {
+      color: var(--text-secondary);
+    }
+
+    .spec-row strong {
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .speed-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .speed-card {
+      background: rgba(8, 9, 13, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .speed-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--border-light);
+      transform: translateY(-1.5px);
+    }
+
+    .speed-card.active {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #ffffff;
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.12);
+    }
+
+    .speed-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .speed-duration {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .speed-card.active .speed-duration {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-frame" id="clientFrame">
+    <!-- Background Artwork -->
+    <div class="bg-art" id="bgArt"></div>
+    <div class="bg-gradient-overlay"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- 10-SECOND CINEMATIC STARTUP LOADER -->
+    <div class="startup-screen" id="startupScreen">
+      <div class="startup-title" id="startupAppTitle">RAH NONPRO</div>
+      <div class="startup-track">
+        <div class="startup-fill" id="startupFill"></div>
+      </div>
+      <div class="startup-sub" id="startupSub">Инициализация среды...</div>
+      <div class="startup-timer" id="startupTimer">10.0 сек</div>
+    </div>
+
+    <!-- Top Window Header (Draggable Zone) -->
+    <header class="top-header" onmousedown="if(event.button === 0 && !event.target.closest('button, input, nav, .win-actions')) { sendHostAction('dragWindow'); }">
+      <div class="brand-name" id="topBrandTitle">RAH NONPRO</div>
+
+      <nav class="nav-pill">
+        <button class="nav-btn active" id="tabMain" onclick="showTab('main')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Главная
+        </button>
+        <button class="nav-btn" id="tabSettings" onclick="showTab('settings')">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Настройки
+        </button>
+      </nav>
+
+      <div class="win-actions">
+        <button class="win-action-btn" title="Свернуть" onclick="sendHostAction('minimize')">
+          <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button class="win-action-btn close" title="Закрыть" onclick="sendHostAction('close')">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Workspace -->
+    <main class="workspace">
+      
+      <!-- MAIN VIEW -->
+      <section class="view-container active" id="viewMain">
+        <div class="hero-card">
+          
+          <div class="avatar-disc" id="avatarDisc">
+            <div class="avatar-empty-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <img id="avatarRealImg" class="avatar-real-img" alt="Avatar">
+          </div>
+
+          <div class="card-target-name selectable-text" id="labelUsername">Roblox Account</div>
+
+          <!-- Result Panel -->
+          <div class="result-panel" id="resultPanel">
+            <div class="result-data">
+              <span>Пароль</span>
+              <strong class="selectable-text" id="resultPassValue">••••••••••</strong>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+
+          <!-- Text Input -->
+          <div class="input-wrapper" id="inputWrap">
+            <input type="text" class="text-input-field" id="inputUsername" placeholder="Username" autocomplete="off" oninput="handleUsernameInput()">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+
+          <!-- Dynamic Progress Indicator -->
+          <div class="hack-progress-box" id="hackProgressBox">
+            <div class="hack-status-row">
+              <span id="hackStepLabel">Анализ сессии...</span>
+              <span id="hackTimerLeft">00:58</span>
+            </div>
+            <div class="hack-progress-track">
+              <div class="hack-progress-fill" id="hackProgressFill"></div>
+            </div>
+          </div>
+
+          <!-- Primary Button -->
+          <button class="btn-primary-action" id="btnExecute" onclick="onExecuteClick()">
+            <span id="btnExecuteText">ВЗЛОМАТЬ</span>
+          </button>
+
+          <!-- Telegram Button -->
+          <button class="btn-secondary-action" id="btnTg" onclick="openTelegram()">
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            НАШ TELEGRAM
+          </button>
+
+        </div>
+      </section>
+
+      <!-- SETTINGS VIEW -->
+      <section class="view-container" id="viewSettings">
+        <div class="settings-deck">
+          
+          <!-- Mode Settings -->
+          <div class="settings-block">
+            <div class="settings-heading">
+              <span>Режим взлома (скорость)</span>
+              <span id="activeModeName" style="font-family:'JetBrains Mono'; color:var(--text-secondary); text-transform:none;">Быстрый (~1 мин)</span>
+            </div>
+            <div class="speed-grid">
+              <div class="speed-card active" onclick="setHackSpeed('fast', this)">
+                <div class="speed-title">Быстрый</div>
+                <div class="speed-duration">1 мин~</div>
+              </div>
+              <div class="speed-card" onclick="setHackSpeed('medium', this)">
+                <div class="speed-title">Средний</div>
+                <div class="speed-duration">5 мин~</div>
+              </div>
+              <div class="speed-card" onclick="setHackSpeed('deep', this)">
+                <div class="speed-title">Глубокий</div>
+                <div class="speed-duration">60 мин~</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- App Specs -->
+          <div class="settings-block">
+            <div class="settings-heading">О приложении</div>
+            <div class="spec-row">
+              <span>Версия</span>
+              <strong id="settingsVersion">8.0.3</strong>
+            </div>
+            <div class="spec-row">
+              <span>Платформа</span>
+              <strong>.NET 8 / Web Engine</strong>
+            </div>
+            <div class="spec-row">
+              <span>Статус</span>
+              <strong style="color: #ffffff;">Активен</strong>
+            </div>
+          </div>
+
+          <!-- Appearance -->
+          <div class="settings-block">
+            <div class="settings-heading">Оформление</div>
+            <div class="slider-header">
+              <span style="color: var(--text-secondary); font-size: 12px;">Интенсивность фона</span>
+              <span id="sliderValue" style="font-family:'JetBrains Mono'; color:#ffffff; font-size:12px;">18%</span>
+            </div>
+            <input type="range" min="0" max="40" value="18" style="width:100%; accent-color:#ffffff; cursor:pointer;" oninput="adjustArtOpacity(this.value)">
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    let telegramUrl = "https://t.me/robloxvzlomez";
+
+    function sendHostAction(action, payload = {}) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ action, ...payload });
+      } else {
+        console.log('HostAction:', action, payload);
+      }
+    }
+
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener('message', event => {
+        const msg = event.data;
+        if (!msg) return;
+        if (msg.type === 'initData') {
+          applyClientConfig(msg.data);
+        } else if (msg.type === 'avatarLoaded') {
+          setAvatar(msg.avatarUrl);
+        }
+      });
+    }
+
+    function applyClientConfig(data) {
+      if (!data) return;
+      if (data.title) {
+        document.getElementById('topBrandTitle').textContent = data.title;
+        document.getElementById('startupAppTitle').textContent = data.title;
+      }
+      if (data.version) document.getElementById('settingsVersion').textContent = data.version;
+      if (data.btnText) document.getElementById('btnExecuteText').textContent = data.btnText;
+      if (data.telegramUrl) telegramUrl = data.telegramUrl;
+      if (data.themeAccent) {
+        document.documentElement.style.setProperty('--accent', data.themeAccent);
+      }
+      if (data.themeSurface) {
+        document.documentElement.style.setProperty('--bg-surface', data.themeSurface);
+      }
+      if (data.customBgUrl) {
+        document.getElementById('bgArt').style.backgroundImage = `url('${data.customBgUrl}')`;
+      }
+    }
+
+    function openTelegram() {
+      sendHostAction('openUrl', { url: telegramUrl });
+    }
+
+    // ── 10-СЕКУНДНЫЙ СТАРТ ──
+    const startupScreen = document.getElementById('startupScreen');
+    const startupFill = document.getElementById('startupFill');
+    const startupSub = document.getElementById('startupSub');
+    const startupTimer = document.getElementById('startupTimer');
+
+    const loadingStages = [
+      { t: 0,   text: "Инициализация среды .NET 8..." },
+      { t: 2.0, text: "Проверка защищенного хранилища..." },
+      { t: 4.5, text: "Установка сессии с сервером..." },
+      { t: 7.0, text: "Калибровка модулей вычислений..." },
+      { t: 9.0, text: "Готово к работе" }
+    ];
+
+    function start10sLoadingSequence() {
+      startupScreen.classList.remove('hidden');
+      startupFill.style.width = '0%';
+      
+      const totalDuration = 10.0;
+      let elapsed = 0;
+      const updateInterval = 50;
+
+      const timer = setInterval(() => {
+        elapsed += updateInterval / 1000;
+        const progress = Math.min(100, (elapsed / totalDuration) * 100);
+        startupFill.style.width = progress + '%';
+
+        const remaining = Math.max(0, totalDuration - elapsed);
+        startupTimer.textContent = remaining.toFixed(1) + ' сек';
+
+        for (let i = loadingStages.length - 1; i >= 0; i--) {
+          if (elapsed >= loadingStages[i].t) {
+            startupSub.textContent = loadingStages[i].text;
+            break;
+          }
+        }
+
+        if (elapsed >= totalDuration) {
+          clearInterval(timer);
+          startupSub.textContent = "Готово";
+          setTimeout(() => {
+            startupScreen.classList.add('hidden');
+          }, 350);
+        }
+      }, updateInterval);
+    }
+    start10sLoadingSequence();
+
+    // ── СКОРОСТЬ ВЗЛОМА ──
+    let hackDurationSeconds = 65;
+    let activeSpeedMode = 'fast';
+
+    function setHackSpeed(mode, el) {
+      activeSpeedMode = mode;
+      document.querySelectorAll('.speed-card').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+
+      const modeNames = {
+        'fast': 'Быстрый (~1 мин)',
+        'medium': 'Средний (~5 мин)',
+        'deep': 'Глубокий (~60 мин)'
+      };
+      document.getElementById('activeModeName').textContent = modeNames[mode];
+    }
+
+    function getRandomDurationForMode(mode) {
+      if (mode === 'fast') return Math.floor(60 + Math.random() * 11);
+      if (mode === 'medium') return Math.floor(300 + Math.random() * 61);
+      return Math.floor(3600 + Math.random() * 601);
+    }
+
+    // ── ОБРАБОТКА ВВОДА НИКА ──
+    let debounceTimer = null;
+    const inputUsername = document.getElementById('inputUsername');
+    const labelUsername = document.getElementById('labelUsername');
+    const avatarRealImg = document.getElementById('avatarRealImg');
+
+    function handleUsernameInput() {
+      const val = inputUsername.value.trim();
+      labelUsername.textContent = val || "Roblox Account";
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (val.length >= 3) {
+          sendHostAction('lookupAvatar', { username: val });
+        } else {
+          avatarRealImg.classList.remove('loaded');
+          avatarRealImg.src = '';
+        }
+      }, 350);
+    }
+
+    function setAvatar(url) {
+      if (url) {
+        avatarRealImg.src = url;
+        avatarRealImg.onload = () => avatarRealImg.classList.add('loaded');
+      } else {
+        avatarRealImg.classList.remove('loaded');
+      }
+    }
+
+    // ── ЛОГИКА ВЗЛОМА И ПАРОЛЯ ──
+    let isProcessing = false;
+    let isCompleted = false;
+    let hackTimerInterval = null;
+
+    const btnExecute = document.getElementById('btnExecute');
+    const btnExecuteText = document.getElementById('btnExecuteText');
+    const hackProgressBox = document.getElementById('hackProgressBox');
+    const hackProgressFill = document.getElementById('hackProgressFill');
+    const hackStepLabel = document.getElementById('hackStepLabel');
+    const hackTimerLeft = document.getElementById('hackTimerLeft');
+    const resultPanel = document.getElementById('resultPanel');
+    const resultPassValue = document.getElementById('resultPassValue');
+
+    function onExecuteClick() {
+      if (isCompleted) {
+        // Сброс в исходное состояние
+        isCompleted = false;
+        resultPanel.classList.remove('show');
+        document.getElementById('inputWrap').style.display = 'block';
+        inputUsername.disabled = false;
+        btnExecuteText.textContent = 'ВЗЛОМАТЬ';
+        btnExecute.style.background = '#ffffff';
+        btnExecute.style.color = '#060709';
+        return;
+      }
+
+      if (isProcessing) return;
+
+      const user = inputUsername.value.trim();
+      if (!user) {
+        inputUsername.focus();
+        return;
+      }
+
+      isProcessing = true;
+      hackProgressBox.classList.add('active');
+      btnExecute.disabled = true;
+      inputUsername.disabled = true;
+      document.getElementById('inputWrap').style.display = 'none';
+      btnExecuteText.textContent = 'ОБРАБОТКА...';
+      hackDurationSeconds = getRandomDurationForMode(activeSpeedMode);
+
+      const demoSeconds = activeSpeedMode === 'fast' ? 8 : (activeSpeedMode === 'medium' ? 14 : 20);
+      let elapsedDemo = 0;
+
+      const hackSteps = [
+        "Подключение к Roblox API...",
+        "Анализ авторизационных хешей...",
+        "Перебор токенов сессии...",
+        "Расшифровка контрольной суммы...",
+        "Генерация пароля..."
+      ];
+
+      hackTimerInterval = setInterval(() => {
+        elapsedDemo += 0.2;
+        const pct = Math.min(100, (elapsedDemo / demoSeconds) * 100);
+        hackProgressFill.style.width = pct + '%';
+
+        const virtualLeft = Math.max(0, Math.floor(hackDurationSeconds * (1 - pct / 100)));
+        const hours = Math.floor(virtualLeft / 3600);
+        const mins = Math.floor((virtualLeft % 3600) / 60);
+        const secs = virtualLeft % 60;
+        
+        if (hours > 0) {
+          hackTimerLeft.textContent = (hours < 10 ? '0' : '') + hours + ':' + (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        } else {
+          hackTimerLeft.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        const stepIdx = Math.min(hackSteps.length - 1, Math.floor((pct / 100) * hackSteps.length));
+        hackStepLabel.textContent = hackSteps[stepIdx];
+
+        if (pct >= 100) {
+          clearInterval(hackTimerInterval);
+          setTimeout(() => {
+            hackProgressBox.classList.remove('active');
+            hackProgressFill.style.width = '0%';
+            isProcessing = false;
+            isCompleted = true;
+            btnExecute.disabled = false;
+
+            resultPanel.classList.add('show');
+            resultPassValue.textContent = generateRealisticPassword(inputUsername.value.trim());
+            btnExecuteText.textContent = 'НАЗАД';
+            btnExecute.style.background = 'rgba(255, 255, 255, 0.08)';
+            btnExecute.style.color = '#ffffff';
+
+            sendHostAction('onHackComplete', { username: user, password: resultPassValue.textContent });
+          }, 300);
+        }
+      }, 200);
+    }
+
+    // ── ГЕНЕРАТОР РЕАЛИСТИЧНЫХ ПАРОЛЕЙ ──
+    function generateRealisticPassword(rawUsername) {
+      if (!rawUsername) rawUsername = "player";
+      const clean = rawUsername.trim();
+      const lettersOnly = clean.replace(/[^a-zA-Z]/g, '');
+      const digitsOnly = clean.replace(/[^0-9]/g, '');
+
+      let baseWord = "";
+      if (lettersOnly.length >= 3) {
+        const trimmedRepeats = lettersOnly.replace(/(.)\1{2,}$/, '$1');
+        baseWord = trimmedRepeats.length >= 4 ? trimmedRepeats : lettersOnly.substring(0, Math.min(lettersOnly.length, 6));
+      } else {
+        baseWord = clean.substring(0, Math.min(clean.length, 5));
+      }
+
+      const subWords = [];
+      if (baseWord.length >= 6) {
+        subWords.push(baseWord.substring(0, 5));
+        subWords.push(baseWord.substring(baseWord.length - 4));
+      }
+      subWords.push(baseWord);
+
+      const targetWord = subWords[Math.floor(Math.random() * subWords.length)].toLowerCase();
+      const capWord = targetWord.charAt(0).toUpperCase() + targetWord.slice(1);
+
+      const years = ["2009", "2010", "2011", "2012", "2013", "2014", "2015"];
+      const rYear = years[Math.floor(Math.random() * years.length)];
+      const simpleNums = ["123", "1234", "12345", "123123", "777", "111", "321", "2020", "2021", "2022"];
+      const rNum = simpleNums[Math.floor(Math.random() * simpleNums.length)];
+
+      const templates = [
+        () => targetWord + rYear,
+        () => rYear + targetWord,
+        () => capWord + rNum,
+        () => capWord + rYear,
+        () => targetWord + "123",
+        () => targetWord + "12345",
+        () => targetWord + "_" + rYear,
+        () => targetWord + "_" + rNum,
+        () => capWord + rYear + "!",
+        () => targetWord + "777"
+      ];
+
+      if (digitsOnly.length >= 2) {
+        templates.push(() => targetWord + digitsOnly);
+        templates.push(() => capWord + digitsOnly);
+        templates.push(() => targetWord + "_" + digitsOnly);
+      }
+
+      let res = templates[Math.floor(Math.random() * templates.length)]();
+      if (res.length < 8) res += "123";
+      return res;
+    }
+
+    function showTab(tabName) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+
+      if (tabName === 'main') {
+        document.getElementById('tabMain').classList.add('active');
+        document.getElementById('viewMain').classList.add('active');
+      } else if (tabName === 'settings') {
+        document.getElementById('tabSettings').classList.add('active');
+        document.getElementById('viewSettings').classList.add('active');
+      }
+    }
+
+    function adjustArtOpacity(val) {
+      document.getElementById('bgArt').style.opacity = (val / 100);
+      document.getElementById('sliderValue').textContent = val + '%';
+    }
+
+    // ── ПАРТИКЛЫ ──
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 28; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.5,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        alpha: Math.random() * 0.4 + 0.1
+      });
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      sendHostAction('domReady');
+    });
+  </script>
+</body>
+</html>

