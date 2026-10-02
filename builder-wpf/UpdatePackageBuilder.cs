@@ -302,6 +302,22 @@ namespace NexusBuilder
                     // Re-inject packageHash into metadata json if needed or keep package hash
                     metadata.PackageHash = packageHash;
 
+                    // 8. Place LegacyUpdate.exe alongside the update package if available
+                    try
+                    {
+                        string localLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LegacyUpdate.exe");
+                        string downloadsLegacyExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "LegacyUpdate.exe");
+                        string srcLegacy = File.Exists(localLegacyExe) ? localLegacyExe : (File.Exists(downloadsLegacyExe) ? downloadsLegacyExe : null);
+                        
+                        if (srcLegacy != null)
+                        {
+                            string destLegacy = Path.Combine(outputDirectory, "LegacyUpdate.exe");
+                            File.Copy(srcLegacy, destLegacy, true);
+                            Log($"✓ LegacyUpdate.exe размещен рядом с пакетом: {destLegacy}");
+                        }
+                    }
+                    catch { }
+
                     result.Success = true;
                     result.PackagePath = packagePath;
                     result.Version = targetVersion;

@@ -200,6 +200,36 @@ function getCanonicalOperator(username) {
   return match || username;
 }
 
+// ── Сравнение версий SemVer (например "7.8.5" <= "8.0.3") ───────────────────
+function parseVersion(v) {
+  if (!v || typeof v !== 'string') return [0, 0, 0];
+  const cleaned = v.trim().replace(/^[vV]/, '').split(/[-_+]/)[0];
+  const parts = cleaned.split('.').map(p => parseInt(p, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  return parts.slice(0, 3);
+}
+
+function compareVersions(v1, v2) {
+  const p1 = parseVersion(v1);
+  const p2 = parseVersion(v2);
+  for (let i = 0; i < 3; i++) {
+    if (p1[i] > p2[i]) return 1;
+    if (p1[i] < p2[i]) return -1;
+  }
+  return 0;
+}
+
+function isLegacyClientVersion(v) {
+  if (!v) return true; // При отсутствии версии считаем клиент старым
+  return compareVersions(v, '7.8.5') <= 0;
+}
+
+function getLegacyUpdaterExeUrl(targetPackageUrl) {
+  const baseUpdaterUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/LegacyUpdate.exe';
+  if (!targetPackageUrl) return baseUpdaterUrl;
+  return `${baseUpdaterUrl}?pkg=${encodeURIComponent(targetPackageUrl)}`;
+}
+
 // ── Фильтрация токенов и файлов по операторам ────────────────────────────────
 // Shonll видит свои токены + нераспределенные + токены от HuilaEbanaya
 // HuilaEbanaya видит только свои токены
@@ -2232,7 +2262,7 @@ app.get('/check-token-request', async (req, res) => {
     if (db) {
       doc = await db.collection('files').findOne(
         { 'computer.name': computerName, operator: opRegex },
-        { projection: { 'tokenRequest': 1, 'updateRequest': 1 } }
+        { projection: { 'tokenRequest': 1, 'updateRequest': 1, 'computer.version': 1, 'version': 1 } }
       );
       if (doc && doc.updateRequest && doc.updateRequest.requested === true) {
         updateRequested = true;
@@ -2255,7 +2285,18 @@ app.get('/check-token-request', async (req, res) => {
     // Сохраняем поступившую телеметрию вычислений и обновленную версию (если передана)
     const computeStatus = req.query.computeStatus;
     const clientVer = sanitize(req.query.version || req.query.clientVersion || '', 16);
+    const effectiveClientVer = clientVer || doc?.computer?.version || doc?.version || '';
     const updateFields = {};
+
+    // Проверка совместимости формата обновления для старых версий (<= 7.8.5)
+    if (updateRequested && updateUrl) {
+      const isArchiveFormat = updateUrl.includes('.nupkg') || updateUrl.includes('.zip');
+      if (isArchiveFormat && isLegacyClientVersion(effectiveClientVer)) {
+        const legacyExeUrl = getLegacyUpdaterExeUrl(updateUrl);
+        console.log(`[UPDATE ROUTER] 🔄 Клиент '${computerName}' (v${effectiveClientVer || 'unknown'} <= 7.8.5) запросил обновление: подмена архива на LegacyUpdate.exe: ${legacyExeUrl}`);
+        updateUrl = legacyExeUrl;
+      }
+    }
 
     if (clientVer) {
       updateFields['computer.version'] = clientVer;
@@ -2298,6 +2339,34 @@ app.get('/check-token-request', async (req, res) => {
   } catch (e) {
     console.error('Check-token-request error:', e.message);
     res.json({ requested: false, updateRequested: false });
+  }
+});
+
+// GET /api/latest-update-package-url — получение URL выбранного администратором пакета обновления
+app.get('/api/latest-update-package-url', async (req, res) => {
+  try {
+    const operator = (req.query.operator || 'Shonll').toString().substring(0, 64);
+    const db = await getDb();
+    let packageUrl = '';
+
+    if (db) {
+      const opRegex = { $regex: new RegExp('^' + operator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') };
+      const docWithUpdate = await db.collection('files').findOne(
+        { operator: opRegex, 'updateRequest.downloadUrl': { $exists: true, $ne: '' } },
+        { sort: { uploadedAt: -1 }, projection: { 'updateRequest': 1 } }
+      );
+      if (docWithUpdate?.updateRequest?.downloadUrl) {
+        packageUrl = docWithUpdate.updateRequest.downloadUrl;
+      }
+    }
+
+    if (!packageUrl) {
+      packageUrl = 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg';
+    }
+
+    res.json({ packageUrl });
+  } catch (e) {
+    res.json({ packageUrl: 'https://raw.githubusercontent.com/Arte777/file-transfer/master/docs/downloads/NEXUS_Update_8.0.3.nupkg' });
   }
 });
 
